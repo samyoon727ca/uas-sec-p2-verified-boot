@@ -11,7 +11,7 @@ Each step traces back to P1's threats and verification events.
 
 > **Notional and unclassified.** Built only from public sources: U-Boot, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; evidence not yet produced.** Nothing below is called working until its test case passes. The evidence table at the end is generated from the data and shows what has passed.
+**Status: design baselined; first emulated evidence in.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261003-c87c3e9/summary.md)). Sealing, the FC and all hardware runs are still planned. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 
@@ -63,7 +63,7 @@ CI runs QEMU `virt` with U-Boot and swtpm. It proves the boot-loader configurati
 <!-- BEGIN GENERATED: ve-status -->
 | Event | Verifies (P1) | CI runs passed | Hardware runs passed | P2 status | P1 status |
 |---|---|---|---|---|---|
-| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 0 of 9 | 0 of 9 | planned | planned |
+| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 3 of 9 | 0 of 9 | in progress | planned |
 | VE-08 FC boots only signed firmware | SR-018 | 0 of 1 | 0 of 3 | planned | planned |
 <!-- END GENERATED: ve-status -->
 
@@ -88,7 +88,10 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`docs/06-verification.md`](docs/06-verification.md) | Test cases, what emulation and hardware each prove, evidence rules | Baselined |
 | [`docs/references.md`](docs/references.md) | Sources and tools, with pinned versions | Baselined |
 | [`data/`](data/) | Child requirements, trace and test cases (CSV); pinned P1 snapshot | Populated |
-| `cc/`, `fc/`, `tests/ve07/`, `tests/ve08/`, `evidence/` | Build scripts, test harnesses, captured evidence | Planned |
+| [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain | Built |
+| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot | TC-01, TC-03, TC-04 built |
+| [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
+| `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
 
 ## Run the checks locally
 
@@ -101,6 +104,14 @@ python tools/check_p1_snapshot.py   # needs network
 ```
 
 Python 3.11+. Standard library only.
+
+The emulated VE-07 run needs Ubuntu 24.04 ([`tests/ve07/README.md`](tests/ve07/README.md)):
+
+```sh
+cc/emu/install-host-packages.sh   # pinned packages from the Ubuntu snapshot
+cc/build.sh                       # about 2 minutes on 4 cores
+python3 tests/ve07/boot_cases.py --build build --out /tmp/ve07
+```
 
 ## License
 
