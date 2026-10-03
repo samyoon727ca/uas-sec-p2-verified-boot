@@ -1,0 +1,814 @@
+{
+  "event": "VE-07",
+  "environment": "ci (emulated)",
+  "date_utc": "2026-10-03T16:50:59Z",
+  "git": {
+    "commit": "c87c3e98f3c73909e4c9a0471e57a6e7f606de15",
+    "cc_or_tests_modified": "false"
+  },
+  "passed": true,
+  "test_cases": {
+    "TC-01": "passed",
+    "TC-03": "passed",
+    "TC-04": "passed"
+  },
+  "host": {
+    "os": "Linux-6.18.44-fc-v64-x86_64-with-glibc2.39",
+    "python": "3.11.15",
+    "qemu": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "swtpm": "TPM emulator version 0.7.3, Copyright (c) 2014-2021 IBM Corp.",
+    "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)",
+    "dtc": "Version: DTC 1.7.0",
+    "mkimage": "mkimage version 2026.07"
+  },
+  "pins": {
+    "u-boot": "# U-Boot release used for the CC boot loader. cc/build.sh downloads the\n# tarball and refuses it unless the SHA-256 matches.\nversion: 2026.07\nurl: https://ftp.denx.de/pub/u-boot/u-boot-2026.07.tar.bz2\nsha256: 78e8bfc382fe388f9b55aa1daf8c563522a037779b5d4c349d1415e381f1243e\n# Tag commit, for reference; the tarball matches it apart from lib/lwip dot-files.\ncommit: ece349ade2973e220f524ce59e59711cc919263f\n# Build timestamp fixed to the tag commit date, so the version string that\n# U-Boot measures into PCR 0 is the same on every build.\nsource_date_epoch: 1783381843\n",
+    "guest": "# arm64 guest packages for the emulated CC, from Launchpad's permanent file\n# store. SHA-256 values match the signed Ubuntu noble-updates index.\n# file sha256\nlinux-image-6.8.0-146-generic_6.8.0-146.146_arm64.deb ee35dffd32c672d6b1814c0d9c8001c1656e06e718ebd5fb15565d0b7e51e418\nbusybox-static_1.36.1-6ubuntu3.1_arm64.deb d96535e0402c011e0ee43449799df2f4504d44b842e4f2b3a6cbc845508eaafc\n"
+  },
+  "public_keys_sha256_der": {
+    "K-CC-OS dev": "0f6bea35243f8b72bc98cbde6e686bd57c24245a7c31f9204b478fb6879e0c00",
+    "rogue": "6e3ec24f428863766483139bc3a775536ad70c2d24b9f76804d7c5ba39b80bef"
+  },
+  "artifacts_sha256": {
+    "ctrl.dtb": "1ac7d56345b67e0217562fca46c2270d48a630073849d713d649e7846dd12819",
+    "kernel.dtb": "d742d34e1d64406b8c7e8091dd9640b5b0a6858f81a1d70548e6f50338e5d0be",
+    "good.itb": "1b8548af34c652fd2a8b033b6a5c238cd42e56ec7db9deb3466fdce6ab71e326",
+    "unsigned.itb": "83ccb071dce660569da85dcff5dace5badb38735eb53a59c161d9b0a0eff90bb",
+    "rogue.itb": "218ee1954a76b11dd5709d4bb22ebeeb4d584bd43ce19a80e89457e0450830df",
+    "added-config.itb": "fea31396c52770520f8ca9daf59d7315a8bfbbf5dd86cbea5e8361aaa694ec6a",
+    "tamper-kernel.itb": "4e7c1540bff9a1eaa72cccc9504885e75ed698444035ea7eb7b480df24030d4f",
+    "tamper-ramdisk.itb": "44cb0a614a4a34b6dc1b22fdc18aa8a3e11983ca8f9aac0a8be8320a6596a59a",
+    "tamper-fdt.itb": "46918b7682945588d049253ae4e4903e489efe33f09411c62b2c16ccb7ba2e21",
+    "legacy.uimg": "3aaf41b80feb7a140d74f34d5db9e684bd4bc8083444df3287243ae8769ceaab",
+    "env.bin": "8a15c8ab39974e6c18a536053b9ec262de2196cfbd616ca08b7db1966463c6ac",
+    "u-boot-hardened.bin": "7fd6e13651ee7100033e78ceded02eddb78601c4f65c88dd77a6b598936ba5e8",
+    "u-boot-stock.bin": "a031b12b739f533979c161e074d810fa317e4ee4a72e0eb9563adf844d8f00dd",
+    "u-boot-hardened.config": "7fa1a4472d9e2506abddbb10a8cd2f9fea67090872ba7e1c93ea5b47f5502abc",
+    "u-boot-stock.config": "0f8b7df26f0cfa645942a652bfc0d528b444c8112899e666cfd0095acd0f456d",
+    "Image.gz": "6001f54164a5201cd5a80e0a09bb05c43fa6e910a0abfe0f5a4e8d7d781cc737",
+    "initramfs.cpio.gz": "5c5ae1844725699f188d71404ab5ec2b1204b2359daf98332b563b8656525cf8"
+  },
+  "notes": {
+    "tpm_node": "/platform-bus@c000000/tpm_tis@0",
+    "tamper-kernel": "byte 9295019 inverted in /images/kernel/data",
+    "tamper-ramdisk": "byte 19100346 inverted in /images/ramdisk/data",
+    "tamper-fdt": "byte 18593727 inverted in /images/fdt/data",
+    "added-config": "conf-alt (kernel and fdt, no initramfs, unsigned) added and made default"
+  },
+  "runs": [
+    {
+      "id": "TC-04a",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Built .config holds every P2 setting",
+      "ok": true,
+      "checks": [
+        {
+          "kind": "config",
+          "pattern": "CONFIG_FIT_SIGNATURE=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_LEGACY_IMAGE_FORMAT is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_ENV_IS_NOWHERE=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_ENV_IS_IN_FLASH is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_BOOTDELAY=-2",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_BOOTSTD_BOOTCOMMAND is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_USE_BOOTCOMMAND=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_USE_BOOTARGS=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_USE_PREBOOT is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_MEASURED_BOOT=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_SYS_BOOTM_LEN=0x8000000",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_UNIT_TEST is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_BOOTCOMMAND=\"virtio scan; virtio read 0x50000000 0 0x20000; bootm 0x50000000; reset\"",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_BOOTARGS=\"console=ttyAMA0 rdinit=/init panic=-1\"",
+          "ok": true
+        }
+      ],
+      "log": null
+    },
+    {
+      "id": "TC-01",
+      "tc": "TC-01",
+      "role": "positive",
+      "title": "Signed chain boots to the initramfs",
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 15.2,
+      "log": "TC-01.log"
+    },
+    {
+      "id": "TC-03a",
+      "tc": "TC-03",
+      "role": "test",
+      "title": "Kernel changed after signing",
+      "uboot": "hardened",
+      "slot": "tamper-kernel",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'kernel' image node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 1.8,
+      "log": "TC-03a.log"
+    },
+    {
+      "id": "TC-03b",
+      "tc": "TC-03",
+      "role": "test",
+      "title": "Initramfs changed after signing",
+      "uboot": "hardened",
+      "slot": "tamper-ramdisk",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'ramdisk' image node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 2.2,
+      "log": "TC-03b.log"
+    },
+    {
+      "id": "TC-03c",
+      "tc": "TC-03",
+      "role": "test",
+      "title": "Devicetree changed after signing",
+      "uboot": "hardened",
+      "slot": "tamper-fdt",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'fdt' image node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 2.0,
+      "log": "TC-03c.log"
+    },
+    {
+      "id": "TC-04b",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Unsigned configuration added after signing and made default",
+      "uboot": "hardened",
+      "slot": "added-config",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "Using 'conf-alt' configuration",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "No 'signature' subnode found for 'conf-alt' config node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Failed to verify required signature 'key-cc-os-dev'",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.8,
+      "log": "TC-04b.log"
+    },
+    {
+      "id": "TC-04c",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Unsigned FIT",
+      "uboot": "hardened",
+      "slot": "unsigned",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "No 'signature' subnode found for 'conf' config node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Failed to verify required signature 'key-cc-os-dev'",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 1.0,
+      "log": "TC-04c.log"
+    },
+    {
+      "id": "TC-04d",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "FIT signed by a rogue key with the same key name",
+      "uboot": "hardened",
+      "slot": "rogue",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev-\\s+error!",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Verification failed for 'conf' config node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Failed to verify required signature 'key-cc-os-dev'",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.8,
+      "log": "TC-04d.log"
+    },
+    {
+      "id": "TC-04e",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Legacy uImage in the boot slot",
+      "uboot": "hardened",
+      "slot": "legacy",
+      "flash": "blank",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "Wrong Image Type for bootm command",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Linux version \\d",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 1.0,
+      "log": "TC-04e.log"
+    },
+    {
+      "id": "TC-04e-control",
+      "tc": "TC-04",
+      "role": "control",
+      "title": "Stock U-Boot boots the same legacy uImage (via injected environment)",
+      "uboot": "stock",
+      "slot": "legacy",
+      "flash": "env",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Booting kernel from Legacy Image",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Linux version \\d",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.6,
+      "log": "TC-04e-control.log"
+    },
+    {
+      "id": "TC-04f",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Environment injected into flash is ignored",
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "env",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 14.2,
+      "log": "TC-04f.log"
+    },
+    {
+      "id": "TC-04f-control",
+      "tc": "TC-04",
+      "role": "control",
+      "title": "Stock U-Boot runs the injected environment",
+      "uboot": "stock",
+      "slot": "good",
+      "flash": "env",
+      "keys": false,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 8.2,
+      "log": "TC-04f-control.log"
+    },
+    {
+      "id": "TC-04g",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Keystrokes during a good boot do not interrupt it",
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "keys": true,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 14.4,
+      "log": "TC-04g.log"
+    },
+    {
+      "id": "TC-04h",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Keystrokes after a refused boot reach no prompt",
+      "uboot": "hardened",
+      "slot": "tamper-kernel",
+      "flash": "blank",
+      "keys": true,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-ENV-INJECTED",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 2.2,
+      "log": "TC-04h.log"
+    },
+    {
+      "id": "TC-04g-control",
+      "tc": "TC-04",
+      "role": "control",
+      "title": "Keystrokes stop stock U-Boot at a prompt",
+      "uboot": "stock",
+      "slot": "good",
+      "flash": "blank",
+      "keys": true,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: stopped",
+          "ok": true
+        }
+      ],
+      "end": "stopped",
+      "seconds": 4.8,
+      "log": "TC-04g-control.log"
+    }
+  ]
+}
