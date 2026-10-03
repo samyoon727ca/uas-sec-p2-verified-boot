@@ -1,0 +1,4 @@
+# P1 snapshot. The CSVs in this folder are byte-for-byte copies of P1's data/
+# at the commit below; tools/check_p1_snapshot.py verifies that in CI.
+repo: samyoon727ca/uas-sec-p1-architecture
+commit: 7aadc83f363fc4d1c24f987d50a831d07ba86f18

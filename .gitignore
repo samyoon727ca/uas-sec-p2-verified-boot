@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.cache/
+# Build and test output
+build/
+work/
+# Keys: generated per run in CI, or held locally for hardware runs. Never committed.
+keys/
+*.key
+*.pem
+!*.pub.pem
