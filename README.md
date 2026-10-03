@@ -88,7 +88,10 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`docs/06-verification.md`](docs/06-verification.md) | Test cases, what emulation and hardware each prove, evidence rules | Baselined |
 | [`docs/references.md`](docs/references.md) | Sources and tools, with pinned versions | Baselined |
 | [`data/`](data/) | Child requirements, trace and test cases (CSV); pinned P1 snapshot | Populated |
-| `cc/`, `fc/`, `tests/ve07/`, `tests/ve08/`, `evidence/` | Build scripts, test harnesses, captured evidence | Planned |
+| [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain | Built |
+| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot | TC-01, TC-03, TC-04 built |
+| [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
+| `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
 
 ## Run the checks locally
 
@@ -101,6 +104,14 @@ python tools/check_p1_snapshot.py   # needs network
 ```
 
 Python 3.11+. Standard library only.
+
+The emulated VE-07 run needs Ubuntu 24.04 ([`tests/ve07/README.md`](tests/ve07/README.md)):
+
+```sh
+cc/emu/install-host-packages.sh   # pinned packages from the Ubuntu snapshot
+cc/build.sh                       # about 2 minutes on 4 cores
+python3 tests/ve07/boot_cases.py --build build --out /tmp/ve07
+```
 
 ## License
 

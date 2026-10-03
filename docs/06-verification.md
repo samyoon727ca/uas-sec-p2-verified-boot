@@ -60,7 +60,7 @@ Generated from the CSVs by `tools/render_views.py`. CI fails if this view drifts
 - **Contents.** Each run folder holds:
   - `summary.json`: tool versions, pins, SHA-256 of every built artifact and public key, and each case's result;
   - one console log per case.
-- **Scripted.** A harness exits non-zero if any case fails, and CI runs the harnesses on every push.
+- **Scripted.** A harness exits non-zero if any case fails, and CI runs it on every change to `cc/` or the harness. VE-07's emulated harness is [`tests/ve07/boot_cases.py`](../tests/ve07/boot_cases.py), run by the [`ve07-emu`](../.github/workflows/ve07-emu.yml) workflow, which uploads its evidence as a build artifact.
 - **Controls first.** A negative case counts only if the positive control passed in the same run. Where the attack would succeed against a weaker setup (for example stock `qemu_arm64_defconfig`), a control run shows it succeeding there, so the test can be seen to detect it.
 - **Hardware runs** are run by the owner on owned devices with the scripts in this repo. Their logs are committed the same way.
 
