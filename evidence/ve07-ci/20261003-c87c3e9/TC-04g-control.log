@@ -1,0 +1,173 @@
+Bloblist at 0 not found (err=-2)
+alloc space exhausted ptr 400 limit 0
+Bloblist at 0 not found (err=-2)
+
+
+U-Boot 2026.07 (Jul 06 2026 - 23:50:43 +0000)
+
+DRAM:  2 GiB
+using memory 0xbe64f000-0xbf68f000 for malloc()
+Core:  52 devices, 15 uclasses, devicetree: board
+Flash: 64 MiB
+Loading Environment from Flash... *** Warning - bad CRC, using default environment
+
+In:    serial,usbkbd
+Out:   serial,vidconsole
+Err:   serial,vidconsole
+No USB controllers found
+Net:   No ethernet found.
+[?25h
+[2KHit any key to stop autoboot: 2[2KHit any key to stop autoboot: 1[2KHit any key to stop autoboot: 0
+Scanning for bootflows in all bootdevs
+Seq  Method       State   Uclass    Part  Name                      Filename
+---  -----------  ------  --------  ----  ------------------------  ----------------
+Scanning global bootmeth 'efi_mgr':
+7[r[999;999H[6n8Cannot persist EFI variables without system partition
+  0  efi_mgr      ready   (none)       0  <NULL>                    
+** Booting bootflow '<NULL>' with efi_mgr
+Loading Boot0000 'virtio 0' failed
+EFI boot manager: Cannot load any image
+Boot failed (err=-14)
+Scanning bootdev 'fw-cfg@9020000.bootdev':
+fatal: no kernel available
+scanning bus for devices...
+Scanning bootdev 'virtio-blk#31.bootdev':
+No more bootdevs
+---  -----------  ------  --------  ----  ------------------------  ----------------
+(1 bootflow, 1 valid)
+=> elp
+Unknown command 'elp' - try 'help'
+=> 
+Unknown command 'elp' - try 'help'
+=> 
+Unknown command 'elp' - try 'help'
+=> 
+Unknown command 'elp' - try 'help'
+=> 
+Unknown command 'elp' - try 'help'
+=> help
+?         - alias for 'help'
+[         - alias for 'test'
+base      - print or set address offset
+bdinfo    - print Board Info structure
+blkcache  - block cache diagnostics and control
+blkmap    - Composeable virtual block devices
+bloblist  - Bloblists
+boot      - boot default, i.e., run 'bootcmd'
+bootd     - boot default, i.e., run 'bootcmd'
+bootdev   - Boot devices
+bootefi   - Boots an EFI payload from memory
+bootelf   - Boot from an ELF image in memory
+bootflow  - Boot flows
+booti     - boot Linux kernel 'Image' format from memory
+bootm     - boot application image from memory
+bootmeth  - Boot methods
+bootp     - boot image via network using BOOTP/TFTP protocol
+bootstd   - Standard-boot operation
+bootvx    - Boot vxWorks from an ELF image
+bootz     - boot Linux zImage image from memory
+chpart    - change active partition of a MTD device
+cls       - clear screen
+cmp       - memory compare
+coninfo   - print console devices and information
+cp        - memory copy
+crc32     - checksum calculation
+cyclic    - Cyclic
+date      - get/set/reset date & time
+dfu       - Device Firmware Upgrade
+dhcp      - boot image via network using DHCP/TFTP protocol
+dm        - Driver model low level access
+dns       - lookup the IP of a hostname
+echo      - echo args to console
+editenv   - edit environment variable
+eficonfig - provide menu-driven UEFI variable maintenance interface
+efidebug  - Configure UEFI environment
+env       - environment handling commands
+erase     - erase FLASH memory
+exit      - exit script
+ext2load  - load binary file from a Ext2 filesystem
+ext2ls    - list files in a directory (default /)
+ext4load  - load binary file from a Ext4 filesystem
+ext4ls    - list files in a directory (default /)
+ext4size  - determine a file's size
+false     - do nothing, unsuccessfully
+fatinfo   - print information about filesystem
+fatload   - load binary file from a dos filesystem
+fatls     - list files in a directory (default /)
+fatmkdir  - create a directory
+fatrm     - delete a file
+fatsize   - determine a file's size
+fatwrite  - write file into a dos filesystem
+fdt       - flattened device tree utility commands
+flinfo    - print FLASH memory information
+fstype    - Look up a filesystem type
+fstypes   - List supported filesystem types
+go        - start application at address 'addr'
+gzwrite   - unzip and write memory to block device
+help      - print command description/usage
+iminfo    - print header information for application image
+imxtract  - extract a part of a multi-image
+itest     - return true/false on integer compare
+lcdputs   - print string on video framebuffer
+ln        - Create a symbolic link
+load      - load binary file from a filesystem
+loadb     - load binary file over serial line (kermit mode)
+loads     - load S-Record file over serial line
+loadx     - load binary file over serial line (xmodem mode)
+loady     - load binary file over serial line (ymodem mode)
+loop      - infinite loop on address range
+ls        - list files in a directory (default /)
+lzmadec   - lzma uncompress a memory region
+md        - memory display
+mii       - MII utility commands
+mkdir     - create a directory
+mm        - memory modify (auto-incrementing address)
+mtd       - MTD utils
+mtdparts  - define flash/nand partitions
+mv        - rename/move a file/directory
+mw        - memory write (fill)
+net       - NET sub-system
+nm        - memory modify (constant address)
+nvme      - NVM Express sub-system
+panic     - Panic with optional message
+part      - disk partition related commands
+pci       - list and access PCI Configuration Space
+ping      - send ICMP ECHO_REQUEST to network host
+poweroff  - Perform POWEROFF of the device
+printenv  - print environment variables
+protect   - enable or disable FLASH write protection
+pxe       - get and boot from pxe files
+qfw       - QEMU firmware interface
+random    - fill memory with random pattern
+reset     - Perform RESET of the CPU
+rm        - delete a file
+run       - run commands in an environment variable
+save      - save file to a filesystem
+saveenv   - save environment variables to persistent storage
+scsi      - SCSI sub-system
+scsiboot  - boot from SCSI device
+setcurs   - set cursor position within screen
+setenv    - set environment variables
+setexpr   - set environment variable as the result of eval expression
+showvar   - print local hushshell variables
+size      - determine a file's size
+sleep     - delay execution for some time
+smbios    - display SMBIOS information
+source    - run script from memory
+spawn     - run commands and summarize execution time
+test      - minimal test like /bin/sh
+tftpboot  - load file via network using TFTP protocol
+tpm       - Issue a TPMv1.x command
+tpm2      - Issue a TPMv2.x command
+true      - do nothing, successfully
+unlz4     - lz4 uncompress a memory region
+unzip     - unzip a memory region
+usb       - USB sub-system
+usbboot   - boot from USB device
+ut        - unit tests
+vbe       - Verified Boot for Embedded
+version   - print monitor, compiler and linker version
+virtio    - virtio block devices sub-system
+wait      - wait for one or more jobs to complete
+wget      - boot image via network using HTTP protocol
+=> qemu-system-aarch64: terminating on signal 15 from pid 18349 (python3)

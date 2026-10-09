@@ -1,0 +1,5 @@
+# arm64 guest packages for the emulated CC, from Launchpad's permanent file
+# store. SHA-256 values match the signed Ubuntu noble-updates index.
+# file sha256
+linux-image-6.8.0-146-generic_6.8.0-146.146_arm64.deb ee35dffd32c672d6b1814c0d9c8001c1656e06e718ebd5fb15565d0b7e51e418
+busybox-static_1.36.1-6ubuntu3.1_arm64.deb d96535e0402c011e0ee43449799df2f4504d44b842e4f2b3a6cbc845508eaafc

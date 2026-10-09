@@ -1,0 +1,22 @@
+Bloblist at 0 not found (err=-2)
+alloc space exhausted ptr 400 limit 0
+Bloblist at 0 not found (err=-2)
+
+
+U-Boot 2026.07 (Jul 06 2026 - 23:50:43 +0000)
+
+DRAM:  2 GiB
+Core:  52 devices, 15 uclasses, devicetree: board
+Flash: 64 MiB
+Loading Environment from nowhere... OK
+In:    serial,usbkbd
+Out:   serial,vidconsole
+Err:   serial,vidconsole
+No USB controllers found
+Net:   No ethernet found.
+[?25h
+
+virtio read: device 0 block # 0, count 131072 ... 131072 blocks read: OK
+Wrong Image Type for bootm command
+ERROR -91: can't get kernel image!
+resetting ...
