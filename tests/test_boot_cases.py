@@ -119,6 +119,17 @@ class EvaluateTest(unittest.TestCase):
         self.assertFalse(all(c["ok"] for c in bc.evaluate(case, "go", "exited", bc.MIN_KEYS - 1)))
         self.assertTrue(all(c["ok"] for c in bc.evaluate(case, "go", "exited", bc.MIN_KEYS)))
 
+    def test_typing_must_cover_the_run_up_to_and_past_a_pattern(self):
+        case = self.case(keys_from="go", keys_until="Starting kernel")
+        text = "go" + "." * 20 + "Starting kernel" + "." * 20   # the pattern ends at offset 37
+
+        def ok(marks):
+            return all(c["ok"] for c in bc.evaluate(case, text, "exited", len(marks), marks))
+        self.assertTrue(ok([2, 5, 10, 15, 20, 40]))
+        self.assertFalse(ok([2, 5, 10, 15, 20]))           # stopped before the kernel started
+        self.assertFalse(ok([2, 5, 10, 15, 40, 50]))       # too few before it
+        self.assertFalse(all(c["ok"] for c in bc.evaluate(case, "go", "exited", 6, [1] * 6)))   # never appeared
+
 
 class ConfigCheckTest(unittest.TestCase):
     def write(self, tmp, name, text):

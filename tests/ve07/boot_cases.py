@@ -74,8 +74,6 @@ UBOOT_VARIANTS = ["hardened", "stock", *CONTROL_FRAGMENTS]
 VERIFIED = rf"sha256,rsa3072:{KEY_NAME}\+ OK"
 BOOTED = r"P2-INITRAMFS-OK kernel=\S+"
 KERNEL_START = r"Starting kernel"
-# Typed input echoed back by the Linux console: keystrokes were still arriving after U-Boot.
-ECHOED_IN_LINUX = r"(?s)Starting kernel.*\n\s*help\s*\n"
 LINUX = r"Linux version \d"
 BANNER = r"(?m)^U-Boot 20\d\d\.\d\d"
 CONSOLE_UP = r"(?m)^In:\s+serial"          # U-Boot's console is ready for input
@@ -223,7 +221,11 @@ class BootResult:
     text: str        # raw console output
     reason: str      # exited | stopped | timeout
     seconds: float
-    keys_sent: int
+    key_marks: list[int]   # per keystroke: length of the cleaned console text when it was sent
+
+    @property
+    def keys_sent(self) -> int:
+        return len(self.key_marks)
 
 
 def keystroke(tick: int) -> bytes:
@@ -252,7 +254,7 @@ def boot(machine: Machine, timeout: int, keys_from: str | None = None, stop: str
 
     thread = threading.Thread(target=reader, daemon=True)
     thread.start()
-    reason, ticks, typing = "exited", 0, False
+    reason, typing, marks = "exited", False, []
     while proc.poll() is None:
         if time.monotonic() - start > timeout:
             reason = "timeout"
@@ -264,9 +266,9 @@ def boot(machine: Machine, timeout: int, keys_from: str | None = None, stop: str
         typing = typing or bool(keys_from and re.search(keys_from, text))
         if typing:
             try:
-                proc.stdin.write(keystroke(ticks))
+                proc.stdin.write(keystroke(len(marks)))
                 proc.stdin.flush()
-                ticks += 1
+                marks.append(len(text))
             except (BrokenPipeError, OSError):
                 pass
         time.sleep(KEY_TICK)
@@ -277,7 +279,7 @@ def boot(machine: Machine, timeout: int, keys_from: str | None = None, stop: str
         except subprocess.TimeoutExpired:
             proc.kill()
     thread.join(5)
-    return BootResult(b"".join(chunks).decode("utf-8", "replace"), reason, time.monotonic() - start, ticks)
+    return BootResult(b"".join(chunks).decode("utf-8", "replace"), reason, time.monotonic() - start, marks)
 
 
 # --- artifacts ---------------------------------------------------------------
@@ -439,6 +441,7 @@ class Case:
     slot: str = "good"
     flash: str = "blank"
     keys_from: str | None = None
+    keys_until: str | None = None   # typing must cover the run up to this pattern and go on past it
     reboot: bool = False
     expect: list[Expect] = dataclasses.field(default_factory=list)
     forbid: list[str] = dataclasses.field(default_factory=list)
@@ -482,7 +485,7 @@ CASES = [
     Case("TC-04f-control", "TC-04", "control", "Stock U-Boot runs the injected environment",
          uboot="stock", flash="env", control_for="TC-04f", expect=[ENV_MARK]),
     Case("TC-04g", "TC-04", "test", "Keystrokes from console start to the end of a good boot reach no prompt",
-         keys_from=CONSOLE_UP, expect=[VERIFIED, BOOTED, ECHOED_IN_LINUX], forbid=CONSOLE),
+         keys_from=CONSOLE_UP, keys_until=KERNEL_START, expect=[VERIFIED, BOOTED], forbid=CONSOLE),
     Case("TC-04g-control", "TC-04", "control", "The same keystrokes stop autoboot when only the delay is restored",
          uboot="ctl-bootdelay", keys_from=CONSOLE_UP, control_for="TC-04g", stop=HELP_OUT,
          expect=[AUTOBOOT, PROMPT, HELP_OUT], forbid=[BOOTFLOW_SCAN, VERIFIED, KERNEL_START]),
@@ -507,7 +510,8 @@ def check_configs(build: Path) -> list[dict]:
     return checks
 
 
-def evaluate(case: Case, text: str, reason: str, keys_sent: int = 0) -> list[dict]:
+def evaluate(case: Case, text: str, reason: str, keys_sent: int = 0,
+             key_marks: list[int] | None = None) -> list[dict]:
     text = clean(text)
     checks = []
     for e in case.expect:
@@ -519,6 +523,15 @@ def evaluate(case: Case, text: str, reason: str, keys_sent: int = 0) -> list[dic
     if case.keys_from and case.role != "control":   # a control's expected console output shows typing
         checks.append({"kind": "keys", "pattern": f"at least {MIN_KEYS} keystrokes typed (typed {keys_sent})",
                        "ok": keys_sent >= MIN_KEYS})
+    if case.keys_until:
+        # Timed on the harness side, so it does not depend on the guest echoing input.
+        m = re.search(case.keys_until, text)
+        marks = key_marks or []
+        before = sum(1 for k in marks if m and k < m.end())
+        after = len(marks) - before if m else 0
+        checks.append({"kind": "keys", "pattern": f"typing covered the run up to {case.keys_until} and went on "
+                       f"past it ({before} keystrokes before, {after} after)",
+                       "ok": before >= MIN_KEYS and after >= 1})
     ended_ok = reason == ("stopped" if case.stop else "exited")
     checks.append({"kind": "end", "pattern": f"run ended: {reason}", "ok": ended_ok})
     return checks
@@ -636,11 +649,11 @@ def main(argv: list[str] | None = None) -> int:
                 tpm.stop()
             log = f"{case.id}.log"
             (out / log).write_text(res.text)
-            checks = evaluate(case, res.text, res.reason, res.keys_sent)
+            checks = evaluate(case, res.text, res.reason, res.keys_sent, res.key_marks)
             ok = all(c["ok"] for c in checks)
             runs.append({"id": case.id, "tc": case.tc, "role": case.role, "title": case.title,
                          "control_for": case.control_for, "uboot": case.uboot, "slot": case.slot,
-                         "flash": case.flash, "keys_from": case.keys_from, "keys_sent": res.keys_sent,
+                         "flash": case.flash, "keys_from": case.keys_from, "keys_until": case.keys_until, "keys_sent": res.keys_sent,
                          "reboot": case.reboot, "ok": ok, "checks": checks, "end": res.reason,
                          "seconds": round(res.seconds, 1), "log": log, "log_sha256": sha256(out / log)})
             print(f"{'PASS' if ok else 'FAIL'}  {case.id:15} {case.title} ({res.seconds:.0f}s, {res.reason})",
