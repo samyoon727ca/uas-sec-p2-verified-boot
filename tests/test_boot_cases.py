@@ -1,14 +1,17 @@
 """Unit tests for the VE-07 harness helpers in tests/ve07/boot_cases.py."""
 from __future__ import annotations
 
+import os
 import struct
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "ve07"))
 import boot_cases as bc  # noqa: E402
+import check_config  # noqa: E402  (cc/uboot, put on the path by boot_cases)
 
 
 def make_fdt(tree: dict) -> bytes:
@@ -102,20 +105,65 @@ class EvaluateTest(unittest.TestCase):
         self.assertIsNotNone(__import__("re").search(bc.PROMPT, "x\n=> "))
 
 
+    def test_counted_expect(self):
+        case = self.case(expect=[("boot", 3)])
+        self.assertTrue(all(c["ok"] for c in bc.evaluate(case, "boot boot boot", "exited")))
+        self.assertFalse(all(c["ok"] for c in bc.evaluate(case, "boot boot", "exited")))
+
+    def test_ansi_sequences_are_ignored(self):
+        checks = bc.evaluate(self.case(expect=[bc.PROMPT]), "x\r\n\x1b[2K=> ", "exited")
+        self.assertTrue(all(c["ok"] for c in checks))
+
+    def test_keystroke_case_needs_enough_keys(self):
+        case = self.case(keys_from="go")
+        self.assertFalse(all(c["ok"] for c in bc.evaluate(case, "go", "exited", bc.MIN_KEYS - 1)))
+        self.assertTrue(all(c["ok"] for c in bc.evaluate(case, "go", "exited", bc.MIN_KEYS)))
+
+
 class ConfigCheckTest(unittest.TestCase):
+    def write(self, tmp, name, text):
+        path = Path(tmp) / name
+        path.write_text(text)
+        return path
+
     def test_reports_missing_setting(self):
         with tempfile.TemporaryDirectory() as tmp:
-            frag, cfg = Path(tmp) / "f.config", Path(tmp) / ".config"
-            frag.write_text("# comment\nCONFIG_A=y\n# CONFIG_B is not set\n")
-            cfg.write_text("CONFIG_A=y\nCONFIG_B=y\n")
-            saved = bc.FRAGMENTS
-            bc.FRAGMENTS = [frag]
-            try:
-                checks = bc.check_config(cfg)
-            finally:
-                bc.FRAGMENTS = saved
+            frag = self.write(tmp, "f.config", "# comment\nCONFIG_A=y\n# CONFIG_B is not set\n")
+            cfg = self.write(tmp, ".config", "CONFIG_A=y\nCONFIG_B=y\n")
+            checks = check_config.check(cfg, [frag])
         self.assertEqual([(c["pattern"], c["ok"]) for c in checks],
                          [("CONFIG_A=y", True), ("# CONFIG_B is not set", False)])
+
+    def test_later_fragment_overrides_earlier(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = self.write(tmp, "a.config", "CONFIG_BOOTDELAY=-2\nCONFIG_A=y\n")
+            b = self.write(tmp, "b.config", "CONFIG_BOOTDELAY=2\n")
+            cfg = self.write(tmp, ".config", "CONFIG_A=y\nCONFIG_BOOTDELAY=2\n")
+            self.assertTrue(all(c["ok"] for c in check_config.check(cfg, [a, b])))
+
+    def test_diff_lists_changed_added_and_removed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = self.write(tmp, "base", "CONFIG_A=y\nCONFIG_B=1\n# CONFIG_C is not set\n")
+            cfg = self.write(tmp, "cfg", "CONFIG_A=y\nCONFIG_B=2\n# CONFIG_C is not set\nCONFIG_D=y\n")
+            self.assertEqual(check_config.diff(cfg, base), ["CONFIG_B=2", "CONFIG_D=y"])
+            self.assertEqual(check_config.diff(base, cfg), ["CONFIG_B=1", "# CONFIG_D removed"])
+
+    def test_each_control_fragment_changes_one_setting(self):
+        for variant, frag in bc.CONTROL_FRAGMENTS.items():
+            self.assertEqual(len(check_config.expected([frag])), 1, variant)
+
+
+class ProvenanceTest(unittest.TestCase):
+    def test_only_github_actions_counts_as_ci(self):
+        with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": ""}):
+            self.assertEqual(bc.environment(), {"kind": "local"})
+        ci = {"GITHUB_ACTIONS": "true", "GITHUB_SERVER_URL": "https://github.com", "GITHUB_REPOSITORY": "o/r",
+              "GITHUB_RUN_ID": "42", "ImageOS": "ubuntu24", "ImageVersion": "20261004.327"}
+        with mock.patch.dict(os.environ, ci):
+            env = bc.environment()
+        self.assertEqual(env["kind"], "ci")
+        self.assertEqual(env["run_url"], "https://github.com/o/r/actions/runs/42")
+        self.assertEqual(env["runner_image"], "ubuntu24 20261004.327")
 
 
 if __name__ == "__main__":

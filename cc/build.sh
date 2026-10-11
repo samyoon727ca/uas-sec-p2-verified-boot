@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Build the inputs for the emulated CC boot chain (tests/ve07):
-#   - U-Boot v2026.07 twice from the pinned tarball: "hardened" (qemu_arm64
-#     defconfig + cc/uboot/p2.config + cc/uboot/qemu.config) and "stock"
-#     (qemu_arm64_defconfig unchanged, used only for control runs);
+#   - U-Boot v2026.07 from the pinned tarball, in four variants:
+#       hardened       qemu_arm64_defconfig + cc/uboot/p2.config + cc/uboot/qemu.config
+#       stock          qemu_arm64_defconfig unchanged (control runs only)
+#       ctl-bootdelay  hardened + cc/uboot/controls/bootdelay.config (control runs only)
+#       ctl-noreset    hardened + cc/uboot/controls/noreset.config (control runs only)
 #   - the pinned Ubuntu arm64 kernel and a busybox initramfs.
-# Every download is checked against a pinned SHA-256. Output goes to $OUT.
+# Every download is checked against a pinned SHA-256, and every variant's
+# .config is checked against its fragments. Output goes to $OUT.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$ROOT/build}
@@ -25,18 +28,6 @@ fetch() { # url sha256 dest
   mv "$dest.part" "$dest"
 }
 
-check_fragment() { # config fragment...
-  local cfg=$1; shift
-  local bad=0 line
-  for frag in "$@"; do
-    while IFS= read -r line; do
-      [[ $line =~ ^CONFIG_ || $line =~ ^\#\ CONFIG_.*\ is\ not\ set$ ]] || continue
-      grep -qxF "$line" "$cfg" || { echo "not applied: $line ($frag)" >&2; bad=1; }
-    done < "$frag"
-  done
-  return $bad
-}
-
 # --- U-Boot -----------------------------------------------------------------
 UB_VER=$(pin version)
 UB_TAR=$DL/u-boot-$UB_VER.tar.bz2
@@ -45,15 +36,23 @@ SRC=$OUT/src/u-boot-$UB_VER
 rm -rf "$SRC" && mkdir -p "$OUT/src" && tar -xjf "$UB_TAR" -C "$OUT/src"
 export SOURCE_DATE_EPOCH=$(pin source_date_epoch)
 
-FRAGS=("$ROOT/cc/uboot/p2.config" "$ROOT/cc/uboot/qemu.config")
-for variant in hardened stock; do
+P2=("$ROOT/cc/uboot/p2.config" "$ROOT/cc/uboot/qemu.config")
+declare -A FRAGS=(
+  [hardened]="${P2[*]}"
+  [stock]=""
+  [ctl-bootdelay]="${P2[*]} $ROOT/cc/uboot/controls/bootdelay.config"
+  [ctl-noreset]="${P2[*]} $ROOT/cc/uboot/controls/noreset.config"
+)
+VARIANTS=(hardened stock ctl-bootdelay ctl-noreset)
+for variant in "${VARIANTS[@]}"; do
   B=$OUT/uboot-$variant
   rm -rf "$B"
   make -s -C "$SRC" O="$B" qemu_arm64_defconfig
-  if [[ $variant == hardened ]]; then
-    "$SRC/scripts/kconfig/merge_config.sh" -m -O "$B" "$B/.config" "${FRAGS[@]}" >/dev/null
+  read -r -a frags <<< "${FRAGS[$variant]}"
+  if (( ${#frags[@]} )); then
+    "$SRC/scripts/kconfig/merge_config.sh" -m -O "$B" "$B/.config" "${frags[@]}" >/dev/null
     make -s -C "$SRC" O="$B" olddefconfig
-    check_fragment "$B/.config" "${FRAGS[@]}"
+    python3 "$ROOT/cc/uboot/check_config.py" "$B/.config" "${frags[@]}"
   fi
   make -s -C "$SRC" O="$B" -j"$JOBS"
   cp "$B/u-boot.bin" "$OUT/u-boot-$variant.bin"
@@ -78,5 +77,14 @@ find "$RD" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 (cd "$RD" && find . -mindepth 1 | LC_ALL=C sort | cpio -o -H newc --reproducible --owner 0:0 --quiet) \
   | gzip -9 -n > "$OUT/initramfs.cpio.gz"
 
-(cd "$OUT" && sha256sum u-boot-hardened.bin u-boot-stock.bin u-boot-hardened.config u-boot-stock.config \
-  Image.gz initramfs.cpio.gz mkimage mkenvimage) | tee "$OUT/SHA256SUMS"
+# --- Record the toolchain that produced these binaries ------------------------
+{
+  "${CROSS_COMPILE}gcc" --version | head -1
+  "${CROSS_COMPILE}ld" --version | head -1
+  gcc --version | head -1
+  dpkg-query -W -f='${Package} ${Version} ${Architecture}\n' 2>/dev/null \
+    | grep -E '^(gcc|cpp|g\+\+|binutils|libgcc|libc6|libstdc|gzip|cpio|device-tree-compiler|libssl|openssl)' || true
+} > "$OUT/toolchain.txt"
+
+(cd "$OUT" && sha256sum u-boot-*.bin u-boot-*.config Image.gz initramfs.cpio.gz mkimage mkenvimage) \
+  | tee "$OUT/SHA256SUMS"

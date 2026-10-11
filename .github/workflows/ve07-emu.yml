@@ -27,7 +27,7 @@ jobs:
           path: .cache/dl
           # Downloads only; cc/build.sh re-checks every SHA-256 on use.
           key: ve07-dl-${{ hashFiles('cc/uboot/pin.txt', 'cc/emu/guest.lock') }}
-      - name: Build U-Boot (hardened and stock), kernel and initramfs
+      - name: Build U-Boot (hardened, stock and control variants), kernel and initramfs
         run: cc/build.sh
       - name: Run VE-07 verified-boot cases (TC-01, TC-03, TC-04)
         run: python3 tests/ve07/boot_cases.py --build build --out "$RUNNER_TEMP/ve07-ci"

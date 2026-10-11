@@ -13,10 +13,11 @@ checks that only the chain signed with the dev K-CC-OS key boots:
          and an environment injected into flash are all refused or ignored;
          keystrokes never reach a console prompt
 
-Control runs repeat the environment, legacy-image and console cases on stock
-qemu_arm64_defconfig and must show the attack succeeding there, so each test
-can be seen to detect what it looks for. A negative case counts only if the
-positive control passed in the same run.
+Each attack that would succeed against a weaker setup has a control run that
+shows it succeeding there: the environment and legacy-image cases on stock
+qemu_arm64_defconfig, and the two console cases on the P2 build with exactly
+one setting changed (the autoboot delay, or the final reset). A negative case
+counts only if the positive control passed in the same run.
 
 Keys are generated per run in a temporary directory and deleted; evidence
 records only public-key SHA-256 values. Writes one console log per case and
@@ -25,8 +26,8 @@ summary.json/summary.md to --out. Exit status 0 only if every case passes.
 Usage:
     python3 tests/ve07/boot_cases.py --build build --out evidence/ve07-ci/<run>
 
-Standard library only. Needs qemu-system-aarch64, swtpm, openssl, dtc and
-fdtput on PATH, and mkimage/mkenvimage from the U-Boot build.
+Standard library only. Needs qemu-system-aarch64, swtpm, openssl, dtc,
+fdtget and fdtput on PATH, and mkimage/mkenvimage from the U-Boot build.
 """
 from __future__ import annotations
 
@@ -48,27 +49,48 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "cc" / "uboot"))
+import check_config  # noqa: E402
 
 KEY_NAME = "cc-os-dev"
+FIT_SOURCE = ROOT / "cc/fit/cc.its"
 FIT_ADDR_SLOT_BYTES = 64 * 1024 * 1024   # matches "virtio read 0x50000000 0 0x20000"
 FLASH_BYTES = 64 * 1024 * 1024           # QEMU virt flash bank size
 ENV_SIZE = 0x40000                       # stock qemu_arm64 CONFIG_ENV_SIZE (flash1 offset 0)
 EVENT_LOG = (0x60000000, 0x10000)        # TPM event-log region handed to Linux
 CASE_TIMEOUT = 240
+KEY_TICK = 0.2                           # seconds between keystrokes
+MIN_KEYS = 5                             # a keystroke case must type at least this many
 
-# Console patterns.
-VERIFIED = rf"sha256,rsa3072:{KEY_NAME}\+ OK"
-BOOTED = r"P2-INITRAMFS-OK"
-KERNEL_START = r"Starting kernel"
-LINUX = r"Linux version \d"
-PROMPT = r"(?m)^=> "
-RESET = r"resetting \.\.\."
-ENV_MARK = r"P2-ENV-INJECTED"
-REQUIRED_FAIL = rf"Failed to verify required signature 'key-{KEY_NAME}'"
-REFUSED = [KERNEL_START, BOOTED, PROMPT, ENV_MARK]
-
-# Settings the built hardened .config must hold (from cc/uboot/*.config).
+# The P2 build and the variants used only for control runs (cc/build.sh).
 FRAGMENTS = [ROOT / "cc/uboot/p2.config", ROOT / "cc/uboot/qemu.config"]
+CONTROL_FRAGMENTS = {
+    "ctl-bootdelay": ROOT / "cc/uboot/controls/bootdelay.config",
+    "ctl-noreset": ROOT / "cc/uboot/controls/noreset.config",
+}
+UBOOT_VARIANTS = ["hardened", "stock", *CONTROL_FRAGMENTS]
+
+# Console patterns, matched after ANSI escape sequences are removed.
+VERIFIED = rf"sha256,rsa3072:{KEY_NAME}\+ OK"
+BOOTED = r"P2-INITRAMFS-OK kernel=\S+"
+KERNEL_START = r"Starting kernel"
+# Typed input echoed back by the Linux console: keystrokes were still arriving after U-Boot.
+ECHOED_IN_LINUX = r"(?s)Starting kernel.*\n\s*help\s*\n"
+LINUX = r"Linux version \d"
+BANNER = r"(?m)^U-Boot 20\d\d\.\d\d"
+CONSOLE_UP = r"(?m)^In:\s+serial"          # U-Boot's console is ready for input
+PROMPT = r"(?m)^=> "
+AUTOBOOT = r"Hit any key to stop autoboot"
+HELP_OUT = r"(?m)^bootm\s+- boot application image"
+UNKNOWN_CMD = r"Unknown command"
+BOOTFLOW_SCAN = r"Scanning for bootflows"
+RESET = r"resetting \.\.\."
+ENV_MARK = r"(?m)^P2-ENV-INJECTED$"
+REQUIRED_FAIL = rf"Failed to verify required signature 'key-{KEY_NAME}'"
+BAD_KERNEL = r"Bad hash value for 'hash' hash node in 'kernel' image node"
+CONSOLE = [PROMPT, AUTOBOOT, HELP_OUT, UNKNOWN_CMD]
+REFUSED = [KERNEL_START, BOOTED, ENV_MARK, *CONSOLE]
+ANSI = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*[@-~]|[78])")
 
 
 # --- small helpers ----------------------------------------------------------
@@ -91,6 +113,11 @@ def first_line(cmd: list[str]) -> str:
         return (out.stdout or out.stderr).strip().splitlines()[0]
     except (OSError, IndexError, subprocess.TimeoutExpired):
         return "unavailable"
+
+
+def clean(text: str) -> str:
+    """Console text as matched: ANSI escape sequences and carriage returns removed."""
+    return ANSI.sub("", text).replace("\r", "")
 
 
 # --- FDT: find a property's value inside a FIT, to tamper after signing -----
@@ -144,12 +171,13 @@ class Machine:
     flash1: Path
     dtb: Path | None
     tpm_sock: Path
+    reboot: bool = False
 
     def argv(self, dumpdtb: Path | None = None) -> list[str]:
         machine = "virt,gic-version=3" + (f",dumpdtb={dumpdtb}" if dumpdtb else "")
         argv = [
             "qemu-system-aarch64", "-machine", machine, "-cpu", "cortex-a57", "-smp", "1", "-m", "2G",
-            "-display", "none", "-serial", "stdio", "-monitor", "none", "-no-reboot", "-nic", "none",
+            "-display", "none", "-serial", "stdio", "-monitor", "none", "-nic", "none",
             "-bios", str(self.bios),
             "-chardev", f"socket,id=chrtpm,path={self.tpm_sock}",
             "-tpmdev", "emulator,id=tpm0,chardev=chrtpm", "-device", "tpm-tis-device,tpmdev=tpm0",
@@ -157,6 +185,8 @@ class Machine:
             "-device", "virtio-blk-device,drive=slot",
             "-drive", f"if=pflash,unit=1,file={self.flash1},format=raw,readonly=on",
         ]
+        if not self.reboot:
+            argv.append("-no-reboot")   # a guest reset ends the run
         if self.dtb and not dumpdtb:
             argv += ["-dtb", str(self.dtb)]
         return argv
@@ -188,11 +218,28 @@ class Swtpm:
                 self.proc.kill()
 
 
-def boot(machine: Machine, timeout: int, keys: bool = False, stop: str | None = None) -> tuple[str, str, float]:
-    """Run QEMU until it exits, `stop` appears on the console, or timeout.
+@dataclasses.dataclass
+class BootResult:
+    text: str        # raw console output
+    reason: str      # exited | stopped | timeout
+    seconds: float
+    keys_sent: int
 
-    With keys=True, keystrokes are typed at the console throughout, as an
-    attacker with serial access would. Returns (console text, end reason, seconds).
+
+def keystroke(tick: int) -> bytes:
+    """What an attacker at the serial console types: a command every fifth tick, spaces between."""
+    return b"help\r" if tick % 5 == 0 else b" "
+
+
+def boot(machine: Machine, timeout: int, keys_from: str | None = None, stop: str | None = None,
+         stop_count: int = 1) -> BootResult:
+    """Run QEMU until it exits, `stop` has appeared `stop_count` times, or timeout.
+
+    With `keys_from` set, keystrokes are typed at the serial console every
+    KEY_TICK seconds from the moment that pattern appears until the run ends.
+    Typing starts at a console line, not at power-on: in QEMU, keystrokes sent
+    before U-Boot's console is up never stopped stock autoboot in our runs,
+    while keystrokes sent after it did.
     """
     start = time.monotonic()
     proc = subprocess.Popen(machine.argv(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -205,22 +252,24 @@ def boot(machine: Machine, timeout: int, keys: bool = False, stop: str | None = 
 
     thread = threading.Thread(target=reader, daemon=True)
     thread.start()
-    reason, ticks = "exited", 0
+    reason, ticks, typing = "exited", 0, False
     while proc.poll() is None:
         if time.monotonic() - start > timeout:
             reason = "timeout"
             break
-        if stop and re.search(stop, b"".join(chunks).decode("utf-8", "replace")):
+        text = clean(b"".join(chunks).decode("utf-8", "replace"))
+        if stop and len(re.findall(stop, text)) >= stop_count:
             reason = "stopped"
             break
-        if keys:
+        typing = typing or bool(keys_from and re.search(keys_from, text))
+        if typing:
             try:
-                proc.stdin.write(b"help\r" if ticks % 5 == 0 else b"\r")
+                proc.stdin.write(keystroke(ticks))
                 proc.stdin.flush()
+                ticks += 1
             except (BrokenPipeError, OSError):
                 pass
-            ticks += 1
-        time.sleep(0.2)
+        time.sleep(KEY_TICK)
     if proc.poll() is None:
         proc.terminate()
         try:
@@ -228,49 +277,10 @@ def boot(machine: Machine, timeout: int, keys: bool = False, stop: str | None = 
         except subprocess.TimeoutExpired:
             proc.kill()
     thread.join(5)
-    text = b"".join(chunks).decode("utf-8", "replace").replace("\r", "")
-    return text, reason, time.monotonic() - start
+    return BootResult(b"".join(chunks).decode("utf-8", "replace"), reason, time.monotonic() - start, ticks)
 
 
 # --- artifacts ---------------------------------------------------------------
-
-FIT_ITS = """/dts-v1/;
-/ {{
-	description = "P2 emulated CC boot chain";
-	#address-cells = <1>;
-	images {{
-		kernel {{
-			description = "Ubuntu 6.8.0-146-generic arm64";
-			data = /incbin/("Image.gz");
-			type = "kernel"; arch = "arm64"; os = "linux"; compression = "gzip";
-			load = <0x40400000>; entry = <0x40400000>;
-			hash {{ algo = "sha256"; }};
-		}};
-		fdt {{
-			data = /incbin/("kernel.dtb");
-			type = "flat_dt"; arch = "arm64"; compression = "none";
-			hash {{ algo = "sha256"; }};
-		}};
-		ramdisk {{
-			data = /incbin/("initramfs.cpio.gz");
-			type = "ramdisk"; arch = "arm64"; os = "linux"; compression = "none";
-			hash {{ algo = "sha256"; }};
-		}};
-	}};
-	configurations {{
-		default = "conf";
-		conf {{
-			kernel = "kernel"; fdt = "fdt"; ramdisk = "ramdisk";
-{signature}		}};
-	}};
-}};
-"""
-SIGNATURE = f"""\t\t\tsignature {{
-\t\t\t\talgo = "sha256,rsa3072"; key-name-hint = "{KEY_NAME}";
-\t\t\t\tsign-images = "kernel", "fdt", "ramdisk";
-\t\t\t}};
-"""
-
 
 class Artifacts:
     """Keys, devicetrees, FIT variants, slot disks and flash images for one run."""
@@ -278,7 +288,7 @@ class Artifacts:
     def __init__(self, build: Path, work: Path, short: Path) -> None:
         self.build, self.work, self.short = build, work, short
         self.mkimage, self.mkenvimage = build / "mkimage", build / "mkenvimage"
-        self.uboot = {"hardened": build / "u-boot-hardened.bin", "stock": build / "u-boot-stock.bin"}
+        self.uboot = {v: build / f"u-boot-{v}.bin" for v in UBOOT_VARIANTS}
         self.env = dict(os.environ, SOURCE_DATE_EPOCH=os.environ.get("SOURCE_DATE_EPOCH", "1783381843"))
         self.slots: dict[str, Path] = {}
         self.flash: dict[str, Path] = {}
@@ -349,13 +359,19 @@ class Artifacts:
         self.devicetree()
         for f in ("Image.gz", "initramfs.cpio.gz"):
             shutil.copy(self.build / f, self.work / f)
-        (self.work / "fit.its").write_text(FIT_ITS.format(signature=SIGNATURE))
-        (self.work / "fit-unsigned.its").write_text(FIT_ITS.format(signature=""))
+        its = FIT_SOURCE.read_text()
+        unsigned, n = re.subn(r"\n\t+signature \{.*?\n\t+\};", "", its, flags=re.S)
+        if n != 1:
+            raise ValueError(f"{FIT_SOURCE.name}: expected one signature node, found {n}")
+        (self.work / "fit.its").write_text(its)
+        (self.work / "fit-unsigned.its").write_text(unsigned)
 
         # Signed FIT; the public key goes into the control DT as a required key.
         self.make_image("-f", "fit.its", "-K", "ctrl.dtb", "-k", str(self.short / "keys"), "-r", "good.itb")
         good = self.work / "good.itb"
         self.disk("good", good.read_bytes())
+        self.notes["key_required"] = run(["fdtget", str(self.work / "ctrl.dtb"),
+                                          f"/signature/key-{KEY_NAME}", "required"]).stdout.strip()
 
         # TC-03: one byte changed after signing, in each payload.
         for node in ("kernel", "ramdisk", "fdt"):
@@ -386,7 +402,7 @@ class Artifacts:
 
         # TC-04: legacy uImage (no signature format exists for it).
         self.make_image("-A", "arm64", "-O", "linux", "-T", "kernel", "-C", "gzip", "-a", "0x40400000",
-                     "-e", "0x40400000", "-n", "p2-legacy", "-d", "Image.gz", "legacy.uimg")
+                        "-e", "0x40400000", "-n", "p2-legacy", "-d", "Image.gz", "legacy.uimg")
         self.disk("legacy", (self.work / "legacy.uimg").read_bytes())
 
         # TC-04: boot-loader environment injected at stock U-Boot's env location.
@@ -399,16 +415,19 @@ class Artifacts:
         self.flash_image("env", (self.work / "env.bin").read_bytes())
 
     def hashes(self) -> dict[str, str]:
-        names = ["ctrl.dtb", "kernel.dtb", "good.itb", "unsigned.itb", "rogue.itb", "added-config.itb",
+        names = ["fit.its", "ctrl.dtb", "kernel.dtb", "good.itb", "unsigned.itb", "rogue.itb", "added-config.itb",
                  "tamper-kernel.itb", "tamper-ramdisk.itb", "tamper-fdt.itb", "legacy.uimg", "env.bin"]
         out = {n: sha256(self.work / n) for n in names}
-        for n in ("u-boot-hardened.bin", "u-boot-stock.bin", "u-boot-hardened.config", "u-boot-stock.config",
-                  "Image.gz", "initramfs.cpio.gz"):
+        built = [f"u-boot-{v}.{ext}" for v in UBOOT_VARIANTS for ext in ("bin", "config")]
+        for n in built + ["Image.gz", "initramfs.cpio.gz", "mkimage", "mkenvimage"]:
             out[n] = sha256(self.build / n)
         return out
 
 
 # --- cases -------------------------------------------------------------------
+
+Expect = str | tuple[str, int]   # a pattern, or (pattern, minimum number of matches)
+
 
 @dataclasses.dataclass
 class Case:
@@ -419,20 +438,22 @@ class Case:
     uboot: str = "hardened"
     slot: str = "good"
     flash: str = "blank"
-    keys: bool = False
-    expect: list[str] = dataclasses.field(default_factory=list)
+    keys_from: str | None = None
+    reboot: bool = False
+    expect: list[Expect] = dataclasses.field(default_factory=list)
     forbid: list[str] = dataclasses.field(default_factory=list)
     stop: str | None = None
+    stop_count: int = 1
+    control_for: str | None = None
 
 
 CASES = [
     Case("TC-01", "TC-01", "positive", "Signed chain boots to the initramfs",
-         expect=[VERIFIED, KERNEL_START, BOOTED], forbid=[PROMPT, ENV_MARK]),
+         expect=[VERIFIED, KERNEL_START, BOOTED], forbid=[ENV_MARK, *CONSOLE]),
     # TC-03: the configuration signature still verifies (the signed hash values are
     # untouched); the per-image hash check catches the changed byte.
     Case("TC-03a", "TC-03", "test", "Kernel changed after signing", slot="tamper-kernel",
-         expect=[VERIFIED, r"Bad hash value for 'hash' hash node in 'kernel' image node", RESET],
-         forbid=REFUSED),
+         expect=[VERIFIED, BAD_KERNEL, RESET], forbid=REFUSED),
     Case("TC-03b", "TC-03", "test", "Initramfs changed after signing", slot="tamper-ramdisk",
          expect=[VERIFIED, r"Bad hash value for 'hash' hash node in 'ramdisk' image node", RESET],
          forbid=REFUSED),
@@ -446,49 +467,99 @@ CASES = [
          forbid=REFUSED),
     Case("TC-04c", "TC-04", "test", "Unsigned FIT", slot="unsigned",
          expect=[r"No 'signature' subnode found for 'conf' config node", REQUIRED_FAIL, RESET],
-         forbid=REFUSED + [VERIFIED]),
+         forbid=[*REFUSED, VERIFIED]),
     Case("TC-04d", "TC-04", "test", "FIT signed by a rogue key with the same key name", slot="rogue",
          expect=[rf"sha256,rsa3072:{KEY_NAME}-\s+error!", r"Verification failed for 'conf' config node",
                  REQUIRED_FAIL, RESET],
-         forbid=REFUSED + [VERIFIED]),
+         forbid=[*REFUSED, VERIFIED]),
     Case("TC-04e", "TC-04", "test", "Legacy uImage in the boot slot", slot="legacy",
-         expect=[r"Wrong Image Type for bootm command", RESET], forbid=REFUSED + [LINUX]),
+         expect=[r"Wrong Image Type for bootm command", RESET], forbid=[*REFUSED, LINUX]),
     Case("TC-04e-control", "TC-04", "control", "Stock U-Boot boots the same legacy uImage (via injected environment)",
-         uboot="stock", slot="legacy", flash="env",
+         uboot="stock", slot="legacy", flash="env", control_for="TC-04e",
          expect=[ENV_MARK, r"Booting kernel from Legacy Image", KERNEL_START, LINUX]),
     Case("TC-04f", "TC-04", "test", "Environment injected into flash is ignored", flash="env",
-         expect=[VERIFIED, BOOTED], forbid=[ENV_MARK, PROMPT]),
+         expect=[VERIFIED, BOOTED], forbid=[ENV_MARK, *CONSOLE]),
     Case("TC-04f-control", "TC-04", "control", "Stock U-Boot runs the injected environment",
-         uboot="stock", flash="env", expect=[ENV_MARK]),
-    Case("TC-04g", "TC-04", "test", "Keystrokes during a good boot do not interrupt it",
-         keys=True, expect=[VERIFIED, BOOTED], forbid=[PROMPT]),
-    Case("TC-04h", "TC-04", "test", "Keystrokes after a refused boot reach no prompt",
-         slot="tamper-kernel", keys=True, expect=[RESET], forbid=REFUSED),
-    Case("TC-04g-control", "TC-04", "control", "Keystrokes stop stock U-Boot at a prompt",
-         uboot="stock", keys=True, expect=[PROMPT], stop=PROMPT),
+         uboot="stock", flash="env", control_for="TC-04f", expect=[ENV_MARK]),
+    Case("TC-04g", "TC-04", "test", "Keystrokes from console start to the end of a good boot reach no prompt",
+         keys_from=CONSOLE_UP, expect=[VERIFIED, BOOTED, ECHOED_IN_LINUX], forbid=CONSOLE),
+    Case("TC-04g-control", "TC-04", "control", "The same keystrokes stop autoboot when only the delay is restored",
+         uboot="ctl-bootdelay", keys_from=CONSOLE_UP, control_for="TC-04g", stop=HELP_OUT,
+         expect=[AUTOBOOT, PROMPT, HELP_OUT], forbid=[BOOTFLOW_SCAN, VERIFIED, KERNEL_START]),
+    Case("TC-04h", "TC-04", "test", "Keystrokes after a refused boot reach no prompt; the board resets and refuses again",
+         slot="tamper-kernel", reboot=True, keys_from=BAD_KERNEL, stop=BAD_KERNEL, stop_count=5,
+         expect=[(BANNER, 5), (BAD_KERNEL, 5), RESET], forbid=[KERNEL_START, BOOTED, *CONSOLE]),
+    Case("TC-04h-control", "TC-04", "control", "The same keystrokes reach a prompt when only the reset is removed",
+         uboot="ctl-noreset", slot="tamper-kernel", keys_from=BAD_KERNEL, control_for="TC-04h", stop=HELP_OUT,
+         expect=[BAD_KERNEL, PROMPT, HELP_OUT], forbid=[KERNEL_START, RESET]),
 ]
 
 
-def check_config(path: Path) -> list[dict]:
-    """TC-04a: every line of the P2 fragments is present in the built .config."""
-    text = set(path.read_text().splitlines())
-    checks = []
-    for frag in FRAGMENTS:
-        for line in frag.read_text().splitlines():
-            if line.startswith("CONFIG_") or re.match(r"^# CONFIG_\S+ is not set$", line):
-                checks.append({"kind": "config", "pattern": line, "ok": line in text})
+def check_configs(build: Path) -> list[dict]:
+    """TC-04a: the hardened .config holds every P2 setting, and each control
+    build differs from it in exactly the one setting its fragment changes."""
+    checks = check_config.check(build / "u-boot-hardened.config", FRAGMENTS)
+    for variant, frag in CONTROL_FRAGMENTS.items():
+        want = sorted(check_config.expected([frag]).values())
+        got = check_config.diff(build / f"u-boot-{variant}.config", build / "u-boot-hardened.config")
+        checks.append({"kind": "control-diff", "pattern": f"{variant} differs from hardened only by {want}",
+                       "ok": got == want, "observed": got})
     return checks
 
 
-def evaluate(case: Case, text: str, reason: str) -> list[dict]:
-    checks = [{"kind": "expect", "pattern": p, "ok": bool(re.search(p, text))} for p in case.expect]
+def evaluate(case: Case, text: str, reason: str, keys_sent: int = 0) -> list[dict]:
+    text = clean(text)
+    checks = []
+    for e in case.expect:
+        pattern, need = (e, 1) if isinstance(e, str) else e
+        found = len(re.findall(pattern, text))
+        label = pattern if need == 1 else f"{pattern} (at least {need}x)"
+        checks.append({"kind": "expect", "pattern": label, "ok": found >= need})
     checks += [{"kind": "forbid", "pattern": p, "ok": not re.search(p, text)} for p in case.forbid]
+    if case.keys_from and case.role != "control":   # a control's expected console output shows typing
+        checks.append({"kind": "keys", "pattern": f"at least {MIN_KEYS} keystrokes typed (typed {keys_sent})",
+                       "ok": keys_sent >= MIN_KEYS})
     ended_ok = reason == ("stopped" if case.stop else "exited")
     checks.append({"kind": "end", "pattern": f"run ended: {reason}", "ok": ended_ok})
     return checks
 
 
-# --- main --------------------------------------------------------------------
+# --- provenance --------------------------------------------------------------
+
+def environment() -> dict[str, str]:
+    """Where this run happened. Only a GitHub Actions run counts as CI evidence."""
+    env = os.environ
+    if env.get("GITHUB_ACTIONS") != "true":
+        return {"kind": "local"}
+    server, repo, run_id = env.get("GITHUB_SERVER_URL", ""), env.get("GITHUB_REPOSITORY", ""), env.get("GITHUB_RUN_ID", "")
+    return {
+        "kind": "ci",
+        "run_id": run_id,
+        "run_attempt": env.get("GITHUB_RUN_ATTEMPT", ""),
+        "run_url": f"{server}/{repo}/actions/runs/{run_id}",
+        "workflow": env.get("GITHUB_WORKFLOW", ""),
+        "event": env.get("GITHUB_EVENT_NAME", ""),
+        "ref": env.get("GITHUB_REF", ""),
+        "sha": env.get("GITHUB_SHA", ""),
+        "runner_image": f"{env.get('ImageOS', '')} {env.get('ImageVersion', '')}".strip(),
+    }
+
+
+def host_packages(path: Path = ROOT / "cc/emu/host-packages.txt") -> dict:
+    """Installed versions of the pinned host packages, compared with the pins."""
+    snapshot, packages = "", []
+    for line in path.read_text().splitlines():
+        if line.startswith("snapshot:"):
+            snapshot = line.split(":", 1)[1].strip()
+        elif line.strip() and not line.startswith("#"):
+            name, want = line.split()
+            try:
+                got = run(["dpkg-query", "-W", "-f=${Version}", name]).stdout.strip()
+            except (OSError, subprocess.CalledProcessError):
+                got = "missing"
+            packages.append({"name": name, "pinned": want, "installed": got, "ok": got == want})
+    return {"snapshot": snapshot, "all_match": all(p["ok"] for p in packages), "packages": packages}
+
 
 def git_state() -> dict[str, str]:
     try:
@@ -500,10 +571,16 @@ def git_state() -> dict[str, str]:
 
 
 def write_markdown(out: Path, summary: dict) -> None:
+    env = summary["environment"]
+    where = f"GitHub Actions run [{env['run_id']}]({env['run_url']}) ({env['runner_image']})" \
+        if env["kind"] == "ci" else "local run (not CI evidence)"
     lines = [
         "# VE-07 emulated run: verified boot (TC-01, TC-03, TC-04)", "",
         f"- Date (UTC): {summary['date_utc']}",
+        f"- Where: {where}",
         f"- Code commit: `{summary['git']['commit']}` (cc/ or tests/ modified: {summary['git']['cc_or_tests_modified']})",
+        f"- Host packages match the pins (snapshot {summary['host_packages']['snapshot']}): "
+        f"{'yes' if summary['host_packages']['all_match'] else '**no**'}",
         f"- Result: **{'PASS' if summary['passed'] else 'FAIL'}**",
         "", "| Test case | Result |", "|---|---|",
     ]
@@ -511,11 +588,15 @@ def write_markdown(out: Path, summary: dict) -> None:
     lines += ["", "| Run | Role | What | Result | Seconds | Log |", "|---|---|---|---|---|---|"]
     for r in summary["runs"]:
         log = f"[{r['log']}]({r['log']})" if r.get("log") else "–"
-        lines.append(f"| {r['id']} | {r['role']} | {r['title']} | {'pass' if r['ok'] else '**FAIL**'} | "
+        role = r["role"] + (f" for {r['control_for']}" if r.get("control_for") else "")
+        lines.append(f"| {r['id']} | {role} | {r['title']} | {'pass' if r['ok'] else '**FAIL**'} | "
                      f"{r.get('seconds', 0):.0f} | {log} |")
-    lines += ["", "Every check behind each result is in `summary.json`.", ""]
+    lines += ["", "Every check behind each result is in `summary.json`. Logs are the raw console output; "
+              "patterns are matched with ANSI escape sequences removed.", ""]
     (out / "summary.md").write_text("\n".join(lines))
 
+
+# --- main --------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -536,28 +617,34 @@ def main(argv: list[str] | None = None) -> int:
         art.build_all()
 
         runs = []
-        cfg_checks = check_config(build / "u-boot-hardened.config")
+        cfg_checks = check_configs(build)
+        cfg_checks.append({"kind": "required-key", "pattern": f"control DT marks key-{KEY_NAME} required",
+                           "ok": art.notes["key_required"] in ("conf", "image"),
+                           "observed": art.notes["key_required"]})
         runs.append({"id": "TC-04a", "tc": "TC-04", "role": "test",
-                     "title": "Built .config holds every P2 setting", "ok": all(c["ok"] for c in cfg_checks),
-                     "checks": cfg_checks, "log": None})
+                     "title": "Built .config holds every P2 setting; each control build changes exactly one",
+                     "ok": all(c["ok"] for c in cfg_checks), "checks": cfg_checks, "log": None})
 
         selected = [c for c in CASES if not args.only or c.id in args.only or c.id == "TC-01"]
         for case in selected:
             tpm = Swtpm(short / f"tpm-{case.id}")
             try:
                 m = Machine(art.uboot[case.uboot], art.slots[case.slot], art.flash[case.flash],
-                            work / "ctrl.dtb", tpm.sock)
-                text, reason, secs = boot(m, CASE_TIMEOUT, keys=case.keys, stop=case.stop)
+                            work / "ctrl.dtb", tpm.sock, reboot=case.reboot)
+                res = boot(m, CASE_TIMEOUT, keys_from=case.keys_from, stop=case.stop, stop_count=case.stop_count)
             finally:
                 tpm.stop()
             log = f"{case.id}.log"
-            (out / log).write_text(text)
-            checks = evaluate(case, text, reason)
+            (out / log).write_text(res.text)
+            checks = evaluate(case, res.text, res.reason, res.keys_sent)
             ok = all(c["ok"] for c in checks)
             runs.append({"id": case.id, "tc": case.tc, "role": case.role, "title": case.title,
-                         "uboot": case.uboot, "slot": case.slot, "flash": case.flash, "keys": case.keys,
-                         "ok": ok, "checks": checks, "end": reason, "seconds": round(secs, 1), "log": log})
-            print(f"{'PASS' if ok else 'FAIL'}  {case.id:15} {case.title} ({secs:.0f}s, {reason})", flush=True)
+                         "control_for": case.control_for, "uboot": case.uboot, "slot": case.slot,
+                         "flash": case.flash, "keys_from": case.keys_from, "keys_sent": res.keys_sent,
+                         "reboot": case.reboot, "ok": ok, "checks": checks, "end": res.reason,
+                         "seconds": round(res.seconds, 1), "log": log, "log_sha256": sha256(out / log)})
+            print(f"{'PASS' if ok else 'FAIL'}  {case.id:15} {case.title} ({res.seconds:.0f}s, {res.reason})",
+                  flush=True)
 
         positive = next(r for r in runs if r["role"] == "positive")
         test_cases = {}
@@ -568,11 +655,16 @@ def main(argv: list[str] | None = None) -> int:
                 r["note"] = "not counted: the positive control (TC-01) failed in this run"
             test_cases[tc] = "passed" if test_cases.get(tc, "passed") == "passed" and r["ok"] else "failed"
 
+        env = environment()
+        pkgs = host_packages()
+        toolchain = build / "toolchain.txt"
         summary = {
-            "event": "VE-07", "environment": "ci (emulated)",
+            "event": "VE-07", "harness": "tests/ve07/boot_cases.py",
+            "environment": env,
             "date_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "git": git_state(),
-            "passed": all(r["ok"] for r in runs),
+            # CI evidence also needs every host package at its pinned version.
+            "passed": all(r["ok"] for r in runs) and (pkgs["all_match"] or env["kind"] != "ci"),
             "test_cases": dict(sorted(test_cases.items())),
             "host": {
                 "os": platform.platform(), "python": platform.python_version(),
@@ -582,6 +674,8 @@ def main(argv: list[str] | None = None) -> int:
                 "dtc": first_line(["dtc", "--version"]),
                 "mkimage": first_line([str(art.mkimage), "-V"]),
             },
+            "host_packages": pkgs,
+            "toolchain": toolchain.read_text().splitlines() if toolchain.exists() else [],
             "pins": {
                 "u-boot": (ROOT / "cc/uboot/pin.txt").read_text(),
                 "guest": (ROOT / "cc/emu/guest.lock").read_text(),
@@ -591,10 +685,13 @@ def main(argv: list[str] | None = None) -> int:
             "notes": art.notes,
             "runs": runs,
         }
+        if env["kind"] == "ci" and not pkgs["all_match"]:
+            for tc in summary["test_cases"]:
+                summary["test_cases"][tc] = "failed"
         (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
         write_markdown(out, summary)
         print(f"{'PASS' if summary['passed'] else 'FAIL'}: {sum(r['ok'] for r in runs)}/{len(runs)} runs; "
-              + ", ".join(f"{k} {v}" for k, v in sorted(test_cases.items())))
+              + ", ".join(f"{k} {v}" for k, v in sorted(summary["test_cases"].items())))
         return 0 if summary["passed"] else 1
     finally:
         shutil.rmtree(short, ignore_errors=True)   # removes the per-run private keys
