@@ -38,10 +38,10 @@ Generated from the CSVs by `tools/render_views.py`. CI fails if this view drifts
 
 | ID | Event | Test case | Verifies | CI | Hardware | Pass criteria |
 |---|---|---|---|---|---|---|
-| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261003-c87c3e9/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. |
+| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261011-7bc523b/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. |
 | TC-02 | VE-07 | Modified boot loader refused by the hardware root of trust | SR-005 | – | planned | The Raspberry Pi boot loader refuses both images and U-Boot never runs. |
-| TC-03 | VE-07 | Modified kernel, initramfs or devicetree refused | SR-005 | [passed](../evidence/ve07-ci/20261003-c87c3e9/summary.md) | planned | U-Boot reports a hash mismatch for the changed image, does not start the kernel and resets without offering a console. |
-| TC-04 | VE-07 | Modified boot configuration refused | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261003-c87c3e9/summary.md) | planned | Every attempt is refused or ignored and no console prompt appears. The control runs show the stock configuration accepts the injected environment and the legacy image, and the same keystrokes reach a prompt when either console setting is relaxed. |
+| TC-03 | VE-07 | Modified kernel, initramfs or devicetree refused | SR-005 | [passed](../evidence/ve07-ci/20261011-7bc523b/summary.md) | planned | U-Boot reports a hash mismatch for the changed image, does not start the kernel and resets without offering a console. |
+| TC-04 | VE-07 | Modified boot configuration refused | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261011-7bc523b/summary.md) | planned | Every attempt is refused or ignored and no console prompt appears. The control runs show the stock configuration accepts the injected environment and the legacy image, and the same keystrokes reach a prompt when either console setting is relaxed. |
 | TC-05 | VE-07 | Keys unseal in the measured, unmodified boot state | SR-010, SR-010.1, SR-010.2 | planned | planned | Both keys unseal and match the provisioned values. |
 | TC-06 | VE-07 | Keys do not unseal from a modified boot state | SR-010, SR-010.1 | planned | planned | Unseal fails in every case. |
 | TC-07 | VE-07 | Keys do not unseal from removed storage | SR-010 | planned | planned | The sealed objects do not load on the second TPM. |
@@ -61,6 +61,7 @@ Generated from the CSVs by `tools/render_views.py`. CI fails if this view drifts
   - `summary.json`: tool versions, pins, SHA-256 of every built artifact and public key, and each case's result;
   - one console log per case.
 - **Scripted.** A harness exits non-zero if any case fails, and CI runs it on every change to `cc/` or the harness. VE-07's emulated harness is [`tests/ve07/boot_cases.py`](../tests/ve07/boot_cases.py), run by the [`ve07-emu`](../.github/workflows/ve07-emu.yml) workflow, which uploads its evidence as a build artifact.
+- **Provenance.** A `ci` folder is the unchanged artifact of a GitHub Actions run; its `summary.json` records the run ID, runner image and installed host package versions. Runs anywhere else are marked `local` and are not CI evidence.
 - **Controls first.** A negative case counts only if the positive control passed in the same run. Where the attack would succeed against a weaker setup (for example stock `qemu_arm64_defconfig`), a control run shows it succeeding there, so the test can be seen to detect it.
 - **Hardware runs** are run by the owner on owned devices with the scripts in this repo. Their logs are committed the same way.
 

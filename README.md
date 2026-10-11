@@ -11,7 +11,7 @@ Each step traces back to P1's threats and verification events.
 
 > **Notional and unclassified.** Built only from public sources: U-Boot, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; first emulated evidence in.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261003-c87c3e9/summary.md)). Sealing, the FC and all hardware runs are still planned. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
+**Status: design baselined; first emulated evidence in.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261011-7bc523b/summary.md)). Sealing, the FC and all hardware runs are still planned. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 

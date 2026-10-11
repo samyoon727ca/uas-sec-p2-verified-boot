@@ -4,6 +4,6 @@ One folder per run: `<event>-<ci|hw>/<YYYYMMDD>-<commit>/`, where `<commit>` is 
 
 | Run | Event | Environment | Test cases | Result |
 |---|---|---|---|---|
-| [`ve07-ci/20261003-c87c3e9`](ve07-ci/20261003-c87c3e9/summary.md) | VE-07 | QEMU `virt` 8.2.2 + U-Boot 2026.07 + swtpm 0.7.3, Ubuntu 24.04 | TC-01, TC-03, TC-04 | Pass: 15 of 15 runs, including 3 control runs |
+| [`ve07-ci/20261011-7bc523b`](ve07-ci/20261011-7bc523b/summary.md) | VE-07 | GitHub Actions run [38120187352](https://github.com/samyoon727ca/uas-sec-p2-verified-boot/actions/runs/38120187352), runner image `ubuntu24` 20261004.327.1: QEMU `virt` 8.2.2 + U-Boot 2026.07 + swtpm 0.7.3 | TC-01, TC-03, TC-04 | Pass: 16 of 16 runs, including 4 control runs |
 
-The CI workflow [`ve07-emu`](../.github/workflows/ve07-emu.yml) re-runs the same harness on every change to `cc/` or `tests/ve07/` and uploads its output as the `ve07-ci-evidence` artifact.
+The CI workflow [`ve07-emu`](../.github/workflows/ve07-emu.yml) re-runs the same harness on every change to `cc/` or `tests/ve07/` and uploads its output as the `ve07-ci-evidence` artifact. A `ci` folder is that artifact, downloaded unchanged.
