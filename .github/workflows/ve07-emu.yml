@@ -1,0 +1,42 @@
+name: ve07-emu
+
+# VE-07 emulated test cases on QEMU virt + U-Boot + swtpm (tests/ve07).
+on:
+  push:
+    paths: ["cc/**", "tests/ve07/**", ".github/workflows/ve07-emu.yml"]
+  pull_request:
+    paths: ["cc/**", "tests/ve07/**", ".github/workflows/ve07-emu.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verified-boot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      # Actions are pinned to full commit SHAs; the tag is noted for review.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned host packages from the Ubuntu snapshot
+        run: cc/emu/install-host-packages.sh
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/dl
+          # Downloads only; cc/build.sh re-checks every SHA-256 on use.
+          key: ve07-dl-${{ hashFiles('cc/uboot/pin.txt', 'cc/emu/guest.lock') }}
+      - name: Build U-Boot (hardened, stock and control variants), kernel and initramfs
+        run: cc/build.sh
+      - name: Run VE-07 verified-boot cases (TC-01, TC-03, TC-04)
+        run: python3 tests/ve07/boot_cases.py --build build --out "$RUNNER_TEMP/ve07-ci"
+      - name: Check the evidence holds no private key material
+        if: always()
+        run: python3 tools/check_no_secrets.py --root "$RUNNER_TEMP/ve07-ci"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: ve07-ci-evidence
+          path: ${{ runner.temp }}/ve07-ci
+          if-no-files-found: error

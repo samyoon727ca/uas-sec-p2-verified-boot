@@ -1,0 +1,57 @@
+Bloblist at 0 not found (err=-2)
+alloc space exhausted ptr 400 limit 0
+Bloblist at 0 not found (err=-2)
+
+
+U-Boot 2026.07 (Jul 06 2026 - 23:50:43 +0000)
+
+DRAM:  2 GiB
+Core:  52 devices, 15 uclasses, devicetree: board
+Flash: 64 MiB
+Loading Environment from nowhere... OK
+In:    serial,usbkbd
+Out:   serial,vidconsole
+Err:   serial,vidconsole
+No USB controllers found
+Net:   No ethernet found.
+[?25h
+
+virtio read: device 0 block # 0, count 131072 ... 131072 blocks read: OK
+## Loading kernel (any) from FIT Image at 50000000 ...
+   Using 'conf' configuration
+   Verifying Hash Integrity ... sha256,rsa3072:cc-os-dev+ OK
+   Trying 'kernel' kernel subimage
+     Description:  Ubuntu 6.8.0-146-generic arm64
+     Created:      2026-07-06  23:50:43 UTC
+     Type:         Kernel Image
+     Compression:  gzip compressed
+     Data Start:   0x500000d8
+     Data Size:    18589606 Bytes = 17.7 MiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: 0x40400000
+     Entry Point:  0x40400000
+     Hash algo:    sha256
+     Hash value:   6001f54164a5201cd5a80e0a09bb05c43fa6e910a0abfe0f5a4e8d7d781cc737
+   Verifying Hash Integrity ... sha256+ OK
+## Loading ramdisk (any) from FIT Image at 50000000 ...
+   Using 'conf' configuration
+   Verifying Hash Integrity ... sha256,rsa3072:cc-os-dev+ OK
+   Trying 'ramdisk' ramdisk subimage
+     Description:  unavailable
+     Created:      2026-07-06  23:50:43 UTC
+     Type:         RAMDisk Image
+     Compression:  uncompressed
+     Data Start:   0x511bc6d0
+     Data Size:    1005525 Bytes = 982 KiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: unavailable
+     Entry Point:  unavailable
+     Hash algo:    sha256
+     Hash value:   5c5ae1844725699f188d71404ab5ec2b1204b2359daf98332b563b8656525cf8
+   Verifying Hash Integrity ... sha256 error!
+Bad hash value for 'hash' hash node in 'ramdisk' image node
+Bad Data Hash
+Ramdisk image is corrupt or invalid
+resetting ...

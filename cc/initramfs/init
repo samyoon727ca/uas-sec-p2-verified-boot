@@ -1,0 +1,6 @@
+#!/bin/busybox sh
+# Emulated CC initramfs. Reports that the verified kernel reached userspace,
+# then powers off. Key unsealing is added with TC-05 to TC-10.
+/bin/busybox mount -t proc proc /proc
+/bin/busybox echo "P2-INITRAMFS-OK kernel=$(/bin/busybox uname -r)"
+/bin/busybox poweroff -f

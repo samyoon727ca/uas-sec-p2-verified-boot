@@ -1,0 +1,42 @@
+/*
+ * FIT source for the emulated CC boot chain (docs/02-cc-boot-chain.md §2.2).
+ * One configuration, signed with K-CC-OS. The signature covers the kernel,
+ * the devicetree and the initramfs together (sign-images, DD2-04), so images
+ * from different releases cannot be mixed. tests/ve07 signs it per run with
+ * a dev key; mkimage -K writes the public key into U-Boot's control
+ * devicetree with required = "conf".
+ */
+/dts-v1/;
+/ {
+	description = "P2 emulated CC boot chain";
+	#address-cells = <1>;
+	images {
+		kernel {
+			description = "Ubuntu 6.8.0-146-generic arm64";
+			data = /incbin/("Image.gz");
+			type = "kernel"; arch = "arm64"; os = "linux"; compression = "gzip";
+			load = <0x40400000>; entry = <0x40400000>;
+			hash { algo = "sha256"; };
+		};
+		fdt {
+			data = /incbin/("kernel.dtb");
+			type = "flat_dt"; arch = "arm64"; compression = "none";
+			hash { algo = "sha256"; };
+		};
+		ramdisk {
+			data = /incbin/("initramfs.cpio.gz");
+			type = "ramdisk"; arch = "arm64"; os = "linux"; compression = "none";
+			hash { algo = "sha256"; };
+		};
+	};
+	configurations {
+		default = "conf";
+		conf {
+			kernel = "kernel"; fdt = "fdt"; ramdisk = "ramdisk";
+			signature {
+				algo = "sha256,rsa3072"; key-name-hint = "cc-os-dev";
+				sign-images = "kernel", "fdt", "ramdisk";
+			};
+		};
+	};
+};

@@ -52,7 +52,7 @@ flowchart LR
 | `BOOTCOMMAND` | Read a fixed-size raw FIT slot, `bootm` it, then `reset` | Nothing reaches a prompt: any failure resets. No filesystem is parsed before the signature check (DD2-05) |
 | `MEASURED_BOOT` | on | §3 |
 
-The exact fragment and a check of the built `.config` land with the emulated test harness (TC-04).
+The settings live in [`cc/uboot/p2.config`](../cc/uboot/p2.config), with the board-specific boot command in [`cc/uboot/qemu.config`](../cc/uboot/qemu.config). [`cc/build.sh`](../cc/build.sh) fails if any line is missing from the built `.config`, and TC-04 checks it again. The FIT source is [`cc/fit/cc.its`](../cc/fit/cc.its).
 
 ## 2.4 Emulated chain
 
@@ -65,6 +65,7 @@ CI runs the same U-Boot configuration on QEMU's `virt` machine with swtpm. The d
 | TPM | SPI TPM through `spi-gpio` | swtpm through `tpm-tis-device` and U-Boot's `TPM2_MMIO` [QEMU] |
 | FIT storage | Raw partition on the SD card | Raw virtio disk |
 | Devicetree | Pi devicetree | Dumped from QEMU with the *same* command line used to boot. A dump taken without `-bios` crashed the kernel during AMBA probing in a prototype run |
+| Control runs | — | The same U-Boot release built from stock `qemu_arm64_defconfig`, to show that the environment and legacy-image attacks TC-04 tries succeed without the P2 settings. For the console attacks, the P2 build with exactly one setting changed: the autoboot delay restored ([`controls/bootdelay.config`](../cc/uboot/controls/bootdelay.config)) or the final `reset` removed ([`controls/noreset.config`](../cc/uboot/controls/noreset.config)). These builds are never used to boot a CC |
 
 ## 2.5 Anti-rollback
 
