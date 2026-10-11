@@ -1,0 +1,10 @@
+# U-Boot release used for the CC boot loader. cc/build.sh downloads the
+# tarball and refuses it unless the SHA-256 matches.
+version: 2026.07
+url: https://ftp.denx.de/pub/u-boot/u-boot-2026.07.tar.bz2
+sha256: 78e8bfc382fe388f9b55aa1daf8c563522a037779b5d4c349d1415e381f1243e
+# Tag commit, for reference; the tarball matches it apart from lib/lwip dot-files.
+commit: ece349ade2973e220f524ce59e59711cc919263f
+# Build timestamp fixed to the tag commit date, so the version string that
+# U-Boot measures into PCR 0 is the same on every build.
+source_date_epoch: 1783381843
