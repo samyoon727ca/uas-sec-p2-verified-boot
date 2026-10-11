@@ -89,7 +89,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`docs/references.md`](docs/references.md) | Sources and tools, with pinned versions | Baselined |
 | [`data/`](data/) | Child requirements, trace and test cases (CSV); pinned P1 snapshot | Populated |
 | [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain | Built |
-| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot | TC-01, TC-03, TC-04 built |
+| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03, TC-04 built |
 | [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
 | `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
 
