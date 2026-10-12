@@ -1,6 +1,6 @@
 # 1. Scope and traceability
 
-P2 produces the verification evidence for three P1 requirements. On the companion computer (CC) they are SR-005 (verified boot) and SR-010 (keys sealed to the TPM). On the flight controller (FC) it is SR-018 (PX4 Bootloader Secure Boot). Evidence is produced through two P1 verification events, VE-07 and VE-08. P2 adds five child requirements where a P1 requirement needs refinement to be testable. Every other P2 statement traces to the P1 baseline at commit `7aadc83` ([P1]).
+P2 produces the verification evidence for three P1 requirements. On the companion computer (CC) they are SR-005 (verified boot) and SR-010 (keys sealed to the TPM). On the flight controller (FC) it is SR-018 (PX4 Bootloader Secure Boot). Evidence is produced through two P1 verification events, VE-07 and VE-08. P2 adds five child requirements where a P1 requirement needs refinement to be testable. Every other P2 statement traces to P1 at commit `83c6d2d`: baseline 1.0 plus change 1 ([P1]).
 
 ## 1.1 P1 parents
 
@@ -57,7 +57,7 @@ P2 corrects P1 rather than diverging from it. Each item becomes a small P1 pull 
 
 | # | Proposed change | Reason | P1 PR |
 |---|---|---|---|
-| 1 | Add an `evidence` column to `verification.csv`: required when the status is `passed` or `failed`, optional while `planned`. Keep the validator, generated views and SysML generator green | P1 has no place to link the evidence that P2–P6 produce | [#12](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/12) |
+| 1 | Add an `evidence` column to `verification.csv`: required when the status is `passed` or `failed`, optional while `planned`. Keep the validator, generated views and SysML generator green | P1 has no place to link the evidence that P2–P6 produce | [#12](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/12), merged |
 | 2 | Add a threat: an older signed FC firmware is loaded over USB. Disposition to be decided in P1: accept with rationale, or mitigate by procedure | The PX4 boot loader checks the signature only; `image_cert_t` carries creation and expiry fields, but the boot loader never reads them [PX4-BL]. SR-018 as written does not cover rollback | — |
 | 3 | Record that SR-018's root of trust is the FC boot-loader sector and depends on SR-024 | The PX4 boot loader sets no flash write-protection [PX4-BL]. Anyone with SWD access can replace it | — |
 | 4 | Add to THR-034's residual risk: a TPM bus probe or a TPM reset with replayed measurements on a captured CC | SR-010.4 stops passive sniffing of unsealed keys; reset-and-replay depends on A2-02 | — |
