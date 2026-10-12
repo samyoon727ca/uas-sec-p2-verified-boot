@@ -8,15 +8,15 @@ P3 takes custody with an offline root tier and an HSM-held intermediate tier. No
 
 | Key | Algorithm | Security strength | Trusted by | Signs | P2 custody | P3 custody | Rotation |
 |---|---|---|---|---|---|---|---|
-| K-CC-ROOT | RSA-2048, PKCS#1 v1.5 (fixed by the Pi boot loader [RPI-SB]) | 112 bits | Raspberry Pi boot loader; key hash in OTP | `boot.img` (Pi firmware, U-Boot, U-Boot devicetree) | Generated offline for the hardware phase; encrypted backup | Offline root tier | **Never.** OTP cannot be reprogrammed |
-| K-CC-OS | RSA-3072 with SHA-256 | 128 bits | U-Boot: public key in its control devicetree, marked required | FIT configurations | CI: per run. Hardware: local | HSM intermediate tier; U-Boot's `mkimage -N` signs through an OpenSSL PKCS#11 engine [UBOOT-SIG] | Ship a new `boot.img` carrying the new public key |
+| K-CC-ROOT | Table of up to four RSA-4096 SRKs, signing with SHA-256 through NXP's CST (DD2-13) [NXP-CST] | 128 bits | i.MX 8M Plus boot ROM (HAB); SRK table hash in fuses | SPL with its DDR firmware, and `u-boot.itb` (U-Boot, TF-A BL31, U-Boot devicetree) | Generated offline for the hardware phase; encrypted backup | Offline root tier; CST signs through PKCS#11 [NXP-CST] | Revoke a compromised SRK by fuse and switch to another of the four. A new table needs a new chip |
+| K-CC-OS | RSA-3072 with SHA-256 | 128 bits | U-Boot: public key in its control devicetree, marked required | FIT configurations | CI: per run. Hardware: local | HSM intermediate tier; U-Boot's `mkimage -N` signs through an OpenSSL PKCS#11 engine [UBOOT-SIG] | Ship a new `u-boot.itb` carrying the new public key |
 | K-CC-POL | ECDSA P-256 with SHA-256 | 128 bits | TPM: the key's name is bound into each sealed object's policy | Approved PCR policies (§3.3) | CI: per run. Hardware: local | HSM intermediate tier | Re-provision: the name is fixed in the sealed objects' policy |
 | K-FC-FW | Ed25519 (fixed by PX4) | — | PX4 boot loader, keystore slot 0 | PX4 firmware | Local, git-ignored | HSM intermediate tier, once a PKCS#11 Ed25519 signer exists (OI2-04) | Reflash the boot loader over SWD |
 | K-FC-REC | Ed25519 | — | PX4 boot loader, keystore slot 1 | Recovery firmware only | Offline | Offline root tier | Reflash the boot loader over SWD |
 
 Security strengths are from NIST SP 800-57 Part 1 Rev. 5, Table 2 [SP800-57]. Ed25519 is not given a strength here: its group order is 253 bits, which falls in that table's 112-bit row, while it is commonly described as 128-bit.
 
-**K-CC-ROOT is the long-term weakness.** Under SP 800-57 Table 4, 112-bit strength is acceptable for applying protection through 2030, is disallowed from 2031, and allows only legacy processing after that [SP800-57]. The Pi boot loader fixes RSA-2048, and OTP fixes the key, so a Pi-based CC cannot follow that transition. A fielded design would need a SoC whose root of trust supports 128-bit keys. This is recorded for P1 and P6.
+**K-CC-ROOT is fixed at provisioning.** RSA-4096 gives 128-bit strength, which SP 800-57 allows beyond 2030 [SP800-57]. The fuses fix the SRK table, so the root can only move among the four keys fused at the start: revoking one is permanent, and with all four revoked the board can no longer boot signed images. The Raspberry Pi 4, the first hardware choice, fixed its root key at RSA-2048 (112-bit), which is disallowed from 2031. That was one reason for DD2-01.
 
 The TPM's own keys (the sealing parent and the salt key) are generated inside the TPM and never leave it. They are not signing keys and are not listed here.
 
@@ -26,7 +26,7 @@ The TPM's own keys (the sealing parent and the salt key) are generated inside th
 2. **Per run in CI.** Test harnesses generate keys in a temporary directory and delete it. Evidence records each public key's SHA-256, never a private key.
 3. **Labeled.** Dev public keys are named `*-dev`. Nothing signed with a dev key is presented as a release.
 4. **The PX4 test key** in the PX4 tree is public. P2 uses it only as the wrong-key case (TC-13).
-5. **OTP is not programmed with a dev key** without the owner's explicit go-ahead at that moment (OI2-02).
+5. **No fuse is burned with a dev key** without the owner's explicit go-ahead at that moment: once for the SRK hash, and again for closing the chip (OI2-02).
 
 ## 5.3 Hand-off to P3
 

@@ -26,8 +26,8 @@ Each list says what that kind of run is able to prove. So far CI has proved the 
 - that each test detects the failure it looks for, through a positive control and, where useful, a control run against a weakened configuration.
 
 **Only hardware runs can prove:**
-- a hardware root of trust: an immutable ROM and an OTP key that refuse a modified boot loader (TC-02);
-- that U-Boot reaches a real TPM over `spi-gpio` and measures the same items (OI2-01);
+- a hardware root of trust: an immutable ROM and a fused key hash that refuse a modified boot loader once the chip is closed (TC-02);
+- that U-Boot reaches a real TPM over ECSPI and measures the same items (OI2-01);
 - sealing on a real TPM rather than swtpm (A2-04), including removal of real storage;
 - that the PX4 boot loader enforces signatures at reset on the STM32H753 (TC-12, TC-13), and the recovery paths (TC-14).
 
@@ -40,8 +40,8 @@ Each list says what that kind of run is able to prove. So far CI has proved the 
 
 | ID | Event | Test case | Verifies | CI | Hardware | Pass criteria |
 |---|---|---|---|---|---|---|
-| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261011-7bc523b/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. |
-| TC-02 | VE-07 | Modified boot loader refused by the hardware root of trust | SR-005 | – | planned | The Raspberry Pi boot loader refuses both images and U-Boot never runs. |
+| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261011-7bc523b/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. On hardware, HAB also reports no events. |
+| TC-02 | VE-07 | Modified boot loader refused by the hardware root of trust | SR-005 | – | planned | On the closed chip, both images are refused and U-Boot never runs. The open-chip run is a check only: HAB logs a failure event for each image, and none for the correct one, but boots them anyway. |
 | TC-03 | VE-07 | Modified kernel, initramfs or devicetree refused | SR-005 | [passed](../evidence/ve07-ci/20261011-7bc523b/summary.md) | planned | U-Boot reports a hash mismatch for the changed image, does not start the kernel and resets without offering a console. |
 | TC-04 | VE-07 | Modified boot configuration refused | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261011-7bc523b/summary.md) | planned | Every attempt is refused or ignored and no console prompt appears. The control runs show the stock configuration accepts the injected environment and the legacy image, and the same keystrokes reach a prompt when either console setting is relaxed. |
 | TC-05 | VE-07 | Keys unseal in the measured, unmodified boot state | SR-010, SR-010.1, SR-010.2 | planned | planned | Both keys unseal and match the provisioned values. |

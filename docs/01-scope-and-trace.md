@@ -44,12 +44,12 @@ Each of these is an **assumption**: accepted for analysis, not yet shown. Test c
 
 | ID | Assumption | Why it matters |
 |---|---|---|
-| A2-01 | Every `boot.img` ever signed with K-CC-ROOT contains a U-Boot with measured boot enabled | A signed U-Boot that does not measure leaves PCRs 0–9 at their reset values. If it also had a verification flaw, the kernel it starts could extend the approved values itself and unseal the keys |
-| A2-02 | The TPM's reset input follows the CC platform reset and cannot be driven by software | If the TPM can be reset on its own, its PCRs return to zero and approved measurements can be replayed. To check on the chosen module; P5 covers physical attack |
+| A2-01 | Every `u-boot.itb` ever signed with K-CC-ROOT contains a U-Boot with measured boot enabled | A signed U-Boot that does not measure leaves PCRs 0–9 at their reset values. If it also had a verification flaw, the kernel it starts could extend the approved values itself and unseal the keys |
+| A2-02 | The TPM's reset input cannot be driven by software. With its reset pin left on the module's pull-up, the TPM resets only at power-on (DD2-14) | If the TPM can be reset on its own, its PCRs return to zero and approved measurements can be replayed. To check on the module bought; P5 covers physical attack |
 | A2-03 | In the emulated chain, QEMU loading `u-boot.bin` and its control devicetree stands in for the hardware root of trust | Emulation cannot show that a modified boot loader is refused (TC-02 is hardware only) |
 | A2-04 | swtpm 0.7.3 implements the TPM 2.0 commands P2 uses as the TCG Library specifies | swtpm is not a certified TPM, and its state is a host file. Hardware runs repeat the sealing cases on a real TPM |
 | A2-05 | PX4 Bootloader Secure Boot behaves the same at `v1.18.0` as at `v1.18.0-rc1` | Rechecked at the DD-06 re-pin |
-| A2-06 | U-Boot's GPIO soft SPI can drive the chosen SPI TPM on a Raspberry Pi 4 | Measured boot on the hardware depends on it (OI2-01) |
+| A2-06 | U-Boot's ECSPI driver (`MXC_SPI`) can drive the chosen SPI TPM on ECSPI2 of the DEBIX Model A. A mainline board on the same SoC does this (Gateworks Venice GW71xx) | Measured boot on the hardware depends on it (OI2-01) |
 
 ## 1.4 Changes proposed to P1
 
@@ -62,7 +62,7 @@ P2 corrects P1 rather than diverging from it. Each item becomes a small P1 pull 
 | 3 | Record that SR-018's root of trust is the FC boot-loader sector and depends on SR-024 | The PX4 boot loader sets no flash write-protection [PX4-BL]. Anyone with SWD access can replace it | — |
 | 4 | Add to THR-034's residual risk: a TPM bus probe or a TPM reset with replayed measurements on a captured CC | SR-010.4 stops passive sniffing of unsealed keys; reset-and-replay depends on A2-02 | — |
 | 5 | Reword A-04 to separate the two roots of trust: SoC secure boot verifies the chain (SR-005); the TPM measures and seals (SR-010) | A TPM does not verify boot. A-04 currently names TPM 2.0 as the example hardware root of trust | — |
-| 6 | Record a residual risk: the CC root boot key is limited to 112-bit strength on the chosen hardware | The Pi boot loader fixes RSA-2048. NIST SP 800-57 disallows 112-bit strength for applying protection from 2031 ([§5.1](05-key-management.md)) | — |
+| 6 | **Withdrawn 2026-10-12.** ~~Record a residual risk: the CC root boot key is limited to 112-bit strength on the chosen hardware~~ | The Raspberry Pi boot loader fixes RSA-2048, which NIST SP 800-57 disallows for applying protection from 2031. DD2-01 moved the CC to the i.MX 8M Plus, whose ROM takes RSA-4096 root keys ([§5.1](05-key-management.md)), so the risk no longer exists | Not opened |
 
 ## 1.5 Out of scope
 
