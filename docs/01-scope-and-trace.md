@@ -8,7 +8,7 @@ P2 produces the verification evidence for three P1 requirements. On the companio
 |---|---|---|---|
 | SR-005: the CC shall boot only boot-chain components signed with the project boot key, verified from a hardware root of trust | CMP-CC | THR-008 persistent modification of CC software; THR-010 code execution on the CC yields full C2; THR-032 CC storage rewritten offline | VE-07 (Test) |
 | SR-010: the CC shall seal its WireGuard private key and its copy of the signing key to its TPM, bound to the measured boot state | CMP-CC | THR-007 vehicle impersonated with a stolen CC WireGuard key; THR-034 keys extracted from a captured CC; THR-035 CC trust anchors replaced | VE-07 (Test) |
-| SR-018: the FC shall boot only firmware signed with the project firmware key, using PX4 Bootloader Secure Boot | CMP-FC | THR-030 FC firmware modified through the boot loader or debug port; THR-041 release artifacts tampered before loading; THR-058 unsigned firmware loaded through the USB boot loader | VE-08 (Test) |
+| SR-018: the FC shall boot only firmware signed with the project firmware key, using PX4 Bootloader Secure Boot | CMP-FC | THR-030 FC firmware or parameters modified through the boot loader or debug port; THR-041 release artifacts tampered before loading; THR-058 unsigned firmware loaded through the USB boot loader | VE-08 (Test) |
 
 P1 also hands P2 these premises:
 - **A-04:** the CC can carry a hardware root of trust and a TPM 2.0.

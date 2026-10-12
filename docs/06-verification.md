@@ -13,9 +13,11 @@ Generated from the CSVs by `tools/render_views.py`. CI fails if this view drifts
 | VE-08 FC boots only signed firmware | SR-018 | 0 of 1 | 0 of 3 | planned | planned |
 <!-- END GENERATED: ve-status -->
 
-## 6.2 What emulation proves, and what only hardware proves
+## 6.2 What emulation can prove, and what only hardware can prove
 
-**CI runs prove:**
+Each list says what that kind of run is able to prove. So far CI has proved the first two CI items, with controls, through TC-01, TC-03 and TC-04 (§6.1). Everything else in both lists is planned.
+
+**CI runs can prove:**
 - the U-Boot configuration: signed configurations only, required key, no legacy images, no stored environment, no console after a failure;
 - that tampered kernels, initramfs, devicetrees and configurations are refused;
 - what U-Boot measures, and that the PCRs can be predicted from the release artifacts;
@@ -23,13 +25,13 @@ Generated from the CSVs by `tools/render_views.py`. CI fails if this view drifts
 - the FC signing pipeline and the image format the PX4 boot loader checks;
 - that each test detects the failure it looks for, through a positive control and, where useful, a control run against a weakened configuration.
 
-**Only hardware runs prove:**
+**Only hardware runs can prove:**
 - a hardware root of trust: an immutable ROM and an OTP key that refuse a modified boot loader (TC-02);
 - that U-Boot reaches a real TPM over `spi-gpio` and measures the same items (OI2-01);
 - sealing on a real TPM rather than swtpm (A2-04), including removal of real storage;
 - that the PX4 boot loader enforces signatures at reset on the STM32H753 (TC-12, TC-13), and the recovery paths (TC-14).
 
-**Neither proves** resistance to physical attack: TPM bus interposers, TPM reset (A2-02), debug-port access or fault injection. Those belong to P5.
+**Neither can prove** resistance to physical attack: TPM bus interposers, TPM reset (A2-02), debug-port access or fault injection. Those belong to P5.
 
 ## 6.3 Test cases
 

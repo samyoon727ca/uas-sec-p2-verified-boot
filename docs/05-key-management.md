@@ -1,6 +1,6 @@
 # 5. Key management
 
-P2 uses five signing keys, all dev/test keys. CI generates a fresh set on every run and discards it. Keys for hardware runs are generated on the owner's machine and kept in a git-ignored `keys/` folder. No private key is ever committed: `tools/check_no_secrets.py` fails CI if one appears.
+P2 uses five signing keys, all dev/test keys. CI generates a fresh set on every run and discards it. Keys for hardware runs are generated on the owner's machine and kept in a git-ignored `keys/` folder. No private key is ever committed: `tools/check_no_secrets.py` fails CI if a PEM-armored or PX4 private key appears (§5.2).
 
 P3 takes custody with an offline root tier and an HSM-held intermediate tier. None of the devices checks an X.509 chain; each trusts a raw public key or its hash. So the hand-off to P3 is about custody and ceremony; P3's certificates record each key's purpose and are not checked by any device.
 
