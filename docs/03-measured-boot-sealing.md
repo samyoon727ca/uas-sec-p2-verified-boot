@@ -2,7 +2,7 @@
 
 U-Boot measures what it boots into four SHA-256 PCRs before running it. The CC's WireGuard private key and its copy of the MAVLink signing key are sealed once, to a policy that the MSS approves with a signature. Each release carries a signed policy covering its predicted PCR values and its anti-rollback epoch. A legitimate update therefore needs no re-sealing, and an older release cannot unseal once a newer epoch is committed (SR-010, SR-010.1 to SR-010.4).
 
-Status: design, informed by a throwaway prototype (§3.7). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
+Status: design, informed by a throwaway prototype (§3.7). The emulated build enables `MEASURED_BOOT`, but no run has read the PCRs or the event log yet, and a boot that passes says nothing about them, because `bootm` ignores a failed measurement (§3.1). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
 
 ## 3.1 Measurements (SR-010.1)
 
@@ -15,7 +15,7 @@ Status: design, informed by a throwaway prototype (§3.7). Nothing here is shown
 
 Sources: `boot/bootm.c` and `lib/tpm_tcg2.c` at `v2026.07` [UBOOT]. Three properties follow.
 
-- **Predictable.** `bootm` measures right after finding the images: before loading or decompressing them, and before any devicetree fixups. So the MSS can compute every PCR value from the release artifacts alone. `tools/predict_pcrs.py` does this, and TC-10 checks the prediction against the measured PCRs and the event log.
+- **Predictable.** `bootm` measures right after finding the images: before loading or decompressing them, and before any devicetree fixups. So the MSS can compute every PCR value from the release artifacts alone. `tools/predict_pcrs.py` (planned) will do this, and TC-10 will check the prediction against the measured PCRs and the event log.
 - **Logged.** The event log goes to Linux through `linux,sml-base`/`linux,sml-size` on the TPM node [UBOOT-MB], so the measurements can be replayed and checked.
 - **Fails open for boot, closed for keys.** `bootm` ignores a measurement failure and boots anyway [UBOOT]. The PCRs then hold no approved values, so the keys stay sealed. The CC boots without them and cannot join C2.
 

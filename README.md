@@ -11,7 +11,7 @@ Each step traces back to P1's threats and verification events.
 
 > **Notional and unclassified.** Built only from public sources: U-Boot, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; first emulated evidence in.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261011-7bc523b/summary.md)). Sealing, the FC and all hardware runs are still planned. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
+**Status: design baselined; first emulated evidence in.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261011-7bc523b/summary.md)). Measured boot is enabled in that build, but no run has read the PCRs yet (TC-10). Sealing, the FC and all hardware runs are still planned. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 
@@ -23,7 +23,7 @@ P2's three parent requirements answer nine P1 threats, eight of them rated MI-1 
 | THR-008 Persistent modification of CC software; THR-032 CC storage rewritten offline | MI-1 | SR-005 |
 | THR-034 Keys extracted from a captured CC; THR-035 CC trust anchors replaced | MI-1 | SR-010 |
 | THR-007 Vehicle impersonated with a stolen CC WireGuard key | MI-2 | SR-010 |
-| THR-030 FC firmware modified through the boot loader; THR-041 release artifacts tampered before loading; THR-058 unsigned firmware loaded over USB | MI-1 | SR-018 |
+| THR-030 FC firmware or parameters modified through the boot loader or debug port; THR-041 release artifacts tampered before loading; THR-058 unsigned firmware loaded over USB | MI-1 | SR-018, for firmware only (P5's SR-024 covers the debug port) |
 
 ## Requirements
 
@@ -51,14 +51,14 @@ flowchart LR
 ```
 
 - **Verified boot (SR-005).** Two stages ([§2](docs/02-cc-boot-chain.md)). The Pi's boot ROM checks Raspberry Pi's signed `bootsys` firmware, which checks `boot.img` against a key whose hash is burned into OTP. So U-Boot itself is verified from hardware. U-Boot then accepts only a FIT configuration signed with K-CC-OS that covers the kernel, initramfs and devicetree. It reads no environment from storage, offers no console and boots no legacy images.
-- **Measured boot and sealing (SR-010).** U-Boot extends PCRs 0, 1, 8 and 9 before running anything ([§3](docs/03-measured-boot-sealing.md)). The keys are sealed once to `TPM2_PolicyAuthorize`. Each release ships an MSS-signed policy for its predicted PCRs, so updates need no re-sealing.
+- **Measured boot and sealing (SR-010).** U-Boot is built to extend PCRs 0, 1, 8 and 9 before running anything ([§3](docs/03-measured-boot-sealing.md)). The keys are sealed once to `TPM2_PolicyAuthorize`. Each release ships an MSS-signed policy for its predicted PCRs, so updates need no re-sealing.
 - **Anti-rollback.** Neither U-Boot nor the Pi provides it, so it is enforced at key release: an NV bit-field epoch in the policy denies keys to an older signed chain.
 - **FC (SR-018).** PX4 Bootloader Secure Boot at `v1.18.0-rc1`: Ed25519 via monocypher, with an offline recovery key in a second slot ([§4](docs/04-fc-secure-boot.md)). PX4 has no firmware anti-rollback; that is proposed to P1 as a new threat.
 - **Keys.** Five signing keys, all dev keys in P2, with a documented hand-off to P3's offline root and HSM tiers ([§5](docs/05-key-management.md)). The Pi fixes the root key at RSA-2048. That is 112-bit strength, which NIST SP 800-57 disallows for new signatures from 2031; it is recorded as a residual risk.
 
 ## Verification evidence
 
-CI runs QEMU `virt` with U-Boot and swtpm. It proves the boot-loader configuration, the tamper cases, the measurements and the sealing policy. Only hardware proves the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
+CI runs QEMU `virt` with U-Boot and swtpm. So far it proves the boot-loader configuration and the tamper cases (TC-01, TC-03, TC-04). The measurement and sealing cases (TC-05 to TC-10) are planned for the same harness. Only hardware can prove the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
 
 <!-- BEGIN GENERATED: ve-status -->
 | Event | Verifies (P1) | CI runs passed | Hardware runs passed | P2 status | P1 status |
@@ -74,7 +74,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 - a passed or failed result has no evidence;
 - a requirement or event is left without a test case.
 
-[`tools/check_p1_snapshot.py`](tools/check_p1_snapshot.py) confirms the P1 snapshot matches P1 at the pinned commit. [`tools/check_no_secrets.py`](tools/check_no_secrets.py) fails on any private key in the tree.
+[`tools/check_p1_snapshot.py`](tools/check_p1_snapshot.py) confirms the P1 snapshot matches P1 at the pinned commit. [`tools/check_no_secrets.py`](tools/check_no_secrets.py) fails on PEM-armored private keys (including OpenSSH and TSS) and PX4 key files in the tree.
 
 ## Repository map
 
@@ -91,6 +91,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain | Built |
 | [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03, TC-04 built |
 | [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
+| `tools/predict_pcrs.py` | Predicts PCRs 0, 1, 8 and 9 from the release artifacts, for TC-10 | Planned |
 | `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
 
 ## Run the checks locally

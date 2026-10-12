@@ -8,7 +8,7 @@ P2 produces the verification evidence for three P1 requirements. On the companio
 |---|---|---|---|
 | SR-005: the CC shall boot only boot-chain components signed with the project boot key, verified from a hardware root of trust | CMP-CC | THR-008 persistent modification of CC software; THR-010 code execution on the CC yields full C2; THR-032 CC storage rewritten offline | VE-07 (Test) |
 | SR-010: the CC shall seal its WireGuard private key and its copy of the signing key to its TPM, bound to the measured boot state | CMP-CC | THR-007 vehicle impersonated with a stolen CC WireGuard key; THR-034 keys extracted from a captured CC; THR-035 CC trust anchors replaced | VE-07 (Test) |
-| SR-018: the FC shall boot only firmware signed with the project firmware key, using PX4 Bootloader Secure Boot | CMP-FC | THR-030 FC firmware modified through the boot loader or debug port; THR-041 release artifacts tampered before loading; THR-058 unsigned firmware loaded through the USB boot loader | VE-08 (Test) |
+| SR-018: the FC shall boot only firmware signed with the project firmware key, using PX4 Bootloader Secure Boot | CMP-FC | THR-030 FC firmware or parameters modified through the boot loader or debug port; THR-041 release artifacts tampered before loading; THR-058 unsigned firmware loaded through the USB boot loader | VE-08 (Test) |
 
 P1 also hands P2 these premises:
 - **A-04:** the CC can carry a hardware root of trust and a TPM 2.0.
@@ -57,7 +57,7 @@ P2 corrects P1 rather than diverging from it. Each item becomes a small P1 pull 
 
 | # | Proposed change | Reason | P1 PR |
 |---|---|---|---|
-| 1 | Add an `evidence` column to `verification.csv`: required when the status is `passed` or `failed`, optional while `planned`. Keep the validator, generated views and SysML generator green | P1 has no place to link the evidence that P2–P6 produce | — |
+| 1 | Add an `evidence` column to `verification.csv`: required when the status is `passed` or `failed`, optional while `planned`. Keep the validator, generated views and SysML generator green | P1 has no place to link the evidence that P2–P6 produce | [#12](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/12) |
 | 2 | Add a threat: an older signed FC firmware is loaded over USB. Disposition to be decided in P1: accept with rationale, or mitigate by procedure | The PX4 boot loader checks the signature only; `image_cert_t` carries creation and expiry fields, but the boot loader never reads them [PX4-BL]. SR-018 as written does not cover rollback | — |
 | 3 | Record that SR-018's root of trust is the FC boot-loader sector and depends on SR-024 | The PX4 boot loader sets no flash write-protection [PX4-BL]. Anyone with SWD access can replace it | — |
 | 4 | Add to THR-034's residual risk: a TPM bus probe or a TPM reset with replayed measurements on a captured CC | SR-010.4 stops passive sniffing of unsealed keys; reset-and-replay depends on A2-02 | — |

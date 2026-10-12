@@ -1,8 +1,8 @@
 # 2. CC boot chain
 
-The CC verifies its boot chain in two stages. First, the SoC's boot loader verifies `boot.img`, which holds U-Boot, against a key whose hash is burned into one-time-programmable (OTP) memory: the hardware root of trust for SR-005. Then U-Boot verifies a signed FIT configuration that covers the kernel, initramfs and devicetree. U-Boot takes no configuration from storage or the console (SR-005.1). Each stage that runs code also measures it into the TPM (§3).
+The CC verifies its boot chain in two stages. First, the SoC's boot loader verifies `boot.img`, which holds U-Boot, against a key whose hash is burned into one-time-programmable (OTP) memory: the hardware root of trust for SR-005. Then U-Boot verifies a signed FIT configuration that covers the kernel, initramfs and devicetree. U-Boot takes no configuration from storage or the console (SR-005.1). U-Boot also measures what it boots into the TPM (§3).
 
-Status: design. Nothing here is shown working until its test case passes ([§6](06-verification.md)).
+Status: the boot-loader configuration (§2.3) passes in emulation (TC-01, TC-03, TC-04). The hardware stages and the measurements are design. Nothing is shown working until its test case passes ([§6](06-verification.md)).
 
 ## 2.1 Hardware target
 
