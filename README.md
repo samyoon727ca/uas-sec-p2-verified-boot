@@ -15,7 +15,7 @@ Each step traces back to P1's threats and verification events.
 
 ## Threat
 
-P2's three parent requirements answer nine P1 threats, eight of them rated MI-1 (P1 snapshot at `7aadc83`):
+P2's three parent requirements answer nine P1 threats, eight of them rated MI-1 (P1 snapshot at `83c6d2d`):
 
 | Threat | Impact | Answered by |
 |---|---|---|
