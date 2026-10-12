@@ -9,9 +9,9 @@ This repo produces the verification evidence for three requirements that the [P1
 
 Each step traces back to P1's threats and verification events.
 
-> **Notional and unclassified.** Built only from public sources: U-Boot, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
+> **Notional and unclassified.** Built only from public sources: U-Boot, NXP, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; first emulated evidence in.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261011-7bc523b/summary.md)). Measured boot is enabled in that build, but no run has read the PCRs yet (TC-10). Sealing, the FC and all hardware runs are still planned. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
+**Status: design baselined; first emulated evidence in.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261011-7bc523b/summary.md)). Measured boot is enabled in that build, but no run has read the PCRs yet (TC-10). Sealing, the FC and all hardware runs are still planned; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 
@@ -39,8 +39,8 @@ Child requirements keep their parent's component and method, and trace only to t
 
 ```mermaid
 flowchart LR
-  subgraph CC["Companion computer: Raspberry Pi 4 + SPI TPM 2.0"]
-    ROM["Boot ROM + OTP<br/>(hardware root of trust)"] -->|"K-CC-ROOT"| UB["U-Boot<br/>no stored env, no console"]
+  subgraph CC["Companion computer: DEBIX Model A (NXP i.MX 8M Plus) + SPI TPM 2.0"]
+    ROM["Boot ROM + fused key hash<br/>(hardware root of trust)"] -->|"K-CC-ROOT"| UB["U-Boot<br/>no stored env, no console"]
     UB -->|"K-CC-OS<br/>signed FIT config"| K["kernel + initramfs + DTB"]
     UB -.->|"measure PCR 0,1,8,9"| TPM[("TPM 2.0")]
     TPM -.->|"policy signed with K-CC-POL<br/>+ epoch"| K
@@ -50,11 +50,11 @@ flowchart LR
   end
 ```
 
-- **Verified boot (SR-005).** Two stages ([§2](docs/02-cc-boot-chain.md)). The Pi's boot ROM checks Raspberry Pi's signed `bootsys` firmware, which checks `boot.img` against a key whose hash is burned into OTP. So U-Boot itself is verified from hardware. U-Boot then accepts only a FIT configuration signed with K-CC-OS that covers the kernel, initramfs and devicetree. It reads no environment from storage, offers no console and boots no legacy images.
+- **Verified boot (SR-005).** Two stages ([§2](docs/02-cc-boot-chain.md)). The i.MX 8M Plus boot ROM (NXP HAB) checks the boot loader against a table of RSA-4096 keys whose hash is burned into fuses. So U-Boot itself is verified from hardware, with no vendor-signed stage before the project's key. HAB enforces this only once the chip is closed, a separate permanent step. U-Boot then accepts only a FIT configuration signed with K-CC-OS that covers the kernel, initramfs and devicetree. It reads no environment from storage, offers no console and boots no legacy images.
 - **Measured boot and sealing (SR-010).** U-Boot is built to extend PCRs 0, 1, 8 and 9 before running anything ([§3](docs/03-measured-boot-sealing.md)). The keys are sealed once to `TPM2_PolicyAuthorize`. Each release ships an MSS-signed policy for its predicted PCRs, so updates need no re-sealing.
-- **Anti-rollback.** Neither U-Boot nor the Pi provides it, so it is enforced at key release: an NV bit-field epoch in the policy denies keys to an older signed chain.
+- **Anti-rollback.** Neither U-Boot nor the boot ROM provides it in P2, so it is enforced at key release: an NV bit-field epoch in the policy denies keys to an older signed chain.
 - **FC (SR-018).** PX4 Bootloader Secure Boot at `v1.18.0-rc1`: Ed25519 via monocypher, with an offline recovery key in a second slot ([§4](docs/04-fc-secure-boot.md)). PX4 has no firmware anti-rollback; that is proposed to P1 as a new threat.
-- **Keys.** Five signing keys, all dev keys in P2, with a documented hand-off to P3's offline root and HSM tiers ([§5](docs/05-key-management.md)). The Pi fixes the root key at RSA-2048. That is 112-bit strength, which NIST SP 800-57 disallows for new signatures from 2031; it is recorded as a residual risk.
+- **Keys.** Five signing keys, all dev keys in P2, with a documented hand-off to P3's offline root and HSM tiers ([§5](docs/05-key-management.md)). The root key is RSA-4096 (128-bit). The fuses fix the key table, so the root can rotate only among the four keys fused at provisioning.
 
 ## Verification evidence
 

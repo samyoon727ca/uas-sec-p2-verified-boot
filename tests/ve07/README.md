@@ -28,4 +28,4 @@ It writes one console log per case and `summary.json`/`summary.md`, and exits no
 
 ## What a pass does and does not show
 
-It shows that the hardened U-Boot configuration boots only the signed configuration and refuses every tamper and configuration change tried. It does not show a hardware root of trust. In emulation, QEMU loads `u-boot.bin` and supplies the control devicetree that holds K-CC-OS (A2-03). TC-02, on the Raspberry Pi, covers that.
+It shows that the hardened U-Boot configuration boots only the signed configuration and refuses every tamper and configuration change tried. It does not show a hardware root of trust. In emulation, QEMU loads `u-boot.bin` and supplies the control devicetree that holds K-CC-OS (A2-03). TC-02, on the DEBIX hardware, covers that.

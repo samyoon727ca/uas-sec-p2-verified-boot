@@ -60,7 +60,7 @@ The epoch is an **NV bit field** in the TPM. Committing epoch *k* sets bit *k*. 
 ## 3.5 Legitimate update
 
 1. **MSS:** build the release, predict PCRs 0, 1, 8 and 9, build the approved policy for epoch *E* and sign it with K-CC-POL. P3 moves the key into the HSM.
-2. **CC:** install the new FIT, and a new `boot.img` if U-Boot changed, together with the signed policy. P3 owns update acceptance (SR-007).
+2. **CC:** install the new FIT, and a new `flash.bin` if the boot loader changed, together with the signed policy. P3 owns update acceptance (SR-007).
 3. **Reboot:** the new chain unseals with the new policy. The sealed objects are untouched.
 4. **Commit:** if *E* is above the current epoch, set bit *E*. From then on, policies for older epochs fail.
 5. **If the new chain cannot unseal,** do not commit, and boot the previous chain. The A/B layout belongs to P3 and P4.
