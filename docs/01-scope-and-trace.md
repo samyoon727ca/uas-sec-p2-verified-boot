@@ -45,7 +45,7 @@ Each of these is an **assumption**: accepted for analysis, not yet shown. Test c
 | ID | Assumption | Why it matters |
 |---|---|---|
 | A2-01 | Every `u-boot.itb` ever signed with K-CC-ROOT contains a U-Boot with measured boot enabled | A signed U-Boot that does not measure leaves PCRs 0–9 at their reset values. If it also had a verification flaw, the kernel it starts could extend the approved values itself and unseal the keys |
-| A2-02 | The TPM's reset input cannot be driven by software. With its reset pin left on the module's pull-up, the TPM resets only at power-on (DD2-14) | If the TPM can be reset on its own, its PCRs return to zero and approved measurements can be replayed. To check on the module bought; P5 covers physical attack |
+| A2-02 | The TPM's reset input cannot be driven by software. With its reset pin left on the module's pull-up, the TPM resets only at power-on (DD2-17) | If the TPM can be reset on its own, its PCRs return to zero and approved measurements can be replayed. To check on the module bought; P5 covers physical attack |
 | A2-03 | In the emulated chain, QEMU loading `u-boot.bin` and its control devicetree stands in for the hardware root of trust | Emulation cannot show that a modified boot loader is refused (TC-02 is hardware only) |
 | A2-04 | swtpm 0.7.3 implements the TPM 2.0 commands P2 uses as the TCG Library specifies | swtpm is not a certified TPM, and its state is a host file. Hardware runs repeat the sealing cases on a real TPM |
 | A2-05 | PX4 Bootloader Secure Boot behaves the same at `v1.18.0` as at `v1.18.0-rc1` | Rechecked at the DD-06 re-pin |
