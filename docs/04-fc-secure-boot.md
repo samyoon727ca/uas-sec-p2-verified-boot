@@ -2,7 +2,7 @@
 
 The FC uses PX4 Bootloader Secure Boot on a Holybro Pixhawk 6X (`px4_fmu-v6x`). At reset, the PX4 boot loader checks an Ed25519 signature over the firmware image. Firmware not signed with a key the boot loader trusts never starts. The project firmware key K-FC-FW sits in keystore slot 0; an offline recovery key K-FC-REC sits in slot 1. SWD is needed only to install or change the boot loader; firmware goes over USB (SR-018).
 
-Status: design. Nothing here is shown working until its test case passes ([§6](06-verification.md)). PX4 is pinned at `v1.18.0-rc1`; `v1.18.0` had not been released on 2026-10-03 (P1 DD-06).
+Status: the signing pipeline and the image format pass on the host (TC-11, [evidence](../evidence/ve08-ci/20261013-aac4299/summary.md)): PX4 at the pinned commit, built in the pinned container with a per-run key, gives a boot loader holding only that key, and PX4's own verification code starts only the image signed with it. The check at reset on the Pixhawk 6X and the recovery paths (TC-12 to TC-14) are planned. Nothing here is shown working until its test case passes ([§6](06-verification.md)). PX4 is pinned at `v1.18.0-rc1`; `v1.18.0` had not been released on 2026-10-03 (P1 DD-06).
 
 ## 4.1 How the PX4 boot loader checks firmware
 

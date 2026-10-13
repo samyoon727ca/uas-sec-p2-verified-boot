@@ -1,0 +1,6 @@
+P2-FC image: 1941520 bytes at 0x08020000
+P2-FC toc 0: BOOT 0x08020000-0x081f9fd0 signature=1 key=0 flags=0x05
+P2-FC toc 1: SIG1 0x081f9fd0-0x081fa010 signature=0 key=0 flags=0x00
+P2-FC toc 2: RDCT 0x081fa010-0x081fa060 signature=3 key=0 flags=0x84
+P2-FC toc 3: RDSG 0x081fa060-0x081fa0a0 signature=0 key=0 flags=0x00
+P2-FC result: stays in the boot loader: TOC entry 0 does not verify
