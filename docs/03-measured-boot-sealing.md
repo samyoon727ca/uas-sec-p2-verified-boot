@@ -2,7 +2,7 @@
 
 U-Boot measures what it boots into four SHA-256 PCRs before running it. The CC's WireGuard private key and its copy of the MAVLink signing key are sealed once, to a policy that the MSS approves with a signature. Each release carries a signed policy covering its predicted PCR values and its anti-rollback epoch. A legitimate update therefore needs no re-sealing, and an older release cannot unseal once a newer epoch is committed (SR-010, SR-010.1 to SR-010.4).
 
-Status: the measurements (§3.1), key release in the approved state, and its refusals (§3.2 to §3.5) pass in emulation on swtpm ([evidence](../evidence/ve07-ci/20261013-cf38809/summary.md)). TC-10 shows that the PCRs U-Boot measures, and the replay of the event log Linux receives, equal the values `tools/predict_pcrs.py` predicts from the release artifacts. TC-05 shows that `p2-unseal` releases both keys in that boot under the policy `tools/approve_policy.py` signed, in a salted, response-encrypted session. The TPM refuses the keys to a boot state with any one measured item changed (TC-06, at `PolicyAuthorize`), to another CC's TPM (TC-07, at `Load`), to an older release after a newer epoch is committed (TC-08, at `PolicyNV`) and to a policy signed by a rogue key (TC-08, at `VerifySignature` or `Unseal`). That the response is encrypted on the wire (TC-09) is planned, as is a real TPM over SPI (OI2-01). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
+Status: the measurements (§3.1), key release in the approved state, its refusals and the session protection (§3.2 to §3.6) pass in emulation on swtpm ([evidence](../evidence/ve07-ci/20261013-d9149f6/summary.md)). TC-10 shows that the PCRs U-Boot measures, and the replay of the event log Linux receives, equal the values `tools/predict_pcrs.py` predicts from the release artifacts. TC-05 shows that `p2-unseal` releases both keys in that boot under the policy `tools/approve_policy.py` signed, in a salted, response-encrypted session. The TPM refuses the keys to a boot state with any one measured item changed (TC-06, at `PolicyAuthorize`), to another CC's TPM (TC-07, at `Load`), to an older release after a newer epoch is committed (TC-08, at `PolicyNV`) and to a policy signed by a rogue key (TC-08, at `VerifySignature` or `Unseal`). In the TPM traffic swtpm recorded during an unseal, neither key appears; with the agent's control build, which leaves the response in the clear, both do (TC-09). A real TPM over SPI has not been shown (OI2-01), and the sealing cases still need their hardware runs on it (A2-04). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
 
 ## 3.1 Measurements (SR-010.1)
 
@@ -82,7 +82,7 @@ This stops passive sniffing. It does not stop an attacker who can reset the TPM 
 
 ## 3.7 Prototype findings
 
-A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was being chosen. Its results shaped the design. They are **not evidence**; TC-05 to TC-10 reproduce them in CI, and all but TC-09 have.
+A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was being chosen. Its results shaped the design. They are **not evidence**; TC-05 to TC-10 have since reproduced them in CI.
 
 - The policy in §3.3 unsealed in the approved state.
 - It unsealed for the next epoch before commit, and only for that epoch after commit.

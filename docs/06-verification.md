@@ -9,13 +9,13 @@ Generated from the CSVs by `tools/render_views.py`. CI fails if this view drifts
 <!-- BEGIN GENERATED: ve-status -->
 | Event | Verifies (P1) | CI runs passed | Hardware runs passed | P2 status | P1 status |
 |---|---|---|---|---|---|
-| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 8 of 9 | 0 of 9 | in progress | planned |
+| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 9 of 9 | 0 of 9 | in progress | planned |
 | VE-08 FC boots only signed firmware | SR-018 | 0 of 1 | 0 of 3 | planned | planned |
 <!-- END GENERATED: ve-status -->
 
 ## 6.2 What emulation can prove, and what only hardware can prove
 
-Each list says what that kind of run is able to prove. So far CI has proved the first three CI items: the first two with controls through TC-01, TC-03 and TC-04, and the third through TC-10 (§6.1). The fourth is proved except for encrypted unseal: keys unseal in the approved state under the signed policy (TC-05) and are refused to a changed state, another TPM, an older epoch and a rogue-signed policy (TC-06 to TC-08), each refusal counted only when TC-05 passed in the same run. Encrypted unseal (TC-09) and everything else in both lists are planned.
+Each list says what that kind of run is able to prove. So far CI has proved the first four CI items (§6.1): the boot-loader configuration and tamper refusal with controls (TC-01, TC-03, TC-04); predictable measurements (TC-10); and the sealing policy logic. For sealing, keys unseal in the approved state under the signed policy (TC-05); they are refused to a changed state, another TPM, an older epoch and a rogue-signed policy (TC-06 to TC-08), each refusal counted only when TC-05 passed in the same run; and they cross the TPM interface only encrypted, with a control run on a build that does not encrypt (TC-09). The FC item (TC-11) and the whole hardware list are planned.
 
 **CI runs can prove:**
 - the U-Boot configuration: signed configurations only, required key, no legacy images, no stored environment, no console after a failure;
@@ -40,16 +40,16 @@ Each list says what that kind of run is able to prove. So far CI has proved the 
 
 | ID | Event | Test case | Verifies | CI | Hardware | Pass criteria |
 |---|---|---|---|---|---|---|
-| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. On hardware, HAB also reports no events. |
+| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. On hardware, HAB also reports no events. |
 | TC-02 | VE-07 | Modified boot loader refused by the hardware root of trust | SR-005 | – | planned | On the closed chip, both images are refused and U-Boot never runs. The open-chip run is a check only: HAB logs a failure event for each image, and none for the correct one, but boots them anyway. |
-| TC-03 | VE-07 | Modified kernel, initramfs or devicetree refused | SR-005 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | U-Boot reports a hash mismatch for the changed image, does not start the kernel and resets without offering a console. |
-| TC-04 | VE-07 | Modified boot configuration refused | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | Every attempt is refused or ignored and no console prompt appears. The control runs show the stock configuration accepts the injected environment and the legacy image, and the same keystrokes reach a prompt when either console setting is relaxed. |
-| TC-05 | VE-07 | Keys unseal in the measured, unmodified boot state | SR-010, SR-010.1, SR-010.2 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | Both keys unseal and match the provisioned values. |
-| TC-06 | VE-07 | Keys do not unseal from a modified boot state | SR-010, SR-010.1 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | Unseal fails in every case. |
-| TC-07 | VE-07 | Keys do not unseal from removed storage | SR-010 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | The sealed objects do not load on the second TPM. |
-| TC-08 | VE-07 | Rollback and unapproved policies refused | SR-010.2, SR-010.3 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | Unseal fails in both cases and the current chain still unseals. |
-| TC-09 | VE-07 | Unseal traffic is encrypted | SR-010.4 | planned | – | The unsealed key bytes never appear in the recorded traffic; in the control run they do. |
-| TC-10 | VE-07 | Predicted PCRs match the measured PCRs and the event log | SR-010.1 | [passed](../evidence/ve07-ci/20261013-cf38809/summary.md) | planned | The predicted, measured and replayed values are equal. |
+| TC-03 | VE-07 | Modified kernel, initramfs or devicetree refused | SR-005 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | U-Boot reports a hash mismatch for the changed image, does not start the kernel and resets without offering a console. |
+| TC-04 | VE-07 | Modified boot configuration refused | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | Every attempt is refused or ignored and no console prompt appears. The control runs show the stock configuration accepts the injected environment and the legacy image, and the same keystrokes reach a prompt when either console setting is relaxed. |
+| TC-05 | VE-07 | Keys unseal in the measured, unmodified boot state | SR-010, SR-010.1, SR-010.2 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | Both keys unseal and match the provisioned values. |
+| TC-06 | VE-07 | Keys do not unseal from a modified boot state | SR-010, SR-010.1 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | Unseal fails in every case. |
+| TC-07 | VE-07 | Keys do not unseal from removed storage | SR-010 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | The sealed objects do not load on the second TPM. |
+| TC-08 | VE-07 | Rollback and unapproved policies refused | SR-010.2, SR-010.3 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | Unseal fails in both cases and the current chain still unseals. |
+| TC-09 | VE-07 | Unseal traffic is encrypted | SR-010.4 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | – | The unsealed key bytes never appear in the recorded traffic; in the control run they do. |
+| TC-10 | VE-07 | Predicted PCRs match the measured PCRs and the event log | SR-010.1 | [passed](../evidence/ve07-ci/20261013-d9149f6/summary.md) | planned | The predicted, measured and replayed values are equal. |
 | TC-11 | VE-08 | FC images signed and checked on the host | SR-018 | planned | – | Only the image signed with the run key verifies. |
 | TC-12 | VE-08 | Signed firmware starts PX4 | SR-018 | – | planned | The board leaves the boot loader and PX4 starts, shown by the console log and USB enumeration. |
 | TC-13 | VE-08 | Unsigned, modified and wrong-key firmware stay in the boot loader | SR-018 | – | planned | The uploader reports a signature failure and, after each power cycle, the board stays in the boot loader. |

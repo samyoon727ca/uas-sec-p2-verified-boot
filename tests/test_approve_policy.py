@@ -220,6 +220,45 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(bc.unseal_lines(text), ["wireguard refused at parent name: missing or wrong CC data",
                                                  "mavlink refused at parent name: missing or wrong CC data"])
 
+    def swtpm_log(self, frames):
+        """A swtpm level-20 log in its own layout: 16 bytes per line, a trailing space, other lines between."""
+        out = [" Ctrl Cmd: length 4", " 00 00 00 02 "]
+        for kind, data in frames:
+            out.append(f" SWTPM_IO_{'Read' if kind == 'cmd' else 'Write'}: length {len(data)}")
+            out += [" " + " ".join(f"{b:02X}" for b in data[i:i + 16]) + " " for i in range(0, len(data), 16)]
+        return "\n".join(out) + "\n"
+
+    def unseal_frames(self, key_in_clear: bytes | None):
+        cmd = struct.pack(">HII", 0x8002, 27, bc.TPM_CC_UNSEAL) + bytes(17)
+        body = key_in_clear if key_in_clear is not None else bytes(range(32))
+        rsp = struct.pack(">HII", 0x8002, 10 + 4 + 2 + len(body), 0) + struct.pack(">IH", 2 + len(body), len(body)) + body
+        return [("cmd", cmd), ("rsp", rsp)]
+
+    def test_parse_and_render_io_log(self):
+        frames = [("cmd", bytes(range(40))), ("rsp", b"\x80\x01" + bytes(8))]
+        self.assertEqual(bc.parse_io_log(self.swtpm_log(frames)), frames)
+        text, redacted = bc.render_io_log(frames, {})
+        self.assertEqual((bc.parse_io_log(text), redacted), (frames, []))
+
+    def test_render_replaces_every_key_occurrence(self):
+        key = bytes(range(100, 132))
+        frames = [("rsp", b"\x00" * 15 + key + b"\x01"), ("cmd", key)]
+        text, redacted = bc.render_io_log(frames, {"wireguard": key})
+        self.assertNotIn(key.hex().upper(), "".join(text.split()))
+        self.assertEqual([(r["frame"], r["offset"]) for r in redacted], [(0, 15), (1, 0)])
+        self.assertTrue(all(r["sha256"] == __import__("hashlib").sha256(key).hexdigest() for r in redacted))
+
+    def test_io_checks(self):
+        keys = {"wireguard": bytes(range(100, 132)), "mavlink": bytes(range(150, 182))}
+        prov = provision.Provisioned(Path("."), Path("."), b"", {}, {}, keys)
+        clear = self.unseal_frames(keys["wireguard"]) + self.unseal_frames(keys["mavlink"])
+        hidden = self.unseal_frames(None) + self.unseal_frames(None)
+        self.assertTrue(all(c["ok"] for c in bc.io_checks(prov, hidden, clear=False)))
+        self.assertFalse(all(c["ok"] for c in bc.io_checks(prov, clear, clear=False)))
+        self.assertTrue(all(c["ok"] for c in bc.io_checks(prov, clear, clear=True)))
+        self.assertFalse(all(c["ok"] for c in bc.io_checks(prov, hidden, clear=True)))
+        self.assertFalse(bc.io_checks(prov, hidden[:2], clear=False)[0]["ok"])   # one Unseal, not two
+
     def test_data_disk_comes_before_the_boot_slot(self):
         m = bc.Machine(Path("u.bin"), Path("slot.img"), Path("f.img"), None, Path("sock"), data=Path("cc.img"))
         argv = m.argv()

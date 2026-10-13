@@ -115,6 +115,8 @@ class Provisioned:
     disk: bytes                       # the same folder as a tar, padded for the data disk
     secrets_sha256: dict[str, str]
     record: dict
+    # The keys themselves, in memory only, for TC-09 to search the TPM traffic. Never written anywhere.
+    secrets: dict[str, bytes] = dataclasses.field(default_factory=dict, repr=False)
 
 
 def tar_folder(folder: Path) -> bytes:
@@ -177,11 +179,12 @@ def provision(work: Path, short: Path, kpol_key: Path, pcrs: dict[int, str], epo
         seal_policy = ap.policy_authorize(kpol["name"])
         (wd / "seal-policy.bin").write_bytes(seal_policy)
 
-        secrets_sha256, sealed = {}, {}
+        secrets_sha256, sealed, kept = {}, {}, {}
         for name in KEYS:
             secret = wireguard_key() if name == "wireguard" else os.urandom(32)
             (secrets / name).write_bytes(secret)
             secrets_sha256[name] = hashlib.sha256(secret).hexdigest()
+            kept[name] = secret
             tpm2("create", "-Q", "-C", parent, "-L", str(wd / "seal-policy.bin"), "-a", SEALED_ATTRIBUTES,
                  "-i", str(secrets / name), "-u", str(data / f"sealed/{name}.pub"),
                  "-r", str(data / f"sealed/{name}.priv"))
@@ -208,7 +211,7 @@ def provision(work: Path, short: Path, kpol_key: Path, pcrs: dict[int, str], epo
         "epoch": epoch, "approved_policy": approved.hex(),
         "approved_for_pcrs_sha256": {str(i): pcrs[i] for i in ap.POLICY_PCRS},
     }
-    return Provisioned(state, data, tar_folder(data), secrets_sha256, record)
+    return Provisioned(state, data, tar_folder(data), secrets_sha256, record, kept)
 
 
 def provisioning_checks(prov: Provisioned) -> list[dict]:

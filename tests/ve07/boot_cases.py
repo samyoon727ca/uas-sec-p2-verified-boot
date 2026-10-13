@@ -26,6 +26,9 @@ from the release artifacts:
   TC-08  after an update to epoch 1 is committed, the release-1 chain with
          its epoch-0 policy cannot unseal, nor can a policy signed by a rogue
          key; release 2 with its epoch-1 policy still unseals
+  TC-09  swtpm records every TPM command and response of a TC-05 boot; neither
+         key appears in them. Control: with the agent's control build, which
+         leaves the unseal response in the clear, both keys do
   TC-10  tools/predict_pcrs.py predicts PCRs 0, 1, 8 and 9 from the signed
          FIT and the U-Boot binary; the PCRs the initramfs reads, and the
          replay of the event log Linux received, equal the prediction
@@ -33,12 +36,14 @@ from the release artifacts:
 Each attack that would succeed against a weaker setup has a control run that
 shows it succeeding there: the environment and legacy-image cases on stock
 qemu_arm64_defconfig, and the two console cases on the P2 build with exactly
-one setting changed (the autoboot delay, or the final reset). A negative case
+one setting changed (the autoboot delay, or the final reset), and the
+encrypted-traffic case on the agent's control build. A negative case
 counts only if the positive control passed in the same run: TC-01 for every
 case, and TC-05 as well for the sealing refusals (TC-06 to TC-08).
 
 Keys are generated per run in a temporary directory and deleted; evidence
-records only public-key SHA-256 values. Writes one console log per case and
+records only public-key SHA-256 values. The sealed keys are kept in memory for
+TC-09, and the swtpm I/O logs it writes have any key bytes replaced by "--". Writes one console log per case and
 summary.json/summary.md to --out. Exit status 0 only if every case passes.
 
 Usage:
@@ -122,6 +127,8 @@ UNSEAL_OK = r"(?m)^P2-UNSEAL {} ok$"                   # printed by cc/initramfs
 UNSEAL_REFUSED = r"(?m)^P2-UNSEAL \S+ refused at "
 KEY_LINE = re.compile(r"(?m)^P2-KEY (\S+) sha256 ([0-9a-f]{64})$")
 UNSEAL_ANY_OK = r"(?m)^P2-UNSEAL \S+ ok$"
+AGENT_CONTROL = r"(?m)^P2-UNSEAL control build: response encryption off$"
+TPM_CC_UNSEAL = 0x0000015E
 KEY_ANY = r"(?m)^P2-KEY "
 
 
@@ -197,6 +204,70 @@ def fdt_prop(blob: bytes | bytearray, node: str, prop: str) -> tuple[int, int]:
             raise ValueError(f"bad FDT token {tok} at {pos - 4}")
 
 
+IO_FRAME = re.compile(r"(?m)^ SWTPM_IO_(Read|Write): length (\d+)\n((?: [0-9A-F]{2})+ ?\n)*")
+
+
+def parse_io_log(text: str) -> list[tuple[str, bytes]]:
+    """TPM commands ("cmd") and responses ("rsp") from a swtpm log at level 20, in order."""
+    frames = []
+    for m in IO_FRAME.finditer(text):
+        data = bytes.fromhex("".join(m.group(0).split("\n", 1)[1].split()))
+        if len(data) != int(m.group(2)):
+            raise ValueError(f"swtpm logged {len(data)} bytes for a frame of {m.group(2)}")
+        frames.append(("cmd" if m.group(1) == "Read" else "rsp", data))
+    return frames
+
+
+def find_all(data: bytes, needle: bytes) -> list[int]:
+    found, at = [], data.find(needle)
+    while at >= 0:
+        found.append(at)
+        at = data.find(needle, at + 1)
+    return found
+
+
+def render_io_log(frames: list[tuple[str, bytes]], secrets: dict[str, bytes]) -> tuple[str, list[dict]]:
+    """The frames in swtpm's own layout, with every occurrence of a key replaced by "--".
+
+    Returns the text and, for each replacement, where it was and the SHA-256 of the bytes replaced.
+    """
+    lines, redacted = [], []
+    for i, (kind, data) in enumerate(frames):
+        cells = [f"{b:02X}" for b in data]
+        for name, key in secrets.items():
+            for at in find_all(data, key):
+                cells[at:at + len(key)] = ["--"] * len(key)
+                redacted.append({"frame": i, "kind": kind, "offset": at, "key": name,
+                                 "sha256": hashlib.sha256(data[at:at + len(key)]).hexdigest()})
+        lines.append(f" SWTPM_IO_{'Read' if kind == 'cmd' else 'Write'}: length {len(data)}")
+        lines += [" " + " ".join(cells[j:j + 16]) + " " for j in range(0, len(cells), 16)]
+    text = "\n".join(lines) + "\n"
+    if any(key.hex().upper() in "".join(text.split()) for key in secrets.values()):
+        raise AssertionError("a key is still in the rendered I/O log")
+    return text, redacted
+
+
+def io_checks(prov: provision.Provisioned, frames: list[tuple[str, bytes]], clear: bool) -> list[dict]:
+    """TC-09: neither key in any recorded command or response; in the control, each in an Unseal response."""
+    unseal = [i for i, (kind, data) in enumerate(frames)
+              if kind == "cmd" and len(data) >= 10 and struct.unpack_from(">I", data, 6)[0] == TPM_CC_UNSEAL]
+    answers = [frames[i + 1][1] for i in unseal if i + 1 < len(frames) and frames[i + 1][0] == "rsp"]
+    checks = [{"kind": "io", "pattern": f"swtpm recorded {len(provision.KEYS)} TPM2_Unseal commands, each answered "
+               "with success", "ok": len(answers) == len(provision.KEYS) == len(unseal)
+               and all(struct.unpack_from(">I", a, 6)[0] == 0 for a in answers),
+               "observed": {"frames": len(frames), "unseal_commands": len(unseal)}}]
+    for name, key in prov.secrets.items():
+        anywhere = sum(len(find_all(data, key)) for _, data in frames)
+        in_answer = sum(len(find_all(a, key)) for a in answers)
+        if clear:
+            checks.append({"kind": "io", "pattern": f"{name}: the key appears in an Unseal response",
+                           "ok": in_answer >= 1, "observed": {"in_unseal_responses": in_answer, "anywhere": anywhere}})
+        else:
+            checks.append({"kind": "io", "pattern": f"{name}: the key appears in no recorded command or response",
+                           "ok": anywhere == 0, "observed": {"anywhere": anywhere}})
+    return checks
+
+
 def cpio_newc(files: dict[str, bytes]) -> bytes:
     """A cpio archive (newc) of regular files at the root; the kernel unpacks it after the initramfs it follows."""
     out = bytearray()
@@ -262,14 +333,18 @@ class Machine:
 
 
 class Swtpm:
-    """A fresh swtpm instance: a new TPM with no state, as at first power-on."""
+    """swtpm on a state directory: empty for a new TPM, as at first power-on, or a provisioned copy.
 
-    def __init__(self, state: Path) -> None:
+    With io_log, swtpm logs every TPM command and response it handles (log level 20).
+    """
+
+    def __init__(self, state: Path, io_log: bool = False) -> None:
         state.mkdir(parents=True, exist_ok=True)
         self.sock = state / "sock"
+        self.log = state / "swtpm.log"
         self.proc = subprocess.Popen(
             ["swtpm", "socket", "--tpm2", "--tpmstate", f"dir={state}",
-             "--ctrl", f"type=unixio,path={self.sock}", "--log", f"file={state}/swtpm.log,level=1"],
+             "--ctrl", f"type=unixio,path={self.sock}", "--log", f"file={self.log},level={20 if io_log else 1}"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             if self.sock.exists():
@@ -589,6 +664,13 @@ class Artifacts:
                                                                  policy(rogue)))
         self.tpm_states["committed"] = provision.commit_epoch(prov.state, self.short / "tpm-committed", 1,
                                                               self.work / "provision-commit")
+
+        # TC-09 control: the chain with the agent's control build (response in the clear), approved at epoch 0.
+        self.signed_variant("ctl-clear", **{"initramfs.cpio.gz": (self.build / "initramfs-ctl-clear.cpio.gz").read_bytes()})
+        approved = approve_policy.approved_policy(self.prediction_for("hardened", "ctl-clear").pcrs, 0)
+        self.data_disk("cc-ctl-clear", provision.data_variant(prov, self.work / "ccdata-ctl-clear", {
+            "policy/approved": approved, "policy/approved.sig": approve_policy.sign(kpol, approved),
+            "policy/epoch": b"0\n"}))
         self.notes["tc08"] = (f"r2: a cpio member p2-release appended, signed with K-CC-OS; approved at epoch 1 "
                               f"({approved.hex()}); committed TPM: bits 0x2 set in {provision.EPOCH_NV}")
 
@@ -598,7 +680,8 @@ class Artifacts:
         names += [f"{f}.itb" for f in self.fits if f != "good"] + [p.name for p in self.data_disks.values()]
         out = {n: sha256(self.work / n) for n in names}
         built = [f"u-boot-{v}.{ext}" for v in UBOOT_VARIANTS for ext in ("bin", "config")]
-        for n in built + ["Image.gz", "initramfs.cpio.gz", "p2-unseal", "mkimage", "mkenvimage"]:
+        for n in built + ["Image.gz", "initramfs.cpio.gz", "initramfs-ctl-clear.cpio.gz", "p2-unseal",
+                          "p2-unseal-ctl-clear", "mkimage", "mkenvimage"]:
             out[n] = sha256(self.build / n)
         data = self.provisioned.data
         for f in sorted(p for p in data.rglob("*") if p.is_file()):
@@ -634,6 +717,7 @@ class Case:
     unseal: bool = False            # compare the unsealed keys with those sealed
     changes_pcr: int | None = None  # the policy PCR this chain moves away from the approved release
     positive: str | None = None     # a further positive control that must pass in the same run
+    io_log: bool = False            # record swtpm's TPM traffic and search it for the keys (TC-09)
 
 
 CASES = [
@@ -683,7 +767,7 @@ CASES = [
          expect=[BAD_KERNEL, PROMPT, HELP_OUT], forbid=[KERNEL_START, RESET]),
     Case("TC-05", "TC-05", "test", "Keys unseal in the measured, unmodified boot state", tpm="provisioned", data="cc",
          expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
-         forbid=[UNSEAL_REFUSED, ENV_MARK, *CONSOLE], pcrs=True, unseal=True),
+         forbid=[UNSEAL_REFUSED, AGENT_CONTROL, ENV_MARK, *CONSOLE], pcrs=True, unseal=True),
     # TC-06: each chain is signed with K-CC-OS and boots, but no approved policy covers it.
     Case("TC-06a", "TC-06", "test", "Boot loader with another version string (PCR 0)", uboot="tc06-version",
          tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
@@ -725,6 +809,15 @@ CASES = [
     Case("TC-08d", "TC-08", "test", "Release 2 with a policy signed by a rogue key, K-CC-POL public key on storage",
          tpm="committed", slot="r2", data="cc-r2-rogue-sig", pcrs=True, positive="TC-05",
          expect=[VERIFIED, BOOTED, *refused("VerifySignature")], forbid=[*NOT_UNSEALED, *CONSOLE]),
+    # TC-09: the TPM traffic of an unseal, as a bus probe would record it.
+    Case("TC-09", "TC-09", "test", "Neither key appears in the TPM traffic of a TC-05 boot", tpm="provisioned",
+         data="cc", io_log=True, unseal=True, positive="TC-05",
+         expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, AGENT_CONTROL, *CONSOLE]),
+    Case("TC-09-control", "TC-09", "control", "Both keys appear in it when the agent leaves the response in the clear",
+         slot="ctl-clear", tpm="provisioned", data="cc-ctl-clear", io_log=True, unseal=True, control_for="TC-09",
+         expect=[VERIFIED, BOOTED, AGENT_CONTROL, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, *CONSOLE]),
     Case("TC-10", "TC-10", "test", "Predicted PCRs equal the measured PCRs and the event-log replay",
          expect=[VERIFIED, BOOTED, (PCR_LINE, 10)], forbid=[ENV_MARK, *CONSOLE], pcrs=True),
 ]
@@ -889,8 +982,21 @@ def write_markdown(out: Path, summary: dict) -> None:
         lines += ["", "Sealing runs: what `p2-unseal` reported for each key.", "",
                   "| Run | U-Boot | FIT | TPM | CC data | p2-unseal |", "|---|---|---|---|---|---|"]
         for r in sealing:
-            said = "; ".join(sorted(set(re.sub(r"^\S+ ", "", u) for u in r.get("unseal", [])))) or "–"
+            said = "; ".join(sorted(set(re.sub(r"^\S+ ", "", u) for u in r.get("unseal", [])
+                                        if not u.startswith("control build")))) or "–"
+            if any(u.startswith("control build") for u in r.get("unseal", [])):
+                said += " (agent control build: response in the clear)"
             lines.append(f"| {r['id']} | {r['uboot']} | {r['slot']} | {r['tpm']} | {r['data'] or '–'} | {said} |")
+    io_runs = [r for r in summary["runs"] if r.get("io_log")]
+    if io_runs:
+        lines += ["", "TC-09: TPM commands and responses swtpm recorded during the boot, searched for each key. "
+                  "The I/O logs are swtpm's own layout with any key bytes replaced by `--`; `summary.json` gives the "
+                  "position and SHA-256 of every replacement.", "",
+                  "| Run | Frames | Key bytes found | I/O log |", "|---|---|---|---|"]
+        for r in io_runs:
+            frames = next(c["observed"]["frames"] for c in r["checks"] if c["kind"] == "io")
+            found = ", ".join(f"{x['key']} in frame {x['frame']} ({x['kind']})" for x in r["io_redacted"]) or "none"
+            lines.append(f"| {r['id']} | {frames} | {found} | [{r['io_log']}]({r['io_log']}) |")
     pcr_run = next((r for r in summary["runs"] if r["tc"] == "TC-10"), None)
     if pcr_run:
         found = {(c["kind"], c["pattern"].split(":")[0]): c for c in pcr_run["checks"]}
@@ -945,7 +1051,7 @@ def main(argv: list[str] | None = None) -> int:
             state = short / f"tpm-{case.id}"
             if case.tpm != "blank":
                 provision.copy_state(art.tpm_states[case.tpm], state)
-            tpm = Swtpm(state)
+            tpm = Swtpm(state, io_log=case.io_log)
             try:
                 m = Machine(art.uboot[case.uboot], art.slots[case.slot], art.flash[case.flash],
                             work / "ctrl.dtb", tpm.sock, reboot=case.reboot,
@@ -962,13 +1068,21 @@ def main(argv: list[str] | None = None) -> int:
                 checks.append(moved_pcrs(art.prediction_for(case.uboot, case.slot), art.prediction, case.changes_pcr))
             if case.unseal:
                 checks += unseal_checks(art.provisioned, res.text)
+            io = {}
+            if case.io_log:
+                frames = parse_io_log(tpm.log.read_text(errors="replace"))
+                checks += io_checks(art.provisioned, frames, clear=case.role == "control")
+                text, redacted = render_io_log(frames, art.provisioned.secrets)
+                io = {"io_log": f"{case.id}.swtpm-io.log", "io_redacted": redacted}
+                (out / io["io_log"]).write_text(text)
+                io["io_log_sha256"] = sha256(out / io["io_log"])
             ok = all(c["ok"] for c in checks)
             runs.append({"id": case.id, "tc": case.tc, "role": case.role, "title": case.title,
                          "control_for": case.control_for, "uboot": case.uboot, "slot": case.slot,
                          "flash": case.flash, "tpm": case.tpm, "data": case.data, "keys_from": case.keys_from, "keys_until": case.keys_until, "keys_sent": res.keys_sent,
                          "reboot": case.reboot, "positive": case.positive, "unseal": unseal_lines(res.text),
                          "ok": ok, "checks": checks, "end": res.reason,
-                         "seconds": round(res.seconds, 1), "log": log, "log_sha256": sha256(out / log)})
+                         "seconds": round(res.seconds, 1), "log": log, "log_sha256": sha256(out / log), **io})
             print(f"{'PASS' if ok else 'FAIL'}  {case.id:15} {case.title} ({res.seconds:.0f}s, {res.reason})",
                   flush=True)
 

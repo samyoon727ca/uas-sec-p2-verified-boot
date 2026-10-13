@@ -1,0 +1,4116 @@
+{
+  "event": "VE-07",
+  "harness": "tests/ve07/boot_cases.py",
+  "environment": {
+    "kind": "ci",
+    "run_id": "38349138261",
+    "run_attempt": "1",
+    "run_url": "https://github.com/samyoon727ca/uas-sec-p2-verified-boot/actions/runs/38349138261",
+    "workflow": "ve07-emu",
+    "event": "push",
+    "ref": "refs/heads/p2/tc09-traffic",
+    "sha": "d9149f6eb9305dc1e477319f2e5c03f517ce12c3",
+    "runner_image": "ubuntu24 20261004.327.1"
+  },
+  "date_utc": "2026-10-13T05:05:52Z",
+  "git": {
+    "commit": "d9149f6eb9305dc1e477319f2e5c03f517ce12c3",
+    "cc_or_tests_modified": "false"
+  },
+  "passed": true,
+  "test_cases": {
+    "TC-01": "passed",
+    "TC-03": "passed",
+    "TC-04": "passed",
+    "TC-05": "passed",
+    "TC-06": "passed",
+    "TC-07": "passed",
+    "TC-08": "passed",
+    "TC-09": "passed",
+    "TC-10": "passed"
+  },
+  "host": {
+    "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "qemu": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)",
+    "swtpm": "TPM emulator version 0.7.3, Copyright (c) 2014-2021 IBM Corp.",
+    "tpm2-tools": "tool=\"tpm2_createprimary\" version=\"5.6\" tctis=\"libtss2-tctildr\" tcti-default=tcti-device",
+    "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)",
+    "dtc": "Version: DTC 1.7.0",
+    "mkimage": "mkimage version 2026.07"
+  },
+  "host_packages": {
+    "snapshot": "20261002T000000Z",
+    "all_match": true,
+    "packages": [
+      {
+        "name": "bc",
+        "pinned": "1.07.1-3ubuntu4",
+        "installed": "1.07.1-3ubuntu4",
+        "ok": true
+      },
+      {
+        "name": "binutils-aarch64-linux-gnu",
+        "pinned": "2.42-4ubuntu2.10",
+        "installed": "2.42-4ubuntu2.10",
+        "ok": true
+      },
+      {
+        "name": "bison",
+        "pinned": "2:3.8.2+dfsg-1ubuntu0.24.04.1",
+        "installed": "2:3.8.2+dfsg-1ubuntu0.24.04.1",
+        "ok": true
+      },
+      {
+        "name": "cpio",
+        "pinned": "2.15+dfsg-1ubuntu2.1",
+        "installed": "2.15+dfsg-1ubuntu2.1",
+        "ok": true
+      },
+      {
+        "name": "device-tree-compiler",
+        "pinned": "1.7.0-2build1",
+        "installed": "1.7.0-2build1",
+        "ok": true
+      },
+      {
+        "name": "flex",
+        "pinned": "2.6.4-8.2build1",
+        "installed": "2.6.4-8.2build1",
+        "ok": true
+      },
+      {
+        "name": "gcc",
+        "pinned": "4:13.2.0-7ubuntu1",
+        "installed": "4:13.2.0-7ubuntu1",
+        "ok": true
+      },
+      {
+        "name": "gcc-aarch64-linux-gnu",
+        "pinned": "4:13.2.0-7ubuntu1",
+        "installed": "4:13.2.0-7ubuntu1",
+        "ok": true
+      },
+      {
+        "name": "gzip",
+        "pinned": "1.12-1ubuntu3.2",
+        "installed": "1.12-1ubuntu3.2",
+        "ok": true
+      },
+      {
+        "name": "libc6-dev-arm64-cross",
+        "pinned": "2.39-0ubuntu8cross1",
+        "installed": "2.39-0ubuntu8cross1",
+        "ok": true
+      },
+      {
+        "name": "libgnutls28-dev",
+        "pinned": "3.8.3-1.1ubuntu3.6",
+        "installed": "3.8.3-1.1ubuntu3.6",
+        "ok": true
+      },
+      {
+        "name": "libssl-dev",
+        "pinned": "3.0.13-0ubuntu3.16",
+        "installed": "3.0.13-0ubuntu3.16",
+        "ok": true
+      },
+      {
+        "name": "linux-libc-dev-arm64-cross",
+        "pinned": "6.8.0-25.25cross1",
+        "installed": "6.8.0-25.25cross1",
+        "ok": true
+      },
+      {
+        "name": "make",
+        "pinned": "4.3-4.1build2",
+        "installed": "4.3-4.1build2",
+        "ok": true
+      },
+      {
+        "name": "openssl",
+        "pinned": "3.0.13-0ubuntu3.16",
+        "installed": "3.0.13-0ubuntu3.16",
+        "ok": true
+      },
+      {
+        "name": "qemu-system-arm",
+        "pinned": "1:8.2.2+ds-0ubuntu1.18",
+        "installed": "1:8.2.2+ds-0ubuntu1.18",
+        "ok": true
+      },
+      {
+        "name": "swtpm",
+        "pinned": "0.7.3-0ubuntu5.24.04.1",
+        "installed": "0.7.3-0ubuntu5.24.04.1",
+        "ok": true
+      },
+      {
+        "name": "swtpm-tools",
+        "pinned": "0.7.3-0ubuntu5.24.04.1",
+        "installed": "0.7.3-0ubuntu5.24.04.1",
+        "ok": true
+      },
+      {
+        "name": "tpm2-tools",
+        "pinned": "5.6-1build4",
+        "installed": "5.6-1build4",
+        "ok": true
+      },
+      {
+        "name": "uuid-dev",
+        "pinned": "2.39.3-9ubuntu6.6",
+        "installed": "2.39.3-9ubuntu6.6",
+        "ok": true
+      }
+    ]
+  },
+  "toolchain": [
+    "aarch64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "GNU ld (GNU Binutils for Ubuntu) 2.42",
+    "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "binutils 2.42-4ubuntu2.10 amd64",
+    "binutils-aarch64-linux-gnu 2.42-4ubuntu2.10 amd64",
+    "binutils-common 2.42-4ubuntu2.10 amd64",
+    "binutils-x86-64-linux-gnu 2.42-4ubuntu2.10 amd64",
+    "cpio 2.15+dfsg-1ubuntu2.1 amd64",
+    "cpp 4:13.2.0-7ubuntu1 amd64",
+    "cpp-12 12.4.0-2ubuntu1~24.04.1 amd64",
+    "cpp-13 13.3.0-6ubuntu2~24.04.1 amd64",
+    "cpp-13-aarch64-linux-gnu 13.3.0-6ubuntu2~24.04.1cross1 amd64",
+    "cpp-13-x86-64-linux-gnu 13.3.0-6ubuntu2~24.04.1 amd64",
+    "cpp-14 14.2.0-4ubuntu2~24.04.1 amd64",
+    "cpp-14-x86-64-linux-gnu 14.2.0-4ubuntu2~24.04.1 amd64",
+    "cpp-aarch64-linux-gnu 4:13.2.0-7ubuntu1 amd64",
+    "cpp-x86-64-linux-gnu 4:13.2.0-7ubuntu1 amd64",
+    "device-tree-compiler 1.7.0-2build1 amd64",
+    "g++ 4:13.2.0-7ubuntu1 amd64",
+    "g++-12 12.4.0-2ubuntu1~24.04.1 amd64",
+    "g++-13 13.3.0-6ubuntu2~24.04.1 amd64",
+    "g++-13-x86-64-linux-gnu 13.3.0-6ubuntu2~24.04.1 amd64",
+    "g++-14 14.2.0-4ubuntu2~24.04.1 amd64",
+    "g++-14-x86-64-linux-gnu 14.2.0-4ubuntu2~24.04.1 amd64",
+    "g++-x86-64-linux-gnu 4:13.2.0-7ubuntu1 amd64",
+    "gcc 4:13.2.0-7ubuntu1 amd64",
+    "gcc-12 12.4.0-2ubuntu1~24.04.1 amd64",
+    "gcc-12-base 12.4.0-2ubuntu1~24.04.1 amd64",
+    "gcc-13 13.3.0-6ubuntu2~24.04.1 amd64",
+    "gcc-13-aarch64-linux-gnu 13.3.0-6ubuntu2~24.04.1cross1 amd64",
+    "gcc-13-aarch64-linux-gnu-base 13.3.0-6ubuntu2~24.04.1cross1 amd64",
+    "gcc-13-base 13.3.0-6ubuntu2~24.04.1 amd64",
+    "gcc-13-cross-base 13.3.0-6ubuntu2~24.04.1cross1 all",
+    "gcc-13-x86-64-linux-gnu 13.3.0-6ubuntu2~24.04.1 amd64",
+    "gcc-14 14.2.0-4ubuntu2~24.04.1 amd64",
+    "gcc-14-base 14.2.0-4ubuntu2~24.04.1 amd64",
+    "gcc-14-cross-base 14.2.0-4ubuntu2~24.04.1cross1 all",
+    "gcc-14-x86-64-linux-gnu 14.2.0-4ubuntu2~24.04.1 amd64",
+    "gcc-aarch64-linux-gnu 4:13.2.0-7ubuntu1 amd64",
+    "gcc-x86-64-linux-gnu 4:13.2.0-7ubuntu1 amd64",
+    "gzip 1.12-1ubuntu3.2 amd64",
+    "libc6 2.39-0ubuntu8.9 amd64",
+    "libc6-arm64-cross 2.39-0ubuntu8cross1 all",
+    "libc6-dev 2.39-0ubuntu8.9 amd64",
+    "libc6-dev-arm64-cross 2.39-0ubuntu8cross1 all",
+    "libc6-i386 2.39-0ubuntu8.9 amd64",
+    "libgcc-12-dev 12.4.0-2ubuntu1~24.04.1 amd64",
+    "libgcc-13-dev 13.3.0-6ubuntu2~24.04.1 amd64",
+    "libgcc-13-dev-arm64-cross 13.3.0-6ubuntu2~24.04.1cross1 all",
+    "libgcc-14-dev 14.2.0-4ubuntu2~24.04.1 amd64",
+    "libgcc-s1 14.2.0-4ubuntu2~24.04.1 amd64",
+    "libgcc-s1-arm64-cross 14.2.0-4ubuntu2~24.04.1cross1 all",
+    "libssl-dev 3.0.13-0ubuntu3.16 amd64",
+    "libssl3t64 3.0.13-0ubuntu3.16 amd64",
+    "libstdc++-12-dev 12.4.0-2ubuntu1~24.04.1 amd64",
+    "libstdc++-13-dev 13.3.0-6ubuntu2~24.04.1 amd64",
+    "libstdc++-14-dev 14.2.0-4ubuntu2~24.04.1 amd64",
+    "libstdc++6 14.2.0-4ubuntu2~24.04.1 amd64",
+    "libstdc++6-arm64-cross 14.2.0-4ubuntu2~24.04.1cross1 all",
+    "openssl 3.0.13-0ubuntu3.16 amd64"
+  ],
+  "pins": {
+    "u-boot": "# U-Boot release used for the CC boot loader. cc/build.sh downloads the\n# tarball and refuses it unless the SHA-256 matches.\nversion: 2026.07\nurl: https://ftp.denx.de/pub/u-boot/u-boot-2026.07.tar.bz2\nsha256: 78e8bfc382fe388f9b55aa1daf8c563522a037779b5d4c349d1415e381f1243e\n# Tag commit, for reference; the tarball matches it apart from lib/lwip dot-files.\ncommit: ece349ade2973e220f524ce59e59711cc919263f\n# Build timestamp fixed to the tag commit date, so the version string that\n# U-Boot measures into PCR 0 is the same on every build.\nsource_date_epoch: 1783381843\n",
+    "guest": "# arm64 guest packages for the emulated CC, from Launchpad's permanent file\n# store. SHA-256 values match the signed Ubuntu noble-updates index.\n# file sha256\nlinux-image-6.8.0-146-generic_6.8.0-146.146_arm64.deb ee35dffd32c672d6b1814c0d9c8001c1656e06e718ebd5fb15565d0b7e51e418\nbusybox-static_1.36.1-6ubuntu3.1_arm64.deb d96535e0402c011e0ee43449799df2f4504d44b842e4f2b3a6cbc845508eaafc\n# The unseal agent's runtime (glibc, libcrypto, TSS2 ESAPI and the device TCTI)\n# and its build-time headers (libtss2-dev). The same versions as the host's\n# glibc 2.39, OpenSSL 3.0.13 and tpm2-tss 4.0.1.\nlibc6_2.39-0ubuntu8.9_arm64.deb ad109797c5f78a5eeb6d4c296bfbaae68b239111a0c9ac0eb97b8d430284ac45\nlibssl3t64_3.0.13-0ubuntu3.16_arm64.deb 8b2dff5ee02f3e1eaaf8106ff372c5ba61b88ee57b7658e163a2de0b90b4956e\nlibtss2-esys-3.0.2-0t64_4.0.1-7.1ubuntu5.1_arm64.deb 18d094a375112556391c826b04f8bc492c31331daea4f8626f27600411cdebfd\nlibtss2-mu-4.0.1-0t64_4.0.1-7.1ubuntu5.1_arm64.deb 75d1d17741a125d85545b326ddc9dd787e1c9cf31306fb8c43d9aa8c83bc5e08\nlibtss2-sys1t64_4.0.1-7.1ubuntu5.1_arm64.deb c4c6fbda40059381e2fc9c16469355b678ea34bf3ed770b849490963e6ff6c01\nlibtss2-tcti-device0t64_4.0.1-7.1ubuntu5.1_arm64.deb 9a28afe6865fdf2ad4a4a51351aa1282babb07d83d7f5c64bf0a8a8408bf23a4\nlibtss2-rc0t64_4.0.1-7.1ubuntu5.1_arm64.deb 93c5301dd6342385a298156159b25c77851f6f27a25053448b8038c16ed39aaa\nlibtss2-dev_4.0.1-7.1ubuntu5.1_arm64.deb 76489d9a78e0b4cb9499d042d66f7f2f1e3f97b1f4c19805d46ddd2f62c8402b\n"
+  },
+  "public_keys_sha256_der": {
+    "K-CC-OS dev": "e1c8e468c989f13bf9a09a38544441519557d066ca5a73522ea571cee702f28c",
+    "rogue": "d2a775015bc79b7ca7ab31cc135ec9bd0a8bae2bb77ccd9a1d2deaee6ed33b73",
+    "K-CC-POL dev": "7ab200ed76e4977b991172e03d96a35fe8e97591c50446b9c59d788d65c4efe1",
+    "K-CC-POL rogue": "b90ace2ba7c616f542d1bb6034e48d59347613a4075f7c1d566fdad02cb2c5c5"
+  },
+  "artifacts_sha256": {
+    "fit.its": "9f810f3e27dc8c0f882536c39ac382776aedb95f5ecce7ff6c78bd8c58888a70",
+    "ctrl.dtb": "e1cfda6bb3e9b9d2b2d1fe8a787e6bdc3d7523c85d65520b10ef40c1115026ec",
+    "kernel.dtb": "d742d34e1d64406b8c7e8091dd9640b5b0a6858f81a1d70548e6f50338e5d0be",
+    "good.itb": "d0810c28f77419f0ae619775c5c1e448b8fa097569930105d2cba09e23f0e3bd",
+    "unsigned.itb": "b00d97267235965ed8646154ff1a081c91e60946fb0c7bc77373b3a22a896e24",
+    "rogue.itb": "7c5417c7734e8c50359ee46ee0534d5865332eb6163073333108f5d037e4771b",
+    "added-config.itb": "216c4e9f326f7bcfb463fc6da6c708a1b410b306324e932d7562390cbbd2566c",
+    "tamper-kernel.itb": "9d2148da2f560013b8ba230b8cee190735690873991e8e4c15f763c10859a349",
+    "tamper-ramdisk.itb": "1fa9aa0d2487d262dfcd82f99126a743cb54956356ed22ad5dd0925756f3bcbf",
+    "tamper-fdt.itb": "50296107e78d43cf86a44de29216b861c07852a9a98d3393efa6ce97cfb7e97d",
+    "legacy.uimg": "3aaf41b80feb7a140d74f34d5db9e684bd4bc8083444df3287243ae8769ceaab",
+    "env.bin": "8a15c8ab39974e6c18a536053b9ec262de2196cfbd616ca08b7db1966463c6ac",
+    "tc06-kernel.itb": "98bbe422c2c2fb2e89e36807808693a5cf727201e0a1ffe4684d52f565b97817",
+    "tc06-initramfs.itb": "92eca3acf265420062000340b4b7d4b3ed4577b7251f89b4062bf838626eae56",
+    "tc06-devicetree.itb": "2a016ece152ae9d8f53e04c09ea3e5f473147d7eb4614580e88310a645f8205d",
+    "r2.itb": "bab4dc1c087e97edfc7db6d6e0a090685a698ff84ed4e75e3c03ef7c176e474c",
+    "ctl-clear.itb": "fd70e885a74c929b9c2294f373c81b0de559a18f837b659e7e1c00c2b8c8e9ad",
+    "data-cc.img": "2a540850524af5bc2d54063dd1afe022f9e35e6f27a6dcfef58799520f346118",
+    "data-cc-moved.img": "e32eb6bafaf0957f5c4e89607729ee8ff0ce38c3e4910de94003bd80d314a5a9",
+    "data-cc-r2.img": "ee44a0e1ab0251124162af0548820c99079fe17f454c40b3e84448c5a6a38b64",
+    "data-cc-r2-rogue-key.img": "727549ac754eaf79ca53b66f4b05fbfd4c39260fadce18f63beb66e792fc8ae6",
+    "data-cc-r2-rogue-sig.img": "56ddc8945ce6a169f2836b367fe32876a7448ca5f673d39f4e8ea1f922967602",
+    "data-cc-ctl-clear.img": "aa516e474cb18e2ffff3c467991573a2187a1d854c7556652e477b08e5ae95a5",
+    "u-boot-hardened.bin": "ef5af6bd69f635b6ded028b649088de240666b859803facb11f4c8bfc11ba1fe",
+    "u-boot-hardened.config": "7fa1a4472d9e2506abddbb10a8cd2f9fea67090872ba7e1c93ea5b47f5502abc",
+    "u-boot-stock.bin": "80a5da4f89a1c0f6a9004e6c21c3dea4536862e044627a6adc286c8ef2d7b12a",
+    "u-boot-stock.config": "0f8b7df26f0cfa645942a652bfc0d528b444c8112899e666cfd0095acd0f456d",
+    "u-boot-ctl-bootdelay.bin": "5babd432806787073bcd227fcf2990eec3a82a1b89f7b147d580d670bbc4909f",
+    "u-boot-ctl-bootdelay.config": "8172fa93b9d27310622cceb3daf3a22a83922c89cbba0b98edb6c62dea83923e",
+    "u-boot-ctl-noreset.bin": "b8b204b412ac31620a4cfc794225e55d4fc3df1e6a4931d88170547e9fe6121d",
+    "u-boot-ctl-noreset.config": "fad1af2c3e1138ad122515ff6a0d638a525a1209daf1ccd79a09ddb8ab947383",
+    "u-boot-tc06-version.bin": "6e93e88f4651b4e305794aab8342454322069d8e1f36de1412377bc26f350c4c",
+    "u-boot-tc06-version.config": "6dc6aa2b8c641030f4dd5a922a5fb3822c1ef6d6197c681a445802b56e0eaa2b",
+    "u-boot-tc06-bootargs.bin": "131ac4dc1927aa76cd8aa4316f8d03be38390d7e590921261a7a740e0b62e2f9",
+    "u-boot-tc06-bootargs.config": "df8cd27ec17dc9da222374d4839408312ee1b9a10bfc8157dea60b7419fa2dd9",
+    "Image.gz": "6001f54164a5201cd5a80e0a09bb05c43fa6e910a0abfe0f5a4e8d7d781cc737",
+    "initramfs.cpio.gz": "e690e2cabc09633434334a203cd2ed7263b6ecb37119d2de77974afe1fb0f078",
+    "initramfs-ctl-clear.cpio.gz": "1036c3c1945db8e076b235d92c7d951250ed3688697ba0eacb07529ad6198129",
+    "p2-unseal": "a2927735bfc26d62c65ba5fa5ea0c95033883334d30ef20578b4ee3e3476acf3",
+    "p2-unseal-ctl-clear": "3c2a29e432d38a45a2230eac609e3be58c628ab0795c76abe6639cbf18a6cdc1",
+    "mkimage": "3a49683866008adaa8453a4edaa4c3697c678e8e97f422b02a3bc56f00cfc666",
+    "mkenvimage": "8d44e616274fe4b26e804063f9026c19e6c35f0e8be934772025ac62070eb672",
+    "ccdata/kpol.pub": "ff82a526f5d41aa17edfa14e6ca8ad1582ddcc85f94d722518793075b91945b0",
+    "ccdata/parent.name": "6b28c137413760bd3c82638970af0cd923b6e4d722ea1b6ba64519bc86d6cf79",
+    "ccdata/policy/approved": "fdca8c8b60b010753341cfcf026e90fb7ccdb13c9085ed9daa7bffea75f5ae96",
+    "ccdata/policy/approved.sig": "48b5afe9e397a87be43f27c52a9b5be52e04a53bfbb89eaf973b73b6bcc3e2a1",
+    "ccdata/policy/epoch": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "ccdata/sealed/mavlink.priv": "97f1133bb2925ad07c0f6ac65d810a51adbc16e1f7d321c2cdbb4955b1af777e",
+    "ccdata/sealed/mavlink.pub": "d292166d11905bf3b08dec5e0a35e0f71fe0bc24f22b295e1cb10e345c47b432",
+    "ccdata/sealed/wireguard.priv": "629121140bf3d2c3440be473bf6f0137e9a473c474aae3663cc5c8fcd4c8d31c",
+    "ccdata/sealed/wireguard.pub": "f1631b4fed0f381ab4c0fb476549f8c51bb26e3efeb42657dc70c449aff6e2c5"
+  },
+  "notes": {
+    "tpm_node": "/platform-bus@c000000/tpm_tis@0",
+    "key_required": "conf",
+    "tc06": "tc06-version and tc06-bootargs: U-Boot test builds; tc06-kernel: gzip MTIME of Image.gz set to 1; tc06-initramfs: a cpio member p2-tc06 appended; tc06-devicetree: /chosen/p2-tc06 added. Each FIT signed with K-CC-OS",
+    "tc08": "r2: a cpio member p2-release appended, signed with K-CC-OS; approved at epoch 1 (43b2194a059d9f523ce93895eb494018df98bbbe70c1137f10a55f640dc7379e); committed TPM: bits 0x2 set in 0x1000001",
+    "tamper-kernel": "byte 9295019 inverted in /images/kernel/data",
+    "tamper-ramdisk": "byte 20579825 inverted in /images/ramdisk/data",
+    "tamper-fdt": "byte 18593727 inverted in /images/fdt/data",
+    "added-config": "conf-alt (kernel and fdt, no initramfs, unsigned) added and made default"
+  },
+  "pcr_prediction": {
+    "uboot_version": "U-Boot 2026.07 (Jul 06 2026 - 23:50:43 +0000)",
+    "bootargs": "console=ttyAMA0 rdinit=/init panic=-1",
+    "fit_configuration": "conf",
+    "events": [
+      {
+        "pcr": 0,
+        "type": "EV_S_CRTM_VERSION",
+        "sha256": "460eda2cf7d6fb5307228a8d0c3d292d14940b466eb96aa205c038aba1ed092d",
+        "event": "U-Boot 2026.07 (Jul 06 2026 - 23:50:43 +0000)"
+      },
+      {
+        "pcr": 8,
+        "type": "EV_COMPACT_HASH",
+        "sha256": "6001f54164a5201cd5a80e0a09bb05c43fa6e910a0abfe0f5a4e8d7d781cc737",
+        "event": "linux"
+      },
+      {
+        "pcr": 9,
+        "type": "EV_COMPACT_HASH",
+        "sha256": "e690e2cabc09633434334a203cd2ed7263b6ecb37119d2de77974afe1fb0f078",
+        "event": "initrd"
+      },
+      {
+        "pcr": 1,
+        "type": "EV_TABLE_OF_DEVICES",
+        "sha256": "d742d34e1d64406b8c7e8091dd9640b5b0a6858f81a1d70548e6f50338e5d0be",
+        "event": "dts"
+      },
+      {
+        "pcr": 1,
+        "type": "EV_PLATFORM_CONFIG_FLAGS",
+        "sha256": "bb889c886a92e92ab4b6e24252a5bac7c6951b3568816f1611ee6153c1bcfdc5",
+        "event": "console=ttyAMA0 rdinit=/init panic=-1"
+      },
+      {
+        "pcr": 0,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      },
+      {
+        "pcr": 1,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      },
+      {
+        "pcr": 2,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      },
+      {
+        "pcr": 3,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      },
+      {
+        "pcr": 4,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      },
+      {
+        "pcr": 5,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      },
+      {
+        "pcr": 6,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      },
+      {
+        "pcr": 7,
+        "type": "EV_SEPARATOR",
+        "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+        "event": "ffffffff"
+      }
+    ],
+    "pcrs_sha256": {
+      "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+      "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+      "2": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93",
+      "3": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93",
+      "4": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93",
+      "5": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93",
+      "6": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93",
+      "7": "e21b703ee69c77476bccb43ec0336a9a1b2914b378944f7b00a10214ca8fea93",
+      "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+      "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+    },
+    "policy_pcrs": [
+      0,
+      1,
+      8,
+      9
+    ]
+  },
+  "provisioning": {
+    "parent_handle": "0x81000001",
+    "parent_name": "000b75443775ee6ac3026a434df3718563a02fdbf52d28b2d498331c05f904072a34",
+    "epoch_nv_index": "0x1000001",
+    "epoch_nv_attributes": {
+      "tpm": "0x22040022",
+      "expected": "0x22040022"
+    },
+    "epoch_nv_name": {
+      "tpm": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c",
+      "computed": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c"
+    },
+    "kpol_name": {
+      "tpm": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa",
+      "computed": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa"
+    },
+    "policy_ref": "p2/cc-keys",
+    "seal_policy": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840",
+    "sealed_objects": {
+      "wireguard": {
+        "attributes": "0x00000092",
+        "flags": [
+          "adminwithpolicy",
+          "fixedparent",
+          "fixedtpm"
+        ],
+        "auth_policy": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840",
+        "name": "000bb7b40a7d2bbd89fc3366a4587d1d76dde08fe40e35d58d9b3b969af0039ac183"
+      },
+      "mavlink": {
+        "attributes": "0x00000092",
+        "flags": [
+          "adminwithpolicy",
+          "fixedparent",
+          "fixedtpm"
+        ],
+        "auth_policy": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840",
+        "name": "000b787ff114a33a24827cabfbe5a4f0d47f58af3e36f6df91e93bbd7f06506dc944"
+      }
+    },
+    "secrets_sha256": {
+      "wireguard": "fe0b3314b248899f8742a80fda8e684677321f8f806728a565db83f6118ee713",
+      "mavlink": "462f8c1f155618730c266a891d397bbfd86858aeb382b01f2b517f599d075e04"
+    },
+    "epoch": 0,
+    "approved_policy": "6a942643065afc6aee87ab94c9b0148a6702f71e89164fbd03e7fdc5a64440d6",
+    "approved_for_pcrs_sha256": {
+      "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+      "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+      "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+      "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+    }
+  },
+  "runs": [
+    {
+      "id": "TC-04a",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Built .config holds every P2 setting; each control build changes exactly one",
+      "ok": true,
+      "checks": [
+        {
+          "kind": "config",
+          "pattern": "CONFIG_FIT_SIGNATURE=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_LEGACY_IMAGE_FORMAT is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_ENV_IS_NOWHERE=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_ENV_IS_IN_FLASH is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_BOOTDELAY=-2",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_BOOTSTD_BOOTCOMMAND is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_USE_BOOTCOMMAND=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_USE_BOOTARGS=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_USE_PREBOOT is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_MEASURED_BOOT=y",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_SYS_BOOTM_LEN=0x8000000",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "# CONFIG_UNIT_TEST is not set",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_BOOTCOMMAND=\"virtio scan; virtio read 0x50000000 0 0x20000; bootm 0x50000000; reset\"",
+          "ok": true
+        },
+        {
+          "kind": "config",
+          "pattern": "CONFIG_BOOTARGS=\"console=ttyAMA0 rdinit=/init panic=-1\"",
+          "ok": true
+        },
+        {
+          "kind": "control-diff",
+          "pattern": "ctl-bootdelay differs from hardened only by ['CONFIG_BOOTDELAY=2']",
+          "ok": true,
+          "observed": [
+            "CONFIG_BOOTDELAY=2"
+          ]
+        },
+        {
+          "kind": "control-diff",
+          "pattern": "ctl-noreset differs from hardened only by ['CONFIG_BOOTCOMMAND=\"virtio scan; virtio read 0x50000000 0 0x20000; bootm 0x50000000\"']",
+          "ok": true,
+          "observed": [
+            "CONFIG_BOOTCOMMAND=\"virtio scan; virtio read 0x50000000 0 0x20000; bootm 0x50000000\""
+          ]
+        },
+        {
+          "kind": "control-diff",
+          "pattern": "tc06-version differs from hardened only by ['CONFIG_LOCALVERSION=\"-p2-tc06\"']",
+          "ok": true,
+          "observed": [
+            "CONFIG_LOCALVERSION=\"-p2-tc06\""
+          ]
+        },
+        {
+          "kind": "control-diff",
+          "pattern": "tc06-bootargs differs from hardened only by ['CONFIG_BOOTARGS=\"console=ttyAMA0 rdinit=/init panic=-1 p2.tc06=1\"']",
+          "ok": true,
+          "observed": [
+            "CONFIG_BOOTARGS=\"console=ttyAMA0 rdinit=/init panic=-1 p2.tc06=1\""
+          ]
+        },
+        {
+          "kind": "required-key",
+          "pattern": "control DT marks key-cc-os-dev required",
+          "ok": true,
+          "observed": "conf"
+        }
+      ],
+      "log": null
+    },
+    {
+      "id": "TC-01",
+      "tc": "TC-01",
+      "role": "positive",
+      "title": "Signed chain boots to the initramfs",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [
+        "no CC data disk"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.4,
+      "log": "TC-01.log",
+      "log_sha256": "57fa2bc18d750866cd023596dc02cab7f55118094fe334766a431e8d8439e6c4"
+    },
+    {
+      "id": "TC-03a",
+      "tc": "TC-03",
+      "role": "test",
+      "title": "Kernel changed after signing",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "tamper-kernel",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'kernel' image node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.8,
+      "log": "TC-03a.log",
+      "log_sha256": "57f030ebe7cef70f8d5d909c962191332e7a1b86bcfbdc365107f933e8d3c4c3"
+    },
+    {
+      "id": "TC-03b",
+      "tc": "TC-03",
+      "role": "test",
+      "title": "Initramfs changed after signing",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "tamper-ramdisk",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'ramdisk' image node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.8,
+      "log": "TC-03b.log",
+      "log_sha256": "a9a40442030c69858e550ce0d687bf09de8dfbb1ebb6d2f962d0a4373e9d51f2"
+    },
+    {
+      "id": "TC-03c",
+      "tc": "TC-03",
+      "role": "test",
+      "title": "Devicetree changed after signing",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "tamper-fdt",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'fdt' image node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.8,
+      "log": "TC-03c.log",
+      "log_sha256": "f23c817f6cafe91e0675db2c2c40c33764ac0115eb1134fa39bfabf9ba839c36"
+    },
+    {
+      "id": "TC-04b",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Unsigned configuration added after signing and made default",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "added-config",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "Using 'conf-alt' configuration",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "No 'signature' subnode found for 'conf-alt' config node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Failed to verify required signature 'key-cc-os-dev'",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.4,
+      "log": "TC-04b.log",
+      "log_sha256": "563c1878c041d0656c3f2604be574cabb35a80c793e81fa541fd339593708a28"
+    },
+    {
+      "id": "TC-04c",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Unsigned FIT",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "unsigned",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "No 'signature' subnode found for 'conf' config node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Failed to verify required signature 'key-cc-os-dev'",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.4,
+      "log": "TC-04c.log",
+      "log_sha256": "67ce172ba3c66c120a77da54d9fde464935f07855b2d2419f62907fd9d038233"
+    },
+    {
+      "id": "TC-04d",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "FIT signed by a rogue key with the same key name",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "rogue",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev-\\s+error!",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Verification failed for 'conf' config node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Failed to verify required signature 'key-cc-os-dev'",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.4,
+      "log": "TC-04d.log",
+      "log_sha256": "38e64f673911591ad160d1b409d7ceefe46214d52864474ad11ad839f334faa8"
+    },
+    {
+      "id": "TC-04e",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Legacy uImage in the boot slot",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "legacy",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "Wrong Image Type for bootm command",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Linux version \\d",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 0.4,
+      "log": "TC-04e.log",
+      "log_sha256": "bf575365e220656c2657812af1d95bd5e0ad08f5e3ad0929a2c7b8b7b7425ba9"
+    },
+    {
+      "id": "TC-04e-control",
+      "tc": "TC-04",
+      "role": "control",
+      "title": "Stock U-Boot boots the same legacy uImage (via injected environment)",
+      "control_for": "TC-04e",
+      "uboot": "stock",
+      "slot": "legacy",
+      "flash": "env",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Booting kernel from Legacy Image",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Linux version \\d",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 2.8,
+      "log": "TC-04e-control.log",
+      "log_sha256": "f3dada5f2b6fe3830a992d5bc14df52265165d5fec0fcf25cc1fe5003783e713"
+    },
+    {
+      "id": "TC-04f",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Environment injected into flash is ignored",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "env",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [
+        "no CC data disk"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.4,
+      "log": "TC-04f.log",
+      "log_sha256": "1f6cbe99cfa987851489839c33364f7f9a9e4dda953fd859712a7aceebff4cd0"
+    },
+    {
+      "id": "TC-04f-control",
+      "tc": "TC-04",
+      "role": "control",
+      "title": "Stock U-Boot runs the injected environment",
+      "control_for": "TC-04f",
+      "uboot": "stock",
+      "slot": "good",
+      "flash": "env",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 3.2,
+      "log": "TC-04f-control.log",
+      "log_sha256": "edc7e3713608a730c133a33bcad8c225b1a1eaeebaf9c114c777acc90403054b"
+    },
+    {
+      "id": "TC-04g",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Keystrokes from console start to the end of a good boot reach no prompt",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": "(?m)^In:\\s+serial",
+      "keys_until": "Starting kernel",
+      "keys_sent": 36,
+      "reboot": false,
+      "positive": null,
+      "unseal": [
+        "no CC data disk"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "keys",
+          "pattern": "at least 5 keystrokes typed (typed 36)",
+          "ok": true
+        },
+        {
+          "kind": "keys",
+          "pattern": "typing covered the run up to Starting kernel and went on past it (28 keystrokes before, 8 after)",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.4,
+      "log": "TC-04g.log",
+      "log_sha256": "34152594d2b8b29a3c00be8e6efb10e161e31284ad0959d3c57c2d5be477b7e1"
+    },
+    {
+      "id": "TC-04g-control",
+      "tc": "TC-04",
+      "role": "control",
+      "title": "The same keystrokes stop autoboot when only the delay is restored",
+      "control_for": "TC-04g",
+      "uboot": "ctl-bootdelay",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": "(?m)^In:\\s+serial",
+      "keys_until": null,
+      "keys_sent": 6,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Scanning for bootflows",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: stopped",
+          "ok": true
+        }
+      ],
+      "end": "stopped",
+      "seconds": 1.4,
+      "log": "TC-04g-control.log",
+      "log_sha256": "7885fb47d9c8ca36eb9cc6bdd9a33eb168ebd2f5350708db007711ad63623712"
+    },
+    {
+      "id": "TC-04h",
+      "tc": "TC-04",
+      "role": "test",
+      "title": "Keystrokes after a refused boot reach no prompt; the board resets and refuses again",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "tamper-kernel",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": "Bad hash value for 'hash' hash node in 'kernel' image node",
+      "keys_until": null,
+      "keys_sent": 12,
+      "reboot": true,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "(?m)^U-Boot 20\\d\\d\\.\\d\\d (at least 5x)",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'kernel' image node (at least 5x)",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "keys",
+          "pattern": "at least 5 keystrokes typed (typed 12)",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: stopped",
+          "ok": true
+        }
+      ],
+      "end": "stopped",
+      "seconds": 3.0,
+      "log": "TC-04h.log",
+      "log_sha256": "b0b5afd19ce279cbf576c91cb4e9032a17b651f548417cc7efa8576b51447752"
+    },
+    {
+      "id": "TC-04h-control",
+      "tc": "TC-04",
+      "role": "control",
+      "title": "The same keystrokes reach a prompt when only the reset is removed",
+      "control_for": "TC-04h",
+      "uboot": "ctl-noreset",
+      "slot": "tamper-kernel",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": "Bad hash value for 'hash' hash node in 'kernel' image node",
+      "keys_until": null,
+      "keys_sent": 1,
+      "reboot": false,
+      "positive": null,
+      "unseal": [],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "Bad hash value for 'hash' hash node in 'kernel' image node",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Starting kernel",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "resetting \\.\\.\\.",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: stopped",
+          "ok": true
+        }
+      ],
+      "end": "stopped",
+      "seconds": 0.8,
+      "log": "TC-04h-control.log",
+      "log_sha256": "8a29bfb76b0e19735e96b7b9529a5c4427b224d24334c6335b028913f9387780"
+    },
+    {
+      "id": "TC-05",
+      "tc": "TC-05",
+      "role": "test",
+      "title": "Keys unseal in the measured, unmodified boot state",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [
+        "wireguard ok",
+        "mavlink ok"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard ok$",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ refused at ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL control build: response encryption off$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "provision",
+          "pattern": "the epoch index name the MSS computes equals the name the TPM reports",
+          "ok": true,
+          "observed": {
+            "tpm": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c",
+            "computed": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "the K-CC-POL name computed from its public area equals the TPM's",
+          "ok": true,
+          "observed": {
+            "tpm": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa",
+            "computed": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "wireguard: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "fe0b3314b248899f8742a80fda8e684677321f8f806728a565db83f6118ee713"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "mavlink: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "462f8c1f155618730c266a891d397bbfd86858aeb382b01f2b517f599d075e04"
+        }
+      ],
+      "end": "exited",
+      "seconds": 8.0,
+      "log": "TC-05.log",
+      "log_sha256": "29152dad2466184052493d815ff5b99cc9ce8d6d4c85243ad73683c37e14d1ac"
+    },
+    {
+      "id": "TC-06a",
+      "tc": "TC-06",
+      "role": "test",
+      "title": "Boot loader with another version string (PCR 0)",
+      "control_for": null,
+      "uboot": "tc06-version",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context",
+        "mavlink refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "b080e295e4bc96a5714df0649b98aabd8014b1092bb40903e5d2b532498a9196",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "b080e295e4bc96a5714df0649b98aabd8014b1092bb40903e5d2b532498a9196"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "b080e295e4bc96a5714df0649b98aabd8014b1092bb40903e5d2b532498a9196"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "moved",
+          "pattern": "only PCR 0 differs from the approved release",
+          "ok": true,
+          "observed": [
+            0
+          ]
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-06a.log",
+      "log_sha256": "9e02f0951bd21a2f74d7e8408f665fcdf534332f1c1553a5ccff60f664d526ec"
+    },
+    {
+      "id": "TC-06b",
+      "tc": "TC-06",
+      "role": "test",
+      "title": "Kernel command line with one more argument (PCR 1)",
+      "control_for": null,
+      "uboot": "tc06-bootargs",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context",
+        "mavlink refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "cfc1bc2e1667754a439d624777ad1e649613b76c19dc2707089281f4d2d39889",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "cfc1bc2e1667754a439d624777ad1e649613b76c19dc2707089281f4d2d39889"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "cfc1bc2e1667754a439d624777ad1e649613b76c19dc2707089281f4d2d39889"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "moved",
+          "pattern": "only PCR 1 differs from the approved release",
+          "ok": true,
+          "observed": [
+            1
+          ]
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-06b.log",
+      "log_sha256": "8fb00b5b890bbf172c4574cf412423bb715ed58fe8d7721edc3273ff0c869264"
+    },
+    {
+      "id": "TC-06c",
+      "tc": "TC-06",
+      "role": "test",
+      "title": "Devicetree with one more property, re-signed (PCR 1)",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "tc06-devicetree",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context",
+        "mavlink refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "894fd2dfa9bc8aa23f1880cde2aaefb6d61f9969a34d59c545965629149d337d",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "894fd2dfa9bc8aa23f1880cde2aaefb6d61f9969a34d59c545965629149d337d"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "894fd2dfa9bc8aa23f1880cde2aaefb6d61f9969a34d59c545965629149d337d"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "moved",
+          "pattern": "only PCR 1 differs from the approved release",
+          "ok": true,
+          "observed": [
+            1
+          ]
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-06c.log",
+      "log_sha256": "f1f813829bb9d92ccf84edd2d93117cad9805b7f91ee24af9ff2a70a54e8e61c"
+    },
+    {
+      "id": "TC-06d",
+      "tc": "TC-06",
+      "role": "test",
+      "title": "Kernel image with other bytes, re-signed (PCR 8)",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "tc06-kernel",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context",
+        "mavlink refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "56444e547febc987a6df78831b9d15a1075577b502c8f844bff580d7a8f1b814",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "56444e547febc987a6df78831b9d15a1075577b502c8f844bff580d7a8f1b814"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "56444e547febc987a6df78831b9d15a1075577b502c8f844bff580d7a8f1b814"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "moved",
+          "pattern": "only PCR 8 differs from the approved release",
+          "ok": true,
+          "observed": [
+            8
+          ]
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-06d.log",
+      "log_sha256": "a18d79a4b425487508da414235983568b918d09bc0f2dfa5a01f03054bd08dfe"
+    },
+    {
+      "id": "TC-06e",
+      "tc": "TC-06",
+      "role": "test",
+      "title": "Initramfs with one more file, re-signed (PCR 9)",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "tc06-initramfs",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context",
+        "mavlink refused at PolicyAuthorize: tpm:parameter(1):value is out of range or is not correct for the context"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at PolicyAuthorize: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "e7b653a9a80266c2d124bba3d3feaf07f77ceac62caf6a9ae1443a114315841d"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "e7b653a9a80266c2d124bba3d3feaf07f77ceac62caf6a9ae1443a114315841d"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "e7b653a9a80266c2d124bba3d3feaf07f77ceac62caf6a9ae1443a114315841d"
+        },
+        {
+          "kind": "moved",
+          "pattern": "only PCR 9 differs from the approved release",
+          "ok": true,
+          "observed": [
+            9
+          ]
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-06e.log",
+      "log_sha256": "544c7bc3c5336bad60f14d0080aaf8ff5ffa429554732913c0885ccd7292aecb"
+    },
+    {
+      "id": "TC-07a",
+      "tc": "TC-07",
+      "role": "test",
+      "title": "This CC's data on a second CC's TPM",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "second",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at parent name: missing or wrong CC data",
+        "mavlink refused at parent name: missing or wrong CC data"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at parent\\ name: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at parent\\ name: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.6,
+      "log": "TC-07a.log",
+      "log_sha256": "974e97fd08bae571fe2b2d45136e703c034c106e4fc9e8565bfb851f9fafc5b8"
+    },
+    {
+      "id": "TC-07b",
+      "tc": "TC-07",
+      "role": "test",
+      "title": "The same, with the parent name changed to the second TPM's",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "second",
+      "data": "cc-moved",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at Load: tpm:parameter(1):integrity check failed",
+        "mavlink refused at Load: tpm:parameter(1):integrity check failed"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at Load: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at Load: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-07b.log",
+      "log_sha256": "6709b0562c45154d213213f237e725e1bec5d5ce163143865f6a4715cae7cea3"
+    },
+    {
+      "id": "TC-08a",
+      "tc": "TC-08",
+      "role": "test",
+      "title": "Release 1 with its epoch-0 policy, after epoch 1 is committed",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "committed",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at PolicyNV: tpm:error(2.0): policy failure in math operation or an invalid authPolicy value",
+        "mavlink refused at PolicyNV: tpm:error(2.0): policy failure in math operation or an invalid authPolicy value"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at PolicyNV: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at PolicyNV: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-08a.log",
+      "log_sha256": "596993a5fc288068c8672583438cf4947d7b428d8c0c7612154abe5be83c26a6"
+    },
+    {
+      "id": "TC-08b",
+      "tc": "TC-08",
+      "role": "test",
+      "title": "Release 2 with its epoch-1 policy, after the commit, still unseals",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "r2",
+      "flash": "blank",
+      "tpm": "committed",
+      "data": "cc-r2",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard ok",
+        "mavlink ok"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard ok$",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ refused at ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+        },
+        {
+          "kind": "provision",
+          "pattern": "the epoch index name the MSS computes equals the name the TPM reports",
+          "ok": true,
+          "observed": {
+            "tpm": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c",
+            "computed": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "the K-CC-POL name computed from its public area equals the TPM's",
+          "ok": true,
+          "observed": {
+            "tpm": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa",
+            "computed": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "wireguard: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "fe0b3314b248899f8742a80fda8e684677321f8f806728a565db83f6118ee713"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "mavlink: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "462f8c1f155618730c266a891d397bbfd86858aeb382b01f2b517f599d075e04"
+        }
+      ],
+      "end": "exited",
+      "seconds": 8.0,
+      "log": "TC-08b.log",
+      "log_sha256": "88cf6e93a33e23fabc694be9aeca169ef317573322e7d09ddbcad9f6dcbe5b06"
+    },
+    {
+      "id": "TC-08c",
+      "tc": "TC-08",
+      "role": "test",
+      "title": "Release 2 with a policy signed by a rogue key, rogue public key on storage",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "r2",
+      "flash": "blank",
+      "tpm": "committed",
+      "data": "cc-r2-rogue-key",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at Unseal: tpm:session(1):a policy check failed",
+        "mavlink refused at Unseal: tpm:session(1):a policy check failed"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at Unseal: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at Unseal: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-08c.log",
+      "log_sha256": "85c91e3f3905a6f0da937ee692946ed6931ffe787e7cb527e7b35278059cefbd"
+    },
+    {
+      "id": "TC-08d",
+      "tc": "TC-08",
+      "role": "test",
+      "title": "Release 2 with a policy signed by a rogue key, K-CC-POL public key on storage",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "r2",
+      "flash": "blank",
+      "tpm": "committed",
+      "data": "cc-r2-rogue-sig",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard refused at VerifySignature: tpm:parameter(2):the signature is not valid",
+        "mavlink refused at VerifySignature: tpm:parameter(2):the signature is not valid"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard refused at VerifySignature: ",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink refused at VerifySignature: ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-KEY ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "8610544fe617fc3ebe137aef91bad177557b507699aa906d31de7c488626fd62"
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.6,
+      "log": "TC-08d.log",
+      "log_sha256": "4165b409f13dc0230004537a7b68bad12ebc597ae949e45b08a1a96add45dafb"
+    },
+    {
+      "id": "TC-09",
+      "tc": "TC-09",
+      "role": "test",
+      "title": "Neither key appears in the TPM traffic of a TC-05 boot",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": "TC-05",
+      "unseal": [
+        "wireguard ok",
+        "mavlink ok"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard ok$",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ refused at ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL control build: response encryption off$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "provision",
+          "pattern": "the epoch index name the MSS computes equals the name the TPM reports",
+          "ok": true,
+          "observed": {
+            "tpm": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c",
+            "computed": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "the K-CC-POL name computed from its public area equals the TPM's",
+          "ok": true,
+          "observed": {
+            "tpm": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa",
+            "computed": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "wireguard: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "fe0b3314b248899f8742a80fda8e684677321f8f806728a565db83f6118ee713"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "mavlink: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "462f8c1f155618730c266a891d397bbfd86858aeb382b01f2b517f599d075e04"
+        },
+        {
+          "kind": "io",
+          "pattern": "swtpm recorded 2 TPM2_Unseal commands, each answered with success",
+          "ok": true,
+          "observed": {
+            "frames": 546,
+            "unseal_commands": 2
+          }
+        },
+        {
+          "kind": "io",
+          "pattern": "wireguard: the key appears in no recorded command or response",
+          "ok": true,
+          "observed": {
+            "anywhere": 0
+          }
+        },
+        {
+          "kind": "io",
+          "pattern": "mavlink: the key appears in no recorded command or response",
+          "ok": true,
+          "observed": {
+            "anywhere": 0
+          }
+        }
+      ],
+      "end": "exited",
+      "seconds": 8.0,
+      "log": "TC-09.log",
+      "log_sha256": "c03697175fe3ebb5b8b246046fbb1464cbd1e87100e6e76238298b8ce08f5ebd",
+      "io_log": "TC-09.swtpm-io.log",
+      "io_redacted": [],
+      "io_log_sha256": "99409601fc40644d92ffccfb0a97258ef9e190b89374407bced00450d30118a2"
+    },
+    {
+      "id": "TC-09-control",
+      "tc": "TC-09",
+      "role": "control",
+      "title": "Both keys appear in it when the agent leaves the response in the clear",
+      "control_for": "TC-09",
+      "uboot": "hardened",
+      "slot": "ctl-clear",
+      "flash": "blank",
+      "tpm": "provisioned",
+      "data": "cc-ctl-clear",
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [
+        "control build: response encryption off",
+        "wireguard ok",
+        "mavlink ok"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL control build: response encryption off$",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL wireguard ok$",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-UNSEAL mavlink ok$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-UNSEAL \\S+ refused at ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "provision",
+          "pattern": "the epoch index name the MSS computes equals the name the TPM reports",
+          "ok": true,
+          "observed": {
+            "tpm": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c",
+            "computed": "000b4e4310ce5717f2559389029b6820ccb55eaf00dc3bf868b64ff885b7b8c0171c"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "the K-CC-POL name computed from its public area equals the TPM's",
+          "ok": true,
+          "observed": {
+            "tpm": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa",
+            "computed": "000b09e0903325d0331e5f17410f0f6c1ddb9793ef9531607072f507ccb2ff92bcaa"
+          }
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "wireguard: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: fixedtpm, fixedparent and adminwithpolicy set; userwithauth clear",
+          "ok": true,
+          "observed": [
+            "adminwithpolicy",
+            "fixedparent",
+            "fixedtpm"
+          ]
+        },
+        {
+          "kind": "provision",
+          "pattern": "mavlink: authPolicy is PolicyAuthorize(K-CC-POL, policyRef)",
+          "ok": true,
+          "observed": "86b191b2953fa1d716b2cc8cdd7067df74d02638f42f12bf6a354d1f8123c840"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "wireguard: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "fe0b3314b248899f8742a80fda8e684677321f8f806728a565db83f6118ee713"
+        },
+        {
+          "kind": "unsealed",
+          "pattern": "mavlink: SHA-256 of the unsealed key equals the key sealed",
+          "ok": true,
+          "observed": "462f8c1f155618730c266a891d397bbfd86858aeb382b01f2b517f599d075e04"
+        },
+        {
+          "kind": "io",
+          "pattern": "swtpm recorded 2 TPM2_Unseal commands, each answered with success",
+          "ok": true,
+          "observed": {
+            "frames": 546,
+            "unseal_commands": 2
+          }
+        },
+        {
+          "kind": "io",
+          "pattern": "wireguard: the key appears in an Unseal response",
+          "ok": true,
+          "observed": {
+            "in_unseal_responses": 1,
+            "anywhere": 1
+          }
+        },
+        {
+          "kind": "io",
+          "pattern": "mavlink: the key appears in an Unseal response",
+          "ok": true,
+          "observed": {
+            "in_unseal_responses": 1,
+            "anywhere": 1
+          }
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.8,
+      "log": "TC-09-control.log",
+      "log_sha256": "c1bbe0871ae50fb507945ab2a692f7096c4c5988959f7fff68bdc84adab82ab9",
+      "io_log": "TC-09-control.swtpm-io.log",
+      "io_redacted": [
+        {
+          "frame": 461,
+          "kind": "rsp",
+          "offset": 16,
+          "key": "wireguard",
+          "sha256": "fe0b3314b248899f8742a80fda8e684677321f8f806728a565db83f6118ee713"
+        },
+        {
+          "frame": 521,
+          "kind": "rsp",
+          "offset": 16,
+          "key": "mavlink",
+          "sha256": "462f8c1f155618730c266a891d397bbfd86858aeb382b01f2b517f599d075e04"
+        }
+      ],
+      "io_log_sha256": "1e88866bad505a8b2c0419dc63f7c7d7ca2b3082f0d4821ae68f1fbd1744028c"
+    },
+    {
+      "id": "TC-10",
+      "tc": "TC-10",
+      "role": "test",
+      "title": "Predicted PCRs equal the measured PCRs and the event-log replay",
+      "control_for": null,
+      "uboot": "hardened",
+      "slot": "good",
+      "flash": "blank",
+      "tpm": "blank",
+      "data": null,
+      "keys_from": null,
+      "keys_until": null,
+      "keys_sent": 0,
+      "reboot": false,
+      "positive": null,
+      "unseal": [
+        "no CC data disk"
+      ],
+      "ok": true,
+      "checks": [
+        {
+          "kind": "expect",
+          "pattern": "sha256,rsa3072:cc-os-dev\\+ OK",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "P2-INITRAMFS-OK kernel=\\S+",
+          "ok": true
+        },
+        {
+          "kind": "expect",
+          "pattern": "(?m)^P2-PCR sha256 \\d+ [0-9A-Fa-f]{64}$ (at least 10x)",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^P2-ENV-INJECTED$",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^=> ",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Hit any key to stop autoboot",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "(?m)^bootm\\s+- boot application image",
+          "ok": true
+        },
+        {
+          "kind": "forbid",
+          "pattern": "Unknown command",
+          "ok": true
+        },
+        {
+          "kind": "end",
+          "pattern": "run ended: exited",
+          "ok": true
+        },
+        {
+          "kind": "measured",
+          "pattern": "every policy PCR moved from its reset value (all zeros)",
+          "ok": true,
+          "observed": {
+            "0": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0",
+            "1": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6",
+            "8": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8",
+            "9": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+          }
+        },
+        {
+          "kind": "eventlog",
+          "pattern": "the event log holds the 13 predicted events, in order",
+          "ok": true,
+          "observed": "13 events"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 0: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 1: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 8: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "replayed",
+          "pattern": "PCR 9: event-log replay equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 0: measured value equals the prediction",
+          "ok": true,
+          "observed": "30c8a64625e906bd4cbb92442cbb825d80a4e91559aece4c5254e554a7fb54e0"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 1: measured value equals the prediction",
+          "ok": true,
+          "observed": "a59fee377561a1ff23d7c9e6f1d6853f054269470832e5a0b0198c42f04e1dc6"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 8: measured value equals the prediction",
+          "ok": true,
+          "observed": "872c40a29504ea646eae76dd60ff0a8078344d933f9c304cfeefb688ce0bb4e8"
+        },
+        {
+          "kind": "measured",
+          "pattern": "PCR 9: measured value equals the prediction",
+          "ok": true,
+          "observed": "2e34bd575fc57407b450443791269d869fcd50fba28fa5352bc687aff9de8358"
+        }
+      ],
+      "end": "exited",
+      "seconds": 7.4,
+      "log": "TC-10.log",
+      "log_sha256": "639c2f60a07022177af35768c132732c90ffcb12c743300356ac767370be2084"
+    }
+  ]
+}

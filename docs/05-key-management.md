@@ -23,7 +23,7 @@ The TPM's own keys (the sealing parent and the salt key) are generated inside th
 ## 5.2 Dev-key rules
 
 1. **Never committed.** `.gitignore` excludes `keys/` and common key file names. `tools/check_no_secrets.py` scans every tracked and untracked, non-ignored file for PEM, OpenSSH and TSS private keys, PX4 key files and WireGuard private keys (`PrivateKey = ...`). It cannot recognize raw key bytes, such as a MAVLink signing key, so harnesses never print them.
-2. **Per run in CI.** Test harnesses generate keys in a temporary directory and delete it. Evidence records each public key's SHA-256, never a private key.
+2. **Per run in CI.** Test harnesses generate keys in a temporary directory and delete it. Evidence records each public key's SHA-256, never a private key. The keys sealed in the TPM (TC-05 onward) are generated per run too, and evidence records only their SHA-256. TC-09's control is designed to put them on the TPM interface in the clear, so the harness writes its swtpm I/O logs with any key bytes replaced by `--` and records the position and SHA-256 of each replacement.
 3. **Labeled.** Dev public keys are named `*-dev`. Nothing signed with a dev key is presented as a release.
 4. **The PX4 test key** in the PX4 tree is public. P2 uses it only as the wrong-key case (TC-13).
 5. **No fuse is burned with a dev key** without the owner's explicit go-ahead at that moment: once for the SRK hash, and again for closing the chip (OI2-02).

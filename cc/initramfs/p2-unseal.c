@@ -44,6 +44,17 @@
 #define POLICY_REF "p2/cc-keys"
 #define TPM_DEVICE "/dev/tpmrm0"
 
+/*
+ * TC-09's control build (cc/build.sh, -DP2_CONTROL_CLEAR_RESPONSE) leaves the
+ * unseal response in the clear, to show that TC-09 would see a key on the
+ * wire. It boots only in that control run. Never used to boot a CC.
+ */
+#ifdef P2_CONTROL_CLEAR_RESPONSE
+#define SESSION_ATTRIBUTES TPMA_SESSION_CONTINUESESSION
+#else
+#define SESSION_ATTRIBUTES (TPMA_SESSION_ENCRYPT | TPMA_SESSION_CONTINUESESSION)
+#endif
+
 static const char *ccdir;
 
 static int read_file(const char *rel, uint8_t *buf, size_t cap, size_t *len)
@@ -117,7 +128,7 @@ static int unseal_one(ESYS_CONTEXT *esys, const struct release *rel, const char 
 				   NULL, TPM2_SE_POLICY, &sym, TPM2_ALG_SHA256, &session);
 	if (rc)
 		goto out;
-	rc = Esys_TRSess_SetAttributes(esys, session, TPMA_SESSION_ENCRYPT | TPMA_SESSION_CONTINUESESSION, 0xff);
+	rc = Esys_TRSess_SetAttributes(esys, session, SESSION_ATTRIBUTES, 0xff);
 	if (rc)
 		goto out;
 	step = "PolicyPCR";
@@ -260,6 +271,9 @@ int main(int argc, char **argv)
 	}
 	ccdir = argv[1];
 	setvbuf(stdout, NULL, _IOLBF, 0);
+#ifdef P2_CONTROL_CLEAR_RESPONSE
+	printf("P2-UNSEAL control build: response encryption off\n");
+#endif
 	memset(&rel, 0, sizeof(rel));
 
 	step = "TPM";
