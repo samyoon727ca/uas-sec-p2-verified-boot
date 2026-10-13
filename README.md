@@ -11,7 +11,7 @@ Each step traces back to P1's threats and verification events.
 
 > **Notional and unclassified.** Built only from public sources: U-Boot, NXP, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; verified and measured boot pass in emulation.** VE-07's verified-boot cases TC-01, TC-03 and TC-04 and its measured-boot case TC-10 pass under QEMU emulation ([evidence](evidence/ve07-ci/20261013-1c9867e/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. Sealing (TC-05 to TC-09), the FC and all hardware runs are still planned; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
+**Status: design baselined; verified boot, measured boot and key release pass in emulation.** VE-07's verified-boot cases TC-01, TC-03 and TC-04, its measured-boot case TC-10 and its first sealing case TC-05 pass under QEMU emulation with swtpm ([evidence](evidence/ve07-ci/20261013-0d3ca38/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. TC-05 shows that the CC's keys unseal in that boot under the MSS-signed policy. The refusal cases (TC-06 to TC-09), the FC and all hardware runs are still planned; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 
@@ -58,12 +58,12 @@ flowchart LR
 
 ## Verification evidence
 
-CI runs QEMU `virt` with U-Boot and swtpm. So far it proves the boot-loader configuration and the tamper cases (TC-01, TC-03, TC-04), and that what U-Boot measures can be predicted from the release artifacts (TC-10). The sealing cases (TC-05 to TC-09) are planned for the same harness. Only hardware can prove the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
+CI runs QEMU `virt` with U-Boot and swtpm. So far it proves the boot-loader configuration and the tamper cases (TC-01, TC-03, TC-04), that what U-Boot measures can be predicted from the release artifacts (TC-10), and that the keys unseal in the approved boot state (TC-05). The cases that must refuse to unseal (TC-06 to TC-09) are planned for the same harness. Only hardware can prove the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
 
 <!-- BEGIN GENERATED: ve-status -->
 | Event | Verifies (P1) | CI runs passed | Hardware runs passed | P2 status | P1 status |
 |---|---|---|---|---|---|
-| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 4 of 9 | 0 of 9 | in progress | planned |
+| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 5 of 9 | 0 of 9 | in progress | planned |
 | VE-08 FC boots only signed firmware | SR-018 | 0 of 1 | 0 of 3 | planned | planned |
 <!-- END GENERATED: ve-status -->
 
@@ -88,10 +88,11 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`docs/06-verification.md`](docs/06-verification.md) | Test cases, what emulation and hardware each prove, evidence rules | Baselined |
 | [`docs/references.md`](docs/references.md) | Sources and tools, with pinned versions | Baselined |
 | [`data/`](data/) | Child requirements, trace and test cases (CSV); pinned P1 snapshot | Populated |
-| [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain | Built |
-| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03, TC-04, TC-10 built |
+| [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain, and the initramfs with its unseal agent ([`p2-unseal.c`](cc/initramfs/p2-unseal.c)) | Built |
+| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03, TC-04, TC-05, TC-10 built |
 | [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
 | [`tools/predict_pcrs.py`](tools/predict_pcrs.py) | Predicts PCRs 0, 1, 8 and 9 from the signed FIT and U-Boot binary; checks an event log and measured PCRs against the prediction (TC-10) | Built |
+| [`tools/approve_policy.py`](tools/approve_policy.py) | The MSS side of sealing: builds a release's approved policy (PCRs and epoch) and signs it with K-CC-POL | Built |
 | `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
 
 ## Run the checks locally

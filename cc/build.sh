@@ -5,7 +5,8 @@
 #       stock          qemu_arm64_defconfig unchanged (control runs only)
 #       ctl-bootdelay  hardened + cc/uboot/controls/bootdelay.config (control runs only)
 #       ctl-noreset    hardened + cc/uboot/controls/noreset.config (control runs only)
-#   - the pinned Ubuntu arm64 kernel and a busybox initramfs.
+#   - the pinned Ubuntu arm64 kernel and a busybox initramfs holding the
+#     unseal agent (cc/initramfs/p2-unseal.c) and the TPM libraries it needs.
 # Every download is checked against a pinned SHA-256, and every variant's
 # .config is checked against its fragments. Output goes to $OUT.
 set -euo pipefail
@@ -69,10 +70,33 @@ while read -r file sha; do
 done < "$ROOT/cc/emu/guest.lock"
 cp "$GUEST"/boot/vmlinuz-* "$OUT/Image.gz"
 
-RD=$OUT/initramfs && rm -rf "$RD" && mkdir -p "$RD"/{bin,dev,proc,sys}
+# The unseal agent, built against the pinned arm64 TPM libraries (headers from
+# libtss2-dev), and every shared library it needs, found by following DT_NEEDED.
+SYSLIB=$GUEST/usr/lib/aarch64-linux-gnu
+"${CROSS_COMPILE}gcc" -std=gnu11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
+  -ffile-prefix-map="$ROOT"=. -I"$GUEST/usr/include" -L"$SYSLIB" -Wl,-rpath-link,"$SYSLIB" \
+  -o "$OUT/p2-unseal" "$ROOT/cc/initramfs/p2-unseal.c" -ltss2-esys -ltss2-mu -ltss2-rc -ltss2-tcti-device
+
+RD=$OUT/initramfs && rm -rf "$RD" && mkdir -p "$RD"/{bin,dev,proc,run,sys,usr/bin,usr/lib/aarch64-linux-gnu}
 cp "$GUEST/usr/bin/busybox" "$RD/bin/busybox"
 cp "$ROOT/cc/initramfs/init" "$RD/init"
-chmod 0755 "$RD/init" "$RD/bin/busybox"
+cp "$OUT/p2-unseal" "$RD/usr/bin/p2-unseal"
+chmod 0755 "$RD/init" "$RD/bin/busybox" "$RD/usr/bin/p2-unseal"
+ln -s usr/lib "$RD/lib"
+ln -s aarch64-linux-gnu/ld-linux-aarch64.so.1 "$RD/usr/lib/ld-linux-aarch64.so.1"
+needed() { "${CROSS_COMPILE}readelf" -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]$/\1/p'; }
+queue=("$OUT/p2-unseal")
+declare -A copied=()
+while (( ${#queue[@]} )); do
+  for lib in $(needed "${queue[0]}"); do
+    [[ -n ${copied[$lib]:-} ]] && continue
+    [[ -e $SYSLIB/$lib ]] || { echo "$lib, needed by ${queue[0]##*/}, is not in guest.lock" >&2; exit 1; }
+    cp -L "$SYSLIB/$lib" "$RD/usr/lib/aarch64-linux-gnu/$lib"
+    copied[$lib]=1
+    queue+=("$SYSLIB/$lib")
+  done
+  queue=("${queue[@]:1}")
+done
 find "$RD" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 (cd "$RD" && find . -mindepth 1 | LC_ALL=C sort | cpio -o -H newc --reproducible --owner 0:0 --quiet) \
   | gzip -9 -n > "$OUT/initramfs.cpio.gz"
@@ -86,5 +110,5 @@ find "$RD" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
     | grep -E '^(gcc|cpp|g\+\+|binutils|libgcc|libc6|libstdc|gzip|cpio|device-tree-compiler|libssl|openssl)' || true
 } > "$OUT/toolchain.txt"
 
-(cd "$OUT" && sha256sum u-boot-*.bin u-boot-*.config Image.gz initramfs.cpio.gz mkimage mkenvimage) \
+(cd "$OUT" && sha256sum u-boot-*.bin u-boot-*.config Image.gz initramfs.cpio.gz p2-unseal mkimage mkenvimage) \
   | tee "$OUT/SHA256SUMS"

@@ -3,3 +3,14 @@
 # file sha256
 linux-image-6.8.0-146-generic_6.8.0-146.146_arm64.deb ee35dffd32c672d6b1814c0d9c8001c1656e06e718ebd5fb15565d0b7e51e418
 busybox-static_1.36.1-6ubuntu3.1_arm64.deb d96535e0402c011e0ee43449799df2f4504d44b842e4f2b3a6cbc845508eaafc
+# The unseal agent's runtime (glibc, libcrypto, TSS2 ESAPI and the device TCTI)
+# and its build-time headers (libtss2-dev). The same versions as the host's
+# glibc 2.39, OpenSSL 3.0.13 and tpm2-tss 4.0.1.
+libc6_2.39-0ubuntu8.9_arm64.deb ad109797c5f78a5eeb6d4c296bfbaae68b239111a0c9ac0eb97b8d430284ac45
+libssl3t64_3.0.13-0ubuntu3.16_arm64.deb 8b2dff5ee02f3e1eaaf8106ff372c5ba61b88ee57b7658e163a2de0b90b4956e
+libtss2-esys-3.0.2-0t64_4.0.1-7.1ubuntu5.1_arm64.deb 18d094a375112556391c826b04f8bc492c31331daea4f8626f27600411cdebfd
+libtss2-mu-4.0.1-0t64_4.0.1-7.1ubuntu5.1_arm64.deb 75d1d17741a125d85545b326ddc9dd787e1c9cf31306fb8c43d9aa8c83bc5e08
+libtss2-sys1t64_4.0.1-7.1ubuntu5.1_arm64.deb c4c6fbda40059381e2fc9c16469355b678ea34bf3ed770b849490963e6ff6c01
+libtss2-tcti-device0t64_4.0.1-7.1ubuntu5.1_arm64.deb 9a28afe6865fdf2ad4a4a51351aa1282babb07d83d7f5c64bf0a8a8408bf23a4
+libtss2-rc0t64_4.0.1-7.1ubuntu5.1_arm64.deb 93c5301dd6342385a298156159b25c77851f6f27a25053448b8038c16ed39aaa
+libtss2-dev_4.0.1-7.1ubuntu5.1_arm64.deb 76489d9a78e0b4cb9499d042d66f7f2f1e3f97b1f4c19805d46ddd2f62c8402b

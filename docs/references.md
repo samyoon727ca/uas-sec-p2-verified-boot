@@ -24,7 +24,8 @@ Every external source P2 relies on, with the version pinned. Facts were checked 
 | [QEMU] | QEMU [`hw/core/sysbus-fdt.c`](https://gitlab.com/qemu-project/qemu/-/blob/v8.2.2/hw/core/sysbus-fdt.c), [`hw/arm/virt.c`](https://gitlab.com/qemu-project/qemu/-/blob/v8.2.2/hw/arm/virt.c) | `v8.2.2` (Ubuntu `1:8.2.2+ds-0ubuntu1.18`) | `tpm-tis-device` on the `virt` machine; devicetree node `tcg,tpm-tis-mmio` |
 | [LINUX] | Linux [`drivers/char/tpm/tpm_tis.c`](https://github.com/torvalds/linux/blob/v6.8/drivers/char/tpm/tpm_tis.c); Ubuntu kernel `6.8.0-146-generic` arm64 `config` | `v6.8`; Ubuntu `6.8.0-146.146` | `tcg,tpm-tis-mmio` match; `CONFIG_TCG_TIS=y` built in |
 | [SWTPM] | [swtpm](https://github.com/stefanberger/swtpm) | `0.7.3` (Ubuntu `0.7.3-0ubuntu5.24.04.1`) | Emulated TPM 2.0 |
-| [TPM2-TOOLS] | [tpm2-tools](https://github.com/tpm2-software/tpm2-tools) `man/` | `5.6` (Ubuntu `5.6-1build4`) | Policy, NV and unseal commands |
+| [TPM2-TOOLS] | [tpm2-tools](https://github.com/tpm2-software/tpm2-tools) `man/` | `5.6` (Ubuntu `5.6-1build4`) | Provisioning on the host: persistent parent, epoch NV index, sealed objects |
+| [TPM2-TSS] | [tpm2-tss](https://github.com/tpm2-software/tpm2-tss) ESAPI headers (`include/tss2/tss2_esys.h`) | `4.0.1` (Ubuntu `4.0.1-7.1ubuntu5.1`, arm64 for the guest) | The unseal agent: salted policy sessions, parameter encryption, `Esys_PolicyAuthorize` |
 
 **U-Boot facts relied on**, all checked at `v2026.07`:
 
@@ -74,4 +75,5 @@ PX4 `v1.18.0` has not been released: the newest v1.18 tag on 2026-10-03 is `v1.1
 | Ubuntu host tools (QEMU, swtpm, tpm2-tools, cross compiler, dtc) | Ubuntu 24.04 archive snapshot `20261002T000000Z` | `apt-get update --snapshot`; installed versions compared with the expected versions |
 | Guest kernel | `linux-image-6.8.0-146-generic_6.8.0-146.146_arm64.deb` from Launchpad | SHA-256 `ee35dffd32c672d6b1814c0d9c8001c1656e06e718ebd5fb15565d0b7e51e418`, matching the signed `noble-updates` index |
 | Guest busybox | `busybox-static_1.36.1-6ubuntu3.1_arm64.deb` from Launchpad | SHA-256 `d96535e0402c011e0ee43449799df2f4504d44b842e4f2b3a6cbc845508eaafc`, matching the signed index |
+| Guest TPM libraries for the unseal agent: glibc, libcrypto, tpm2-tss ESAPI, MU, SYS, RC, device TCTI and headers | Eight arm64 packages from Launchpad, listed with their SHA-256 in [`cc/emu/guest.lock`](../cc/emu/guest.lock) | Each SHA-256 matches the signed `noble-updates` index for arm64 (`ports.ubuntu.com`, checked 2026-10-13); `cc/build.sh` refuses any file that differs |
 | GitHub Actions | Full commit SHAs, as in P1 | Workflow review |
