@@ -2,7 +2,7 @@
 
 U-Boot measures what it boots into four SHA-256 PCRs before running it. The CC's WireGuard private key and its copy of the MAVLink signing key are sealed once, to a policy that the MSS approves with a signature. Each release carries a signed policy covering its predicted PCR values and its anti-rollback epoch. A legitimate update therefore needs no re-sealing, and an older release cannot unseal once a newer epoch is committed (SR-010, SR-010.1 to SR-010.4).
 
-Status: design, informed by a throwaway prototype (§3.7). The emulated build enables `MEASURED_BOOT`, but no run has read the PCRs or the event log yet, and a boot that passes says nothing about them, because `bootm` ignores a failed measurement (§3.1). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
+Status: the measurements (§3.1) pass in emulation; sealing (§3.2 to §3.6) is design, informed by a throwaway prototype (§3.7). TC-10 shows that the PCRs U-Boot measures into swtpm, and the replay of the event log Linux receives, equal the values `tools/predict_pcrs.py` predicts from the release artifacts ([evidence](../evidence/ve07-ci/20261013-1c9867e/summary.md)). A real TPM over SPI has not been shown (OI2-01), and TC-05 to TC-09 are planned. Nothing here is shown working until its test case passes ([§6](06-verification.md)).
 
 ## 3.1 Measurements (SR-010.1)
 

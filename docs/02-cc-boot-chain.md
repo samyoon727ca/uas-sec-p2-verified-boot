@@ -2,7 +2,7 @@
 
 The CC verifies its boot chain in two stages. First, the SoC's boot ROM verifies the boot loader against a table of public keys whose hash is burned into fuses: the hardware root of trust for SR-005. Then U-Boot verifies a signed FIT configuration that covers the kernel, initramfs and devicetree. U-Boot takes no configuration from storage or the console (SR-005.1). U-Boot also measures what it boots into the TPM (§3).
 
-Status: the boot-loader configuration (§2.3) passes in emulation (TC-01, TC-03, TC-04). The hardware stages and the measurements are design. The CC board is on order and no hardware run has happened. Nothing is shown working until its test case passes ([§6](06-verification.md)).
+Status: the boot-loader configuration (§2.3) passes in emulation (TC-01, TC-03, TC-04), and so does the prediction of what U-Boot measures (TC-10, [§3.1](03-measured-boot-sealing.md#31-measurements-sr-0101)). The hardware stages are design. The CC board is on order and no hardware run has happened. Nothing is shown working until its test case passes ([§6](06-verification.md)).
 
 ## 2.1 Hardware target
 
