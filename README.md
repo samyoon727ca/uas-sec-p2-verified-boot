@@ -89,9 +89,9 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`docs/references.md`](docs/references.md) | Sources and tools, with pinned versions | Baselined |
 | [`data/`](data/) | Child requirements, trace and test cases (CSV); pinned P1 snapshot | Populated |
 | [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain | Built |
-| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03, TC-04 built |
+| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03, TC-04, TC-10 built |
 | [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
-| `tools/predict_pcrs.py` | Predicts PCRs 0, 1, 8 and 9 from the release artifacts, for TC-10 | Planned |
+| [`tools/predict_pcrs.py`](tools/predict_pcrs.py) | Predicts PCRs 0, 1, 8 and 9 from the signed FIT and U-Boot binary; checks an event log and measured PCRs against the prediction (TC-10) | Built |
 | `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
 
 ## Run the checks locally

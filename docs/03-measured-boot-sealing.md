@@ -13,9 +13,11 @@ Status: design, informed by a throwaway prototype (§3.7). The emulated build en
 | 8 | Kernel image as stored in the FIT | `EV_COMPACT_HASH` "linux" | Kernel changes |
 | 9 | Initramfs | `EV_COMPACT_HASH` "initrd" | Initramfs changes, including the unseal logic |
 
+After the last of these, U-Boot closes PCRs 0 to 7 with an `EV_SEPARATOR` event: `0xFFFFFFFF`, or `0x00000001` if a measurement failed. The separator is part of PCRs 0 and 1. U-Boot extends and logs every active PCR bank; the policy uses only SHA-256. The emulated swtpm, started without `swtpm_setup`, has SHA-1, SHA-256, SHA-384 and SHA-512 active.
+
 Sources: `boot/bootm.c` and `lib/tpm_tcg2.c` at `v2026.07` [UBOOT]. Three properties follow.
 
-- **Predictable.** `bootm` measures right after finding the images: before loading or decompressing them, and before any devicetree fixups. So the MSS can compute every PCR value from the release artifacts alone. `tools/predict_pcrs.py` (planned) will do this, and TC-10 will check the prediction against the measured PCRs and the event log.
+- **Predictable.** `bootm` measures right after finding the images: before loading or decompressing them, and before any devicetree fixups. So the MSS can compute every PCR value from the release artifacts alone. [`tools/predict_pcrs.py`](../tools/predict_pcrs.py) does this from the signed FIT and the U-Boot binary, which holds the version string and the compiled-in kernel command line. It refuses what it cannot predict, such as two version strings in the binary or a compressed devicetree. TC-10 checks the prediction against the measured PCRs and the event log.
 - **Logged.** The event log goes to Linux through `linux,sml-base`/`linux,sml-size` on the TPM node [UBOOT-MB], so the measurements can be replayed and checked.
 - **Fails open for boot, closed for keys.** `bootm` ignores a measurement failure and boots anyway [UBOOT]. The PCRs then hold no approved values, so the keys stay sealed. The CC boots without them and cannot join C2.
 
