@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""VE-07, emulated: verified-boot test cases TC-01, TC-03 and TC-04, and measured boot (TC-10).
+"""VE-07, emulated: verified boot (TC-01, TC-03, TC-04), key sealing (TC-05) and measured boot (TC-10).
 
 Boots the hardened U-Boot built by cc/build.sh on QEMU virt with swtpm and
-checks that only the chain signed with the dev K-CC-OS key boots, and that
-what it measures can be predicted from the release artifacts:
+checks that only the chain signed with the dev K-CC-OS key boots, that the
+CC's keys unseal in that boot, and that what it measures can be predicted
+from the release artifacts:
 
   TC-01  the signed chain boots to the initramfs (positive control)
   TC-03  a FIT with one byte changed in the kernel, initramfs or devicetree
@@ -13,6 +14,9 @@ what it measures can be predicted from the release artifacts:
          FIT signed by a rogue key with the same key name, a legacy uImage
          and an environment injected into flash are all refused or ignored;
          keystrokes never reach a console prompt
+  TC-05  with the TPM provisioned and the release approved by the MSS
+         (tests/ve07/provision.py), p2-unseal in the initramfs unseals both
+         keys, and their SHA-256 values equal those of the keys sealed
   TC-10  tools/predict_pcrs.py predicts PCRs 0, 1, 8 and 9 from the signed
          FIT and the U-Boot binary; the PCRs the initramfs reads, and the
          replay of the event log Linux received, equal the prediction
@@ -30,8 +34,9 @@ summary.json/summary.md to --out. Exit status 0 only if every case passes.
 Usage:
     python3 tests/ve07/boot_cases.py --build build --out evidence/ve07-ci/<run>
 
-Standard library only. Needs qemu-system-aarch64, swtpm, openssl, dtc,
-fdtget and fdtput on PATH, and mkimage/mkenvimage from the U-Boot build.
+Standard library only. Needs qemu-system-aarch64, swtpm, swtpm_ioctl,
+tpm2-tools, openssl, dtc, fdtget and fdtput on PATH, and mkimage/mkenvimage
+from the U-Boot build.
 """
 from __future__ import annotations
 
@@ -58,6 +63,7 @@ sys.path.insert(0, str(ROOT / "cc" / "uboot"))
 sys.path.insert(0, str(ROOT / "tools"))
 import check_config  # noqa: E402
 import predict_pcrs  # noqa: E402
+import provision  # noqa: E402  (tests/ve07, next to this file)
 
 KEY_NAME = "cc-os-dev"
 FIT_SOURCE = ROOT / "cc/fit/cc.its"
@@ -94,6 +100,9 @@ ENV_MARK = r"(?m)^P2-ENV-INJECTED$"
 REQUIRED_FAIL = rf"Failed to verify required signature 'key-{KEY_NAME}'"
 BAD_KERNEL = r"Bad hash value for 'hash' hash node in 'kernel' image node"
 PCR_LINE = r"(?m)^P2-PCR sha256 \d+ [0-9A-Fa-f]{64}$"   # printed by cc/initramfs/init
+UNSEAL_OK = r"(?m)^P2-UNSEAL {} ok$"                   # printed by cc/initramfs/p2-unseal.c
+UNSEAL_REFUSED = r"(?m)^P2-UNSEAL \S+ refused at "
+KEY_LINE = re.compile(r"(?m)^P2-KEY (\S+) sha256 ([0-9a-f]{64})$")
 EVENTLOG = re.compile(r"(?ms)^P2-EVENTLOG-BEGIN$(.*?)^P2-EVENTLOG-END$")
 CONSOLE = [PROMPT, AUTOBOOT, HELP_OUT, UNKNOWN_CMD]
 REFUSED = [KERNEL_START, BOOTED, ENV_MARK, *CONSOLE]
@@ -179,6 +188,7 @@ class Machine:
     dtb: Path | None
     tpm_sock: Path
     reboot: bool = False
+    data: Path | None = None   # CC data disk (sealed objects, signed policy)
 
     def argv(self, dumpdtb: Path | None = None) -> list[str]:
         machine = "virt,gic-version=3" + (f",dumpdtb={dumpdtb}" if dumpdtb else "")
@@ -188,6 +198,13 @@ class Machine:
             "-bios", str(self.bios),
             "-chardev", f"socket,id=chrtpm,path={self.tpm_sock}",
             "-tpmdev", "emulator,id=tpm0,chardev=chrtpm", "-device", "tpm-tis-device,tpmdev=tpm0",
+        ]
+        if self.data:
+            # Declared before the slot so that U-Boot's virtio 0 and Linux's vda stay the
+            # boot slot and the data disk is vdb; declared after it, U-Boot reads the data disk.
+            argv += ["-drive", f"if=none,id=data,file={self.data},format=raw,readonly=on",
+                     "-device", "virtio-blk-device,drive=data"]
+        argv += [
             "-drive", f"if=none,id=slot,file={self.slot},format=raw,readonly=on",
             "-device", "virtio-blk-device,drive=slot",
             "-drive", f"if=pflash,unit=1,file={self.flash1},format=raw,readonly=on",
@@ -306,6 +323,8 @@ class Artifacts:
         self.public_keys: dict[str, str] = {}
         self.notes: dict[str, str] = {}
         self.prediction: predict_pcrs.Prediction | None = None
+        self.provisioned: provision.Provisioned | None = None
+        self.data_disks: dict[str, Path] = {}
 
     def keypair(self, keydir: Path, label: str) -> None:
         keydir.mkdir(parents=True, exist_ok=True)
@@ -316,6 +335,16 @@ class Artifacts:
         der = subprocess.run(["openssl", "pkey", "-in", str(key), "-pubout", "-outform", "DER"],
                              check=True, capture_output=True).stdout
         self.public_keys[label] = hashlib.sha256(der).hexdigest()
+
+    def ec_key(self, keydir: Path, name: str, label: str) -> Path:
+        """An ECDSA P-256 dev key (K-CC-POL); records the public key's SHA-256."""
+        keydir.mkdir(parents=True, exist_ok=True)
+        key = keydir / f"{name}.pem"
+        run(["openssl", "genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256", "-out", str(key)])
+        der = subprocess.run(["openssl", "pkey", "-in", str(key), "-pubout", "-outform", "DER"],
+                             check=True, capture_output=True).stdout
+        self.public_keys[label] = hashlib.sha256(der).hexdigest()
+        return key
 
     def devicetree(self) -> None:
         """Dump QEMU's devicetree with the exact command line used to boot, then add
@@ -388,6 +417,13 @@ class Artifacts:
         # TC-10: what U-Boot will measure, from the release artifacts alone.
         self.prediction = predict_pcrs.predict(good.read_bytes(), self.uboot["hardened"].read_bytes())
 
+        # TC-05: a provisioned TPM, and the CC data with the MSS's approval of this release.
+        kpol = self.ec_key(self.short / "kpol", "k-cc-pol-dev", "K-CC-POL dev")
+        self.provisioned = provision.provision(self.work, self.short, kpol, self.prediction.pcrs)
+        path = self.work / "data-cc.img"
+        path.write_bytes(self.provisioned.disk)
+        self.data_disks["cc"] = path
+
         # TC-03: one byte changed after signing, in each payload.
         for node in ("kernel", "ramdisk", "fdt"):
             dst = self.work / f"tamper-{node}.itb"
@@ -431,11 +467,14 @@ class Artifacts:
 
     def hashes(self) -> dict[str, str]:
         names = ["fit.its", "ctrl.dtb", "kernel.dtb", "good.itb", "unsigned.itb", "rogue.itb", "added-config.itb",
-                 "tamper-kernel.itb", "tamper-ramdisk.itb", "tamper-fdt.itb", "legacy.uimg", "env.bin"]
+                 "tamper-kernel.itb", "tamper-ramdisk.itb", "tamper-fdt.itb", "legacy.uimg", "env.bin", "data-cc.img"]
         out = {n: sha256(self.work / n) for n in names}
         built = [f"u-boot-{v}.{ext}" for v in UBOOT_VARIANTS for ext in ("bin", "config")]
-        for n in built + ["Image.gz", "initramfs.cpio.gz", "mkimage", "mkenvimage"]:
+        for n in built + ["Image.gz", "initramfs.cpio.gz", "p2-unseal", "mkimage", "mkenvimage"]:
             out[n] = sha256(self.build / n)
+        data = self.provisioned.data
+        for f in sorted(p for p in data.rglob("*") if p.is_file()):
+            out[f"ccdata/{f.relative_to(data).as_posix()}"] = sha256(f)
         return out
 
 
@@ -462,6 +501,9 @@ class Case:
     stop_count: int = 1
     control_for: str | None = None
     pcrs: bool = False              # compare the PCRs and event log the initramfs prints with the prediction
+    tpm: str = "blank"              # blank: a new TPM; provisioned: a copy of the provisioned TPM
+    data: str | None = None         # CC data disk to attach
+    unseal: bool = False            # compare the unsealed keys with those sealed
 
 
 CASES = [
@@ -509,6 +551,9 @@ CASES = [
     Case("TC-04h-control", "TC-04", "control", "The same keystrokes reach a prompt when only the reset is removed",
          uboot="ctl-noreset", slot="tamper-kernel", keys_from=BAD_KERNEL, control_for="TC-04h", stop=HELP_OUT,
          expect=[BAD_KERNEL, PROMPT, HELP_OUT], forbid=[KERNEL_START, RESET]),
+    Case("TC-05", "TC-05", "test", "Keys unseal in the measured, unmodified boot state", tpm="provisioned", data="cc",
+         expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, ENV_MARK, *CONSOLE], pcrs=True, unseal=True),
     Case("TC-10", "TC-10", "test", "Predicted PCRs equal the measured PCRs and the event-log replay",
          expect=[VERIFIED, BOOTED, (PCR_LINE, 10)], forbid=[ENV_MARK, *CONSOLE], pcrs=True),
 ]
@@ -568,6 +613,16 @@ def pcr_checks(pred: predict_pcrs.Prediction, text: str) -> list[dict]:
                        "observed": f"{type(exc).__name__}: {exc}" if m else "no event log in the console output"})
         log = None
     return checks + predict_pcrs.compare(pred, log, measured)
+
+
+def unseal_checks(prov: provision.Provisioned, text: str) -> list[dict]:
+    """TC-05: the provisioned objects are as specified, and each unsealed key is the key sealed."""
+    found = dict(KEY_LINE.findall(clean(text)))
+    checks = provision.provisioning_checks(prov)
+    for name, want in prov.secrets_sha256.items():
+        checks.append({"kind": "unsealed", "pattern": f"{name}: SHA-256 of the unsealed key equals the key sealed",
+                       "ok": found.get(name) == want, "observed": found.get(name)})
+    return checks
 
 
 # --- provenance --------------------------------------------------------------
@@ -637,6 +692,16 @@ def write_markdown(out: Path, summary: dict) -> None:
         role = r["role"] + (f" for {r['control_for']}" if r.get("control_for") else "")
         lines.append(f"| {r['id']} | {role} | {r['title']} | {'pass' if r['ok'] else '**FAIL**'} | "
                      f"{r.get('seconds', 0):.0f} | {log} |")
+    unseal_run = next((r for r in summary["runs"] if r["tc"] == "TC-05"), None)
+    if unseal_run:
+        found = {c["pattern"].split(":")[0]: c for c in unseal_run["checks"] if c["kind"] == "unsealed"}
+        prov = summary["provisioning"]
+        lines += ["", f"TC-05, keys unsealed by `p2-unseal` under the approved policy for epoch {prov['epoch']} "
+                  f"(`{prov['approved_policy'][:16]}…`). Keys are generated per run; only their SHA-256 is recorded.",
+                  "", "| Key | SHA-256 sealed | Unsealed |", "|---|---|---|"]
+        for name, want in prov["secrets_sha256"].items():
+            c = found.get(name)
+            lines.append(f"| {name} | `{want}` | {'equal' if c and c['ok'] else '**' + str(c and c['observed']) + '**'} |")
     pcr_run = next((r for r in summary["runs"] if r["tc"] == "TC-10"), None)
     if pcr_run:
         found = {(c["kind"], c["pattern"].split(":")[0]): c for c in pcr_run["checks"]}
@@ -686,10 +751,14 @@ def main(argv: list[str] | None = None) -> int:
 
         selected = [c for c in CASES if not args.only or c.id in args.only or c.id == "TC-01"]
         for case in selected:
-            tpm = Swtpm(short / f"tpm-{case.id}")
+            state = short / f"tpm-{case.id}"
+            if case.tpm == "provisioned":
+                provision.copy_state(art.provisioned, state)
+            tpm = Swtpm(state)
             try:
                 m = Machine(art.uboot[case.uboot], art.slots[case.slot], art.flash[case.flash],
-                            work / "ctrl.dtb", tpm.sock, reboot=case.reboot)
+                            work / "ctrl.dtb", tpm.sock, reboot=case.reboot,
+                            data=art.data_disks[case.data] if case.data else None)
                 res = boot(m, CASE_TIMEOUT, keys_from=case.keys_from, stop=case.stop, stop_count=case.stop_count)
             finally:
                 tpm.stop()
@@ -698,10 +767,12 @@ def main(argv: list[str] | None = None) -> int:
             checks = evaluate(case, res.text, res.reason, res.keys_sent, res.key_marks)
             if case.pcrs:
                 checks += pcr_checks(art.prediction, res.text)
+            if case.unseal:
+                checks += unseal_checks(art.provisioned, res.text)
             ok = all(c["ok"] for c in checks)
             runs.append({"id": case.id, "tc": case.tc, "role": case.role, "title": case.title,
                          "control_for": case.control_for, "uboot": case.uboot, "slot": case.slot,
-                         "flash": case.flash, "keys_from": case.keys_from, "keys_until": case.keys_until, "keys_sent": res.keys_sent,
+                         "flash": case.flash, "tpm": case.tpm, "data": case.data, "keys_from": case.keys_from, "keys_until": case.keys_until, "keys_sent": res.keys_sent,
                          "reboot": case.reboot, "ok": ok, "checks": checks, "end": res.reason,
                          "seconds": round(res.seconds, 1), "log": log, "log_sha256": sha256(out / log)})
             print(f"{'PASS' if ok else 'FAIL'}  {case.id:15} {case.title} ({res.seconds:.0f}s, {res.reason})",
@@ -731,6 +802,7 @@ def main(argv: list[str] | None = None) -> int:
                 "os": platform.platform(), "python": platform.python_version(),
                 "qemu": first_line(["qemu-system-aarch64", "--version"]),
                 "swtpm": first_line(["swtpm", "--version"]),
+                "tpm2-tools": first_line(["tpm2_createprimary", "--version"]),
                 "openssl": first_line(["openssl", "version"]),
                 "dtc": first_line(["dtc", "--version"]),
                 "mkimage": first_line([str(art.mkimage), "-V"]),
@@ -745,6 +817,7 @@ def main(argv: list[str] | None = None) -> int:
             "artifacts_sha256": art.hashes(),
             "notes": art.notes,
             "pcr_prediction": art.prediction.to_json(),
+            "provisioning": art.provisioned.record,
             "runs": runs,
         }
         if env["kind"] == "ci" and not pkgs["all_match"]:

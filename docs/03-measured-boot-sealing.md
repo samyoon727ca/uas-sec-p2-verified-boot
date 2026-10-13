@@ -28,10 +28,11 @@ PCRs from 10 up change at runtime (IMA, for example) and are not in the policy. 
 | Item | Choice |
 |---|---|
 | Contents | CC WireGuard private key; CC copy of the MAVLink signing key (P1 DS-CC-CRED) |
-| Parent | ECC P-256 primary key in the owner hierarchy |
+| Parent | ECC P-256 storage key in the owner hierarchy, persistent at `0x81000001`. It also salts the unseal session (§3.6). Its name is recorded at provisioning, and the unseal agent refuses any other key |
 | Attributes | `fixedtpm`, `fixedparent`, `adminwithpolicy`; **no** `userwithauth`, so only the policy releases them |
-| Auth policy | `TPM2_PolicyAuthorize(K-CC-POL, policyRef)`. `policyRef` names this use, so a policy the MSS signs for another purpose cannot be reused here |
-| Where the blob lives | CC storage. It is useless away from its TPM (TC-07) |
+| Auth policy | `TPM2_PolicyAuthorize(K-CC-POL, policyRef)` with `policyRef` = `p2/cc-keys`. `policyRef` names this use, so a policy the MSS signs for another purpose cannot be reused here |
+| Epoch index | `TPM_NT_BITS` NV index `0x01000001`, written once at provisioning with no bits set. `ownerwrite`, `authread` with an empty authValue, `no_da` (§3.4) |
+| Where the blob lives | CC storage, with the K-CC-POL public key, the parent's name and each release's signed policy. None of it is secret, and the sealed objects are useless away from their TPM (TC-07). Emulated: a tar on a second virtio disk ([§2.4](02-cc-boot-chain.md#24-emulated-chain)) |
 
 ## 3.3 Release policy (SR-010.2)
 
@@ -42,10 +43,12 @@ PolicyPCR( sha256: 0, 1, 8, 9  =  predicted values )
 PolicyNV ( epoch index, operandB = bits above E, TPM_EO_BITCLEAR )
 ```
 
-To unseal, the initramfs:
-1. checks the signature with `TPM2_VerifySignature` to get a ticket;
-2. runs `PolicyPCR`, then `PolicyNV`, then `PolicyAuthorize` with the ticket, in a policy session;
-3. unseals over a salted, encrypted session (§3.6).
+To unseal, the initramfs runs [`p2-unseal`](../cc/initramfs/p2-unseal.c), a small C program on the TPM software stack's ESAPI [TPM2-TSS]. It:
+1. checks that the persistent parent has the name recorded at provisioning;
+2. loads the K-CC-POL public key into the owner hierarchy and checks the signature with `TPM2_VerifySignature` to get a ticket. A key loaded into the NULL hierarchy yields a NULL ticket, which `PolicyAuthorize` rejects;
+3. for each key, runs `PolicyPCR`, then `PolicyNV`, then `PolicyAuthorize` with the ticket, in a policy session salted to the parent and set to encrypt the response (§3.6), and unseals in that session.
+
+It prints which step refused, with the TPM's response code, and never prints a key. On the MSS side, [`tools/approve_policy.py`](../tools/approve_policy.py) builds the approved policy for a release from its predicted PCRs (§3.1) and epoch, computing the digests offline as the TPM does, and signs it. Unit tests check its digests against tpm2-tools 5.6.
 
 This is the TCG's mechanism for avoiding PCR brittleness [TCG-P1, Figure 16]. Nothing on the CC can approve its own state: approval needs K-CC-POL, which lives on the MSS and in P3's HSM.
 
@@ -72,8 +75,8 @@ Re-sealing on the CC during an update was rejected. It needs the keys in the cle
 ## 3.6 Session protection (SR-010.4)
 
 A discrete TPM answers over SPI. Without parameter encryption, the unsealed key crosses the bus in the clear, where a probe on a captured vehicle can read it (P1 A-08, tier 2). The initramfs therefore unseals in a session that is:
-- **salted** to a TPM key whose public part is recorded at provisioning;
-- set to **encrypt the response.**
+- **salted** to the parent storage key (§3.2), whose name is recorded at provisioning;
+- set to **encrypt the response**, with AES-128 in CFB mode.
 
 This stops passive sniffing. It does not stop an attacker who can reset the TPM alone and replay approved measurements (A2-02); that is P1 change 4 and P5's scope.
 
