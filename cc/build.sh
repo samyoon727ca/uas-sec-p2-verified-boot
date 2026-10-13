@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Build the inputs for the emulated CC boot chain (tests/ve07):
-#   - U-Boot v2026.07 from the pinned tarball, in four variants:
+#   - U-Boot v2026.07 from the pinned tarball, in six variants:
 #       hardened       qemu_arm64_defconfig + cc/uboot/p2.config + cc/uboot/qemu.config
 #       stock          qemu_arm64_defconfig unchanged (control runs only)
 #       ctl-bootdelay  hardened + cc/uboot/controls/bootdelay.config (control runs only)
 #       ctl-noreset    hardened + cc/uboot/controls/noreset.config (control runs only)
+#       tc06-version   hardened + cc/uboot/variants/version.config (TC-06 only)
+#       tc06-bootargs  hardened + cc/uboot/variants/bootargs.config (TC-06 only)
 #   - the pinned Ubuntu arm64 kernel and a busybox initramfs holding the
 #     unseal agent (cc/initramfs/p2-unseal.c) and the TPM libraries it needs.
 # Every download is checked against a pinned SHA-256, and every variant's
@@ -43,8 +45,10 @@ declare -A FRAGS=(
   [stock]=""
   [ctl-bootdelay]="${P2[*]} $ROOT/cc/uboot/controls/bootdelay.config"
   [ctl-noreset]="${P2[*]} $ROOT/cc/uboot/controls/noreset.config"
+  [tc06-version]="${P2[*]} $ROOT/cc/uboot/variants/version.config"
+  [tc06-bootargs]="${P2[*]} $ROOT/cc/uboot/variants/bootargs.config"
 )
-VARIANTS=(hardened stock ctl-bootdelay ctl-noreset)
+VARIANTS=(hardened stock ctl-bootdelay ctl-noreset tc06-version tc06-bootargs)
 for variant in "${VARIANTS[@]}"; do
   B=$OUT/uboot-$variant
   rm -rf "$B"

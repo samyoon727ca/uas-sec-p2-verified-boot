@@ -160,7 +160,7 @@ class ConfigCheckTest(unittest.TestCase):
             self.assertEqual(check_config.diff(base, cfg), ["CONFIG_B=1", "# CONFIG_D removed"])
 
     def test_each_control_fragment_changes_one_setting(self):
-        for variant, frag in bc.CONTROL_FRAGMENTS.items():
+        for variant, frag in bc.ONE_SETTING_BUILDS.items():
             self.assertEqual(len(check_config.expected([frag])), 1, variant)
 
 

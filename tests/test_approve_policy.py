@@ -52,6 +52,13 @@ class KnownAnswerTest(unittest.TestCase):
         self.assertEqual(pub["name"].hex(), KPOL_NAME)
         self.assertEqual((pub["type"], pub["attributes"], pub["auth_policy"]), (0x0023, 0x00060040, b""))
 
+    def test_ecc_public_matches_tpm2_loadexternal(self):
+        x, y = KPOL_PUB[-66:-34], KPOL_PUB[-32:]
+        spki = bytes(26) + b"\x04" + x + y   # the DER prefix is not read, only the point
+        self.assertEqual(ap.ecc_public(spki), KPOL_PUB)
+        with self.assertRaises(ValueError):
+            ap.ecc_public(bytes(26) + b"\x02" + x + y)
+
     def test_seal_policy(self):
         self.assertEqual(ap.policy_authorize(bytes.fromhex(KPOL_NAME)).hex(), SEAL_POLICY)
 
@@ -180,6 +187,38 @@ class HarnessTest(unittest.TestCase):
         failed = [c["pattern"] for c in provision.provisioning_checks(rec) if not c["ok"]]
         self.assertEqual(len(failed), 1)
         self.assertTrue(failed[0].startswith("mavlink: fixedtpm"))
+
+    def test_cpio_newc(self):
+        blob = bc.cpio_newc({"b": b"two\n", "a": b"1"})
+        names, pos = [], 0
+        while True:
+            self.assertEqual(blob[pos:pos + 6], b"070701")
+            size, namesize = int(blob[pos + 54:pos + 62], 16), int(blob[pos + 94:pos + 102], 16)
+            names.append(blob[pos + 110:pos + 110 + namesize - 1].decode())
+            pos = (pos + 110 + namesize + 3) & ~3
+            pos = (pos + size + 3) & ~3
+            if names[-1] == "TRAILER!!!":
+                break
+        self.assertEqual((names, len(blob) % 4, pos), (["a", "b", "TRAILER!!!"], 0, len(blob)))
+
+    def test_moved_pcrs(self):
+        def pred(**pcrs):
+            base = {i: "00" * 32 for i in range(10)}
+            base.update({int(k[1:]): v for k, v in pcrs.items()})
+            return bc.predict_pcrs.Prediction(b"", b"", "conf", [], base)
+        self.assertTrue(bc.moved_pcrs(pred(p9="11" * 32), pred(), 9)["ok"])
+        self.assertFalse(bc.moved_pcrs(pred(p9="11" * 32, p1="22" * 32), pred(), 9)["ok"])
+        self.assertFalse(bc.moved_pcrs(pred(), pred(), 9)["ok"])
+        self.assertTrue(bc.moved_pcrs(pred(p5="11" * 32, p8="22" * 32), pred(), 8)["ok"])   # PCR 5 is not in the policy
+
+    def test_refusal_patterns(self):
+        text = bc.clean("P2-UNSEAL wireguard refused at parent name: missing or wrong CC data\r\n"
+                        "P2-UNSEAL mavlink refused at parent name: missing or wrong CC data\r\n")
+        self.assertTrue(all(re.search(p, text) for p in bc.refused("parent name")))
+        self.assertFalse(any(re.search(p, text) for p in bc.refused("Load")))
+        self.assertFalse(any(re.search(p, text) for p in bc.NOT_UNSEALED))
+        self.assertEqual(bc.unseal_lines(text), ["wireguard refused at parent name: missing or wrong CC data",
+                                                 "mavlink refused at parent name: missing or wrong CC data"])
 
     def test_data_disk_comes_before_the_boot_slot(self):
         m = bc.Machine(Path("u.bin"), Path("slot.img"), Path("f.img"), None, Path("sock"), data=Path("cc.img"))
