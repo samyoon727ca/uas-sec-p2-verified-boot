@@ -1,11 +1,13 @@
 #!/bin/busybox sh
 # Emulated CC initramfs. Reports that the verified kernel reached userspace,
-# prints the SHA-256 PCRs 0 to 9 and the TPM event log for TC-10, then powers
-# off. Key unsealing is added with TC-05 to TC-09.
+# prints the SHA-256 PCRs 0 to 9 and the TPM event log for TC-10, unseals the
+# CC's keys with /usr/bin/p2-unseal if the CC data disk is attached (TC-05),
+# then powers off. Only each key's SHA-256 is printed, never the key.
 bb=/bin/busybox
 $bb mount -t proc proc /proc
 $bb mount -t sysfs sysfs /sys
 $bb mount -t securityfs securityfs /sys/kernel/security
+$bb mount -t devtmpfs devtmpfs /dev
 echo 1 > /proc/sys/kernel/printk   # keep kernel messages from splitting the lines below
 echo "P2-INITRAMFS-OK kernel=$($bb uname -r)"
 for i in 0 1 2 3 4 5 6 7 8 9; do
@@ -14,4 +16,21 @@ done
 echo "P2-EVENTLOG-BEGIN"
 $bb base64 /sys/kernel/security/tpm0/binary_bios_measurements
 echo "P2-EVENTLOG-END"
+
+# CC data (sealed objects, signed policy) on the second virtio disk, as a tar.
+keys="wireguard mavlink"
+if [ -b /dev/vdb ]; then
+	$bb mount -t tmpfs -o mode=0700 tmpfs /run
+	$bb mkdir -p /run/cc /run/keys
+	if $bb tar -xf /dev/vdb -C /run/cc; then
+		/usr/bin/p2-unseal /run/cc /run/keys $keys
+		for k in $keys; do
+			[ -f /run/keys/$k ] && echo "P2-KEY $k sha256 $($bb sha256sum /run/keys/$k | $bb cut -d' ' -f1)"
+		done
+	else
+		echo "P2-UNSEAL no CC data: the data disk is not a tar archive"
+	fi
+else
+	echo "P2-UNSEAL no CC data disk"
+fi
 $bb poweroff -f

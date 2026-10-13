@@ -11,8 +11,10 @@ flex 2.6.4-8.2build1
 gcc 4:13.2.0-7ubuntu1
 gcc-aarch64-linux-gnu 4:13.2.0-7ubuntu1
 gzip 1.12-1ubuntu3.2
+libc6-dev-arm64-cross 2.39-0ubuntu8cross1
 libgnutls28-dev 3.8.3-1.1ubuntu3.6
 libssl-dev 3.0.13-0ubuntu3.16
+linux-libc-dev-arm64-cross 6.8.0-25.25cross1
 make 4.3-4.1build2
 openssl 3.0.13-0ubuntu3.16
 qemu-system-arm 1:8.2.2+ds-0ubuntu1.18
