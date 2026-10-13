@@ -11,7 +11,7 @@ Each step traces back to P1's threats and verification events.
 
 > **Notional and unclassified.** Built only from public sources: U-Boot, NXP, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; every VE-07 case that emulation can prove passes.** VE-07's verified-boot cases TC-01, TC-03 and TC-04, its measured-boot case TC-10 and its sealing cases TC-05 to TC-09 pass under QEMU emulation with swtpm ([evidence](evidence/ve07-ci/20261013-d9149f6/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. TC-05 shows that the CC's keys unseal in that boot under the MSS-signed policy, TC-06 to TC-08 that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy, and TC-09 that they cross the TPM interface only encrypted. VE-07 still needs its nine hardware runs; the FC (VE-08) and all hardware runs are planned; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
+**Status: design baselined; every case that CI can prove passes.** VE-07's verified-boot cases TC-01, TC-03 and TC-04, its measured-boot case TC-10 and its sealing cases TC-05 to TC-09 pass under QEMU emulation with swtpm ([evidence](evidence/ve07-ci/20261013-d9149f6/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. TC-05 shows that the CC's keys unseal in that boot under the MSS-signed policy, TC-06 to TC-08 that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy, and TC-09 that they cross the TPM interface only encrypted. For the FC, TC-11 shows on the host that the pinned PX4 build, with a per-run key, yields a boot loader whose own verification code starts only the image signed with that key ([evidence](evidence/ve08-ci/20261013-aac4299/summary.md)). All hardware runs are planned: nine for VE-07 and three for VE-08; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 
@@ -58,13 +58,13 @@ flowchart LR
 
 ## Verification evidence
 
-CI runs QEMU `virt` with U-Boot and swtpm. So far it proves the boot-loader configuration and the tamper cases (TC-01, TC-03, TC-04), that what U-Boot measures can be predicted from the release artifacts (TC-10), that the keys unseal in the approved boot state (TC-05), and that they do not unseal from a changed boot state, on another TPM, after rollback or under a rogue-signed policy (TC-06 to TC-08), and that the unsealed keys cross the TPM interface only encrypted (TC-09). Only hardware can prove the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
+CI runs QEMU `virt` with U-Boot and swtpm. So far it proves the boot-loader configuration and the tamper cases (TC-01, TC-03, TC-04), that what U-Boot measures can be predicted from the release artifacts (TC-10), that the keys unseal in the approved boot state (TC-05), and that they do not unseal from a changed boot state, on another TPM, after rollback or under a rogue-signed policy (TC-06 to TC-08), and that the unsealed keys cross the TPM interface only encrypted (TC-09). For the FC it builds PX4's secure boot loader and firmware with a per-run key and shows, with PX4's own verification code on the host, that only the image signed with that key would start (TC-11). Only hardware can prove the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
 
 <!-- BEGIN GENERATED: ve-status -->
 | Event | Verifies (P1) | CI runs passed | Hardware runs passed | P2 status | P1 status |
 |---|---|---|---|---|---|
 | VE-07 CC verified boot and key sealing | SR-005, SR-010 | 9 of 9 | 0 of 9 | in progress | planned |
-| VE-08 FC boots only signed firmware | SR-018 | 0 of 1 | 0 of 3 | planned | planned |
+| VE-08 FC boots only signed firmware | SR-018 | 1 of 1 | 0 of 3 | in progress | planned |
 <!-- END GENERATED: ve-status -->
 
 Traceability is checked on every push. [`tools/validate_trace.py`](tools/validate_trace.py) fails the build if any of these hold:
@@ -93,7 +93,8 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
 | [`tools/predict_pcrs.py`](tools/predict_pcrs.py) | Predicts PCRs 0, 1, 8 and 9 from the signed FIT and U-Boot binary; checks an event log and measured PCRs against the prediction (TC-10) | Built |
 | [`tools/approve_policy.py`](tools/approve_policy.py) | The MSS side of sealing: builds a release's approved policy (PCRs and epoch) and signs it with K-CC-POL | Built |
-| `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
+| [`fc/`](fc/) | PX4 pin, and the build of the secure boot loader and signed firmware with a per-run key in the pinned PX4 container | Built |
+| [`tests/ve08/`](tests/ve08/) | VE-08 host harness: each image checked with PX4's own verification code on a 32-bit host | TC-11 built |
 
 ## Run the checks locally
 

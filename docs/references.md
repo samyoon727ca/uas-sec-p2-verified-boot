@@ -72,8 +72,10 @@ PX4 `v1.18.0` has not been released: the newest v1.18 tag on 2026-10-03 is `v1.1
 
 | Item | Pin | How it is checked |
 |---|---|---|
-| Ubuntu host tools (QEMU, swtpm, tpm2-tools, cross compiler, dtc) | Ubuntu 24.04 archive snapshot `20261002T000000Z` | `apt-get update --snapshot`; installed versions compared with the expected versions |
+| Ubuntu host tools (QEMU, swtpm, tpm2-tools, cross compilers, dtc; the 32-bit toolchain for TC-11) | Ubuntu 24.04 archive snapshot `20261002T000000Z` ([`cc/emu/host-packages.txt`](../cc/emu/host-packages.txt), [`fc/host-packages.txt`](../fc/host-packages.txt)) | `apt-get update --snapshot`; installed versions compared with the expected versions |
 | Guest kernel | `linux-image-6.8.0-146-generic_6.8.0-146.146_arm64.deb` from Launchpad | SHA-256 `ee35dffd32c672d6b1814c0d9c8001c1656e06e718ebd5fb15565d0b7e51e418`, matching the signed `noble-updates` index |
 | Guest busybox | `busybox-static_1.36.1-6ubuntu3.1_arm64.deb` from Launchpad | SHA-256 `d96535e0402c011e0ee43449799df2f4504d44b842e4f2b3a6cbc845508eaafc`, matching the signed index |
 | Guest TPM libraries for the unseal agent: glibc, libcrypto, tpm2-tss ESAPI, MU, SYS, RC, device TCTI and headers | Eight arm64 packages from Launchpad, listed with their SHA-256 in [`cc/emu/guest.lock`](../cc/emu/guest.lock) | Each SHA-256 matches the signed `noble-updates` index for arm64 (`ports.ubuntu.com`, checked 2026-10-13); `cc/build.sh` refuses any file that differs |
+| PX4 source | Tag `v1.18.0-rc1`, commit `fca3df865af36124a28c9d607e850f111dbaaea9` ([`fc/px4/pin.txt`](../fc/px4/pin.txt)) | `fc/clone-px4.sh` refuses any other commit; `fc/build.sh` records the commit it built |
+| PX4 build container | `ghcr.io/px4/px4-dev:v1.17.0-rc2`, the default in PX4's `Tools/ci/build_all_config.yml` at that tag, by manifest-list digest `sha256:5e7ad18c75c3a5a655d5adfde4ab1eb216dd4bee7710941b6cd122f3969a7fed` (amd64 `sha256:e4c36e7e…fff0`) | Pulled by digest |
 | GitHub Actions | Full commit SHAs, as in P1 | Workflow review |

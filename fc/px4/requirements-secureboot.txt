@@ -1,0 +1,14 @@
+# PyNaCl, which PX4's generate_signing_keys.py and sign_firmware.py import and
+# the pinned px4-dev container lacks. PX4's own .github/workflows/
+# build_all_targets.yml installs it into that container the same way, unpinned
+# ("drop once the build container ships with pynacl preinstalled"). Here every
+# wheel is pinned by SHA-256 (PyPI, checked 2026-10-13); fc/build.sh installs
+# with --require-hashes.
+pynacl==1.6.2 \
+    --hash=sha256:22de65bb9010a725b0dac248f353bb072969c94fa8d6b1f34b87d7953cf7bbe4 \
+    --hash=sha256:8a66d6fb6ae7661c58995f9c6435bda2b1e68b54b598a6a10247bfcdadac996c \
+    --hash=sha256:c8a231e36ec2cab018c4ad4358c386e36eede0319a0c41fed24f840b1dac59f6
+cffi==2.1.1 \
+    --hash=sha256:c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf
+pycparser==3.0 \
+    --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992

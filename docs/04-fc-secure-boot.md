@@ -2,7 +2,7 @@
 
 The FC uses PX4 Bootloader Secure Boot on a Holybro Pixhawk 6X (`px4_fmu-v6x`). At reset, the PX4 boot loader checks an Ed25519 signature over the firmware image. Firmware not signed with a key the boot loader trusts never starts. The project firmware key K-FC-FW sits in keystore slot 0; an offline recovery key K-FC-REC sits in slot 1. SWD is needed only to install or change the boot loader; firmware goes over USB (SR-018).
 
-Status: design. Nothing here is shown working until its test case passes ([§6](06-verification.md)). PX4 is pinned at `v1.18.0-rc1`; `v1.18.0` had not been released on 2026-10-03 (P1 DD-06).
+Status: the signing pipeline and the image format pass on the host (TC-11, [evidence](../evidence/ve08-ci/20261013-aac4299/summary.md)): PX4 at the pinned commit, built in the pinned container with a per-run key, gives a boot loader holding only that key, and PX4's own verification code starts only the image signed with it. The check at reset on the Pixhawk 6X and the recovery paths (TC-12 to TC-14) are planned. Nothing here is shown working until its test case passes ([§6](06-verification.md)). PX4 is pinned at `v1.18.0-rc1`; `v1.18.0` had not been released on 2026-10-03 (P1 DD-06).
 
 ## 4.1 How the PX4 boot loader checks firmware
 
@@ -14,6 +14,8 @@ Checked in the source and docs at `v1.18.0-rc1` [PX4-SECBOOT], [PX4-BL]:
 - **Uploader check.** `Tools/px4_uploader.py` asks the boot loader to check the signature (`VERIFY_SIG`) before rebooting, so a bad image is reported at upload.
 - **Board support.** Only `px4_fmu-v6x` ships secure-boot variants: `px4_fmu-v6x_bootloader_secureboot` and `px4_fmu-v6x_secureboot`. Other boards need a port (TOC, linker script, board configs).
 - **Lost key.** PX4 warns that if the private key for a boot loader's trusted key is lost, recovery needs a debug probe.
+- **R&D certificate.** The `fmu-v6x` TOC also lists an `RDCT` entry (`image_cert_t`) with `TOC_FLAG1_CHECK_SIGNATURE`; the boot loader skips it if it does not verify. `image_toc.h` defines `RDCT_CAPS0_ALLOW_UNSIGNED_BOOT`, but nothing in the boot loader reads it at `v1.18.0-rc1`, so a certificate cannot unlock unsigned boot.
+- **Build-time keys.** The boot loader build takes the slot-0 key file from a `PUBLIC_KEY0` environment variable, and the firmware build signs with the key file named by `BOARD_SECUREBOOT_KEY`, so a build with another key needs no change to PX4's files.
 
 **Gaps relevant to SR-018:**
 - **No anti-rollback.** The boot loader checks the signature only. `image_cert_t` carries creation and expiry dates, but the boot loader never reads them. An older signed image still boots (P1 change 2).
@@ -45,7 +47,7 @@ A slot-1 key protects against *loss*, not *compromise*. Firmware chooses its slo
 | | CI (TC-11) | Pixhawk 6X (TC-12 to TC-14) |
 |---|---|---|
 | Both targets build at the pinned tag with a per-run key | ✓ | — |
-| Signed, unsigned, modified-signed and wrong-key images are told apart by PX4's verification code | ✓ planned: PX4's own `crypto.c`/TOC code and monocypher compiled for the host. Fallback: the same monocypher with a TOC parser written to PX4's header | — |
+| Signed, unsigned, modified-signed and wrong-key images are told apart by PX4's verification code | ✓ PX4's own `find_toc()`, `verify_app()`, stub keystore and monocypher, built for a 32-bit host so the TOC's addresses keep their 4 bytes, with the image mapped at its flash address. Only the Ed25519 branch of `sw_crypto` is reproduced; the rest of that file builds libtomcrypt, which the boot loader never calls ([`tests/ve08`](../tests/ve08/README.md)) | — |
 | The boot loader enforces the check at reset on the STM32H753 | — | ✓ |
 | Recovery over USB and SWD | — | ✓ |
 

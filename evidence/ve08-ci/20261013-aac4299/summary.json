@@ -1,0 +1,291 @@
+{
+  "event": "VE-08",
+  "harness": "tests/ve08/image_cases.py",
+  "environment": {
+    "kind": "ci",
+    "run_id": "38351585198",
+    "run_attempt": "1",
+    "run_url": "https://github.com/samyoon727ca/uas-sec-p2-verified-boot/actions/runs/38351585198",
+    "workflow": "ve08-host",
+    "event": "push",
+    "ref": "refs/heads/p2/tc11-fc-host",
+    "sha": "aac42999041002065a08c0735633be4155403467",
+    "runner_image": "ubuntu24 20261004.327.1"
+  },
+  "date_utc": "2026-10-13T05:35:39Z",
+  "git": {
+    "commit": "aac42999041002065a08c0735633be4155403467",
+    "fc_or_tests_modified": "false"
+  },
+  "passed": true,
+  "test_cases": {
+    "TC-11": "passed"
+  },
+  "pins": {
+    "repo": "https://github.com/PX4/PX4-Autopilot.git",
+    "tag": "v1.18.0-rc1",
+    "commit": "fca3df865af36124a28c9d607e850f111dbaaea9",
+    "container": "ghcr.io/px4/px4-dev@sha256:5e7ad18c75c3a5a655d5adfde4ab1eb216dd4bee7710941b6cd122f3969a7fed"
+  },
+  "build_info": {
+    "px4_commit": "fca3df865af36124a28c9d607e850f111dbaaea9",
+    "px4_describe": "v1.18.0-rc1",
+    "monocypher": "baca5d31259c598540e4d1284bc8d8f793abf83a",
+    "arm-none-eabi-gcc": "arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009",
+    "python": "Python 3.12.3",
+    "pynacl": "1.6.2"
+  },
+  "build_info_matches_pin": true,
+  "host": {
+    "os": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+  },
+  "host_packages": {
+    "snapshot": "20261002T000000Z",
+    "all_match": true,
+    "packages": [
+      {
+        "name": "gcc-multilib",
+        "pinned": "4:13.2.0-7ubuntu1",
+        "installed": "4:13.2.0-7ubuntu1",
+        "ok": true
+      },
+      {
+        "name": "gcc-13-multilib",
+        "pinned": "13.3.0-6ubuntu2~24.04.1",
+        "installed": "13.3.0-6ubuntu2~24.04.1",
+        "ok": true
+      },
+      {
+        "name": "libc6-dev-i386",
+        "pinned": "2.39-0ubuntu8.9",
+        "installed": "2.39-0ubuntu8.9",
+        "ok": true
+      },
+      {
+        "name": "openssl",
+        "pinned": "3.0.13-0ubuntu3.16",
+        "installed": "3.0.13-0ubuntu3.16",
+        "ok": true
+      }
+    ]
+  },
+  "checker_build": [
+    "gcc",
+    "-m32",
+    "-O2",
+    "-Wall",
+    "-fPIE",
+    "-pie",
+    "-include",
+    "stdint.h",
+    "-include",
+    "stddef.h",
+    "-I/home/runner/work/uas-sec-p2-verified-boot/uas-sec-p2-verified-boot/tests/ve08/host",
+    "-I/home/runner/work/_temp/px4/src/include",
+    "-I/home/runner/work/_temp/px4/platforms/nuttx/src/bootloader/common",
+    "-I/home/runner/work/_temp/px4/platforms/common/include",
+    "-I/home/runner/work/_temp/px4/src/drivers/sw_crypto",
+    "-I/home/runner/work/_temp/px4/src/drivers/stub_keystore",
+    "-I/home/runner/work/_temp/px4/src",
+    "-I/home/runner/work/_temp/px4/src/lib/crypto/monocypher/src",
+    "-DPUBLIC_KEY0=/home/runner/work/_temp/fc/k-fc-fw-dev.pub",
+    "/home/runner/work/uas-sec-p2-verified-boot/uas-sec-p2-verified-boot/tests/ve08/host/check_image.c",
+    "/home/runner/work/uas-sec-p2-verified-boot/uas-sec-p2-verified-boot/tests/ve08/host/sw_crypto_ed25519.c",
+    "/home/runner/work/_temp/px4/platforms/nuttx/src/bootloader/common/image_toc.c",
+    "/home/runner/work/_temp/px4/platforms/nuttx/src/bootloader/common/crypto.c",
+    "/home/runner/work/_temp/px4/src/drivers/stub_keystore/stub_keystore.c",
+    "/home/runner/work/_temp/px4/src/lib/crypto/monocypher/src/monocypher.c",
+    "/home/runner/work/_temp/px4/src/lib/crypto/monocypher/src/optional/monocypher-ed25519.c",
+    "-o",
+    "/tmp/tmpsqsc7bk3/check-run-key"
+  ],
+  "public_keys_sha256": {
+    "K-FC-FW dev (run key)": "9ddd50d45267c6361406ecdfbc3ac6d4be9dbf2cba8bd36259a90a29835c1db2",
+    "PX4 public test key": "7181aad4794ea7067a60c800bf035679183fb2925626a3df72fa278b7b60b0d8"
+  },
+  "modified_byte_offset": 971752,
+  "artifacts_sha256": {
+    "SHA256SUMS": "42fa2b071a2a4f7f5985a896cdefe4873fdb6575aacd31627a1a6ea282218ed4",
+    "bootloader.bin": "1dc433be998b1f9f2fb41461cb3e00e947b29e8e3c1082dc6755878b90acf1f6",
+    "build-info.txt": "4b09d2df22d087f52f30e5c094adef778d002409ce3883924259fd0dc65d96a2",
+    "firmware-signed.bin": "88555663011f642a43ccd1b53f2593a313967ef7e5d727cd2fc4f71f7b674d49",
+    "firmware-test-key.bin": "03938267756abfa2588ac115253c6e0ef962ca38fdcc28ada6f301c9ec253d4b",
+    "firmware.bin": "0c7a9754971dab5137c0207e7ff323ffa41891cf3338d298c46369e346a20707",
+    "firmware.px4": "13d8d57a23053c5d1b737da3c091a921018fa5da0846557b043aeecdff86ff5c",
+    "k-fc-fw-dev.pub": "56a10fb07c28855bbf2b2a96954703ea6cc4d1af8ec93c8ae409fc385328f368",
+    "signed.bin": "88555663011f642a43ccd1b53f2593a313967ef7e5d727cd2fc4f71f7b674d49",
+    "unsigned.bin": "0c7a9754971dab5137c0207e7ff323ffa41891cf3338d298c46369e346a20707",
+    "modified.bin": "eb84052461f1e7e7cab1f0efa4e42a7fbb2aad8da6ffd6d39230ba18423a03b1",
+    "test-key.bin": "03938267756abfa2588ac115253c6e0ef962ca38fdcc28ada6f301c9ec253d4b"
+  },
+  "static": [
+    {
+      "kind": "static",
+      "pattern": "the boot loader holds the run key once",
+      "ok": true,
+      "observed": 1
+    },
+    {
+      "kind": "static",
+      "pattern": "the boot loader does not hold PX4's public test key",
+      "ok": true
+    },
+    {
+      "kind": "static",
+      "pattern": "the signed image is the built image, padded to 4 bytes, plus a 64-byte signature",
+      "ok": true,
+      "observed": {
+        "built": 1941456,
+        "signed": 1941520
+      }
+    },
+    {
+      "kind": "static",
+      "pattern": "the .px4 envelope carries the signed image and marks it signed",
+      "ok": true,
+      "observed": {
+        "image_sha256": "88555663011f642a43ccd1b53f2593a313967ef7e5d727cd2fc4f71f7b674d49",
+        "image_signed": true
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "TC-11a",
+      "tc": "TC-11",
+      "role": "positive",
+      "title": "Image signed by the build with the run key",
+      "image": "signed",
+      "checker": "run-key",
+      "starts": true,
+      "control_for": null,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "result",
+          "pattern": "(?m)^P2-FC result: starts the application at 0x08020000$",
+          "ok": true,
+          "observed": 0
+        },
+        {
+          "kind": "toc",
+          "pattern": "TOC entry 0 is BOOT, checked with key slot 0, and ends where the build put the signature",
+          "ok": true,
+          "observed": "P2-FC toc 0: BOOT 0x08020000-0x081f9fd0 signature=1 key=0 flags=0x05"
+        }
+      ],
+      "log": "TC-11a.log",
+      "log_sha256": "e2e01917ddd93963e066ab81f610c067c8e85058052b830c6cd6a2aa9837fc99"
+    },
+    {
+      "id": "TC-11b",
+      "tc": "TC-11",
+      "role": "test",
+      "title": "Image as built, unsigned",
+      "image": "unsigned",
+      "checker": "run-key",
+      "starts": false,
+      "control_for": null,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "result",
+          "pattern": "(?m)^P2-FC result: stays in the boot loader: ",
+          "ok": true,
+          "observed": 1
+        },
+        {
+          "kind": "toc",
+          "pattern": "TOC entry 0 is BOOT, checked with key slot 0, and ends where the build put the signature",
+          "ok": true,
+          "observed": "P2-FC toc 0: BOOT 0x08020000-0x081f9fd0 signature=1 key=0 flags=0x05"
+        }
+      ],
+      "log": "TC-11b.log",
+      "log_sha256": "cb14d152df47e6e35b9c38577621d7a4146645d7c7f0fd5fbafac1486a165905"
+    },
+    {
+      "id": "TC-11c",
+      "tc": "TC-11",
+      "role": "test",
+      "title": "Signed image with one byte changed after signing",
+      "image": "modified",
+      "checker": "run-key",
+      "starts": false,
+      "control_for": null,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "result",
+          "pattern": "(?m)^P2-FC result: stays in the boot loader: ",
+          "ok": true,
+          "observed": 1
+        },
+        {
+          "kind": "toc",
+          "pattern": "TOC entry 0 is BOOT, checked with key slot 0, and ends where the build put the signature",
+          "ok": true,
+          "observed": "P2-FC toc 0: BOOT 0x08020000-0x081f9fd0 signature=1 key=0 flags=0x05"
+        }
+      ],
+      "log": "TC-11c.log",
+      "log_sha256": "4d1c9a1b785bca3f666c0940ee55288a1d7b4a720813d8db99b0ec95afd0165e"
+    },
+    {
+      "id": "TC-11d",
+      "tc": "TC-11",
+      "role": "test",
+      "title": "Image signed with PX4's public test key",
+      "image": "test-key",
+      "checker": "run-key",
+      "starts": false,
+      "control_for": null,
+      "ok": true,
+      "checks": [
+        {
+          "kind": "result",
+          "pattern": "(?m)^P2-FC result: stays in the boot loader: ",
+          "ok": true,
+          "observed": 1
+        },
+        {
+          "kind": "toc",
+          "pattern": "TOC entry 0 is BOOT, checked with key slot 0, and ends where the build put the signature",
+          "ok": true,
+          "observed": "P2-FC toc 0: BOOT 0x08020000-0x081f9fd0 signature=1 key=0 flags=0x05"
+        }
+      ],
+      "log": "TC-11d.log",
+      "log_sha256": "4d1c9a1b785bca3f666c0940ee55288a1d7b4a720813d8db99b0ec95afd0165e"
+    },
+    {
+      "id": "TC-11d-control",
+      "tc": "TC-11",
+      "role": "control",
+      "title": "The same image starts when the test key is in slot 0",
+      "image": "test-key",
+      "checker": "test-key",
+      "starts": true,
+      "control_for": "TC-11d",
+      "ok": true,
+      "checks": [
+        {
+          "kind": "result",
+          "pattern": "(?m)^P2-FC result: starts the application at 0x08020000$",
+          "ok": true,
+          "observed": 0
+        },
+        {
+          "kind": "toc",
+          "pattern": "TOC entry 0 is BOOT, checked with key slot 0, and ends where the build put the signature",
+          "ok": true,
+          "observed": "P2-FC toc 0: BOOT 0x08020000-0x081f9fd0 signature=1 key=0 flags=0x05"
+        }
+      ],
+      "log": "TC-11d-control.log",
+      "log_sha256": "e2e01917ddd93963e066ab81f610c067c8e85058052b830c6cd6a2aa9837fc99"
+    }
+  ]
+}

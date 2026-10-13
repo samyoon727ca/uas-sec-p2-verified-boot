@@ -1,0 +1,9 @@
+# PX4 release for the FC (docs/04, P1 DD-06). fc/build.sh clones the tag and
+# refuses any other commit. v1.18.0 had not been released on 2026-10-13.
+repo: https://github.com/PX4/PX4-Autopilot.git
+tag: v1.18.0-rc1
+commit: fca3df865af36124a28c9d607e850f111dbaaea9
+# Build container that PX4's Tools/ci/build_all_config.yml names at that tag
+# (ghcr.io/px4/px4-dev:v1.17.0-rc2), pinned by its manifest-list digest as read
+# from the ghcr.io registry API on 2026-10-09.
+container: ghcr.io/px4/px4-dev@sha256:5e7ad18c75c3a5a655d5adfde4ab1eb216dd4bee7710941b6cd122f3969a7fed
