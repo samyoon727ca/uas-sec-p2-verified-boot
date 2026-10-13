@@ -17,6 +17,11 @@ over TCP with tpm2-tools:
 
 swtpm is then shut down, so its state directory can be booted under QEMU, and
 the CC data (everything p2-unseal reads) is packed as a tar for the data disk.
+
+For the refusal cases it also provisions a second CC's TPM the same way
+(TC-07), commits a newer epoch on a copy of the TPM (TC-08), and packs
+modified copies of the CC data, as an attacker with storage access or a
+later release would leave them.
 """
 from __future__ import annotations
 
@@ -70,6 +75,7 @@ class TcpSwtpm:
 
     def __init__(self, state: Path) -> None:
         state.mkdir(parents=True, exist_ok=True)
+        self.state = state
         self.port = free_port_pair()
         self.proc = subprocess.Popen(
             ["swtpm", "socket", "--tpm2", "--tpmstate", f"dir={state}",
@@ -87,6 +93,11 @@ class TcpSwtpm:
         self.stop()
         raise RuntimeError("swtpm did not start")
 
+    def tpm2(self, *args: str, cwd: Path) -> str:
+        """Run tpm2_<args[0]> against this TPM with owner authorization available (empty in P2)."""
+        return subprocess.run(["tpm2_" + args[0], *args[1:]], cwd=cwd, env=self.env, check=True,
+                              capture_output=True, text=True).stdout
+
     def stop(self) -> None:
         if self.proc.poll() is None:
             subprocess.run(["swtpm_ioctl", "--tcp", f"127.0.0.1:{self.port + 1}", "-s"], capture_output=True)
@@ -94,6 +105,7 @@ class TcpSwtpm:
                 self.proc.wait(5)
             except subprocess.TimeoutExpired:
                 self.proc.kill()
+        (self.state / ".lock").unlink(missing_ok=True)
 
 
 @dataclasses.dataclass
@@ -120,6 +132,26 @@ def tar_folder(folder: Path) -> bytes:
     return data.ljust(DATA_DISK_BYTES, b"\0")
 
 
+PARENT = f"{ap.PARENT_HANDLE:#x}"
+EPOCH_NV = f"{ap.EPOCH_NV_INDEX:#x}"
+
+
+def cc_objects(tpm: TcpSwtpm, wd: Path, parent_name: Path) -> tuple[str, int]:
+    """The factory's TPM objects: the persistent parent and the epoch index (no bits set).
+
+    Writes the parent's name to `parent_name`; returns the epoch index's name and attributes as the TPM reports them.
+    """
+    tpm.tpm2("createprimary", "-Q", "-C", "o", "-g", "sha256", "-G", "ecc256:aes128cfb", "-c", "primary.ctx", cwd=wd)
+    tpm.tpm2("evictcontrol", "-Q", "-C", "o", "-c", "primary.ctx", PARENT, cwd=wd)
+    tpm.tpm2("flushcontext", "-t", cwd=wd)   # swtpm has no resource manager
+    tpm.tpm2("readpublic", "-Q", "-c", PARENT, "-n", str(parent_name), cwd=wd)
+    tpm.tpm2("nvdefine", "-Q", EPOCH_NV, "-C", "o", "-s", str(ap.EPOCH_NV_SIZE), "-a", EPOCH_NV_ATTRIBUTES, cwd=wd)
+    tpm.tpm2("nvsetbits", "-Q", EPOCH_NV, "-C", "o", "-i", "0", cwd=wd)
+    nv_public = tpm.tpm2("nvreadpublic", EPOCH_NV, cwd=wd)
+    return (re.search(r"name:\s*([0-9a-f]+)", nv_public).group(1),
+            int(re.search(r"attributes:.*?value:\s*(0x[0-9a-fA-F]+)", nv_public, re.S).group(1), 16))
+
+
 def provision(work: Path, short: Path, kpol_key: Path, pcrs: dict[int, str], epoch: int = 0) -> Provisioned:
     """Provision a fresh TPM and the CC data for a release with these predicted PCRs."""
     wd, data, secrets = work / "provision", work / "ccdata", short / "secrets"
@@ -129,22 +161,11 @@ def provision(work: Path, short: Path, kpol_key: Path, pcrs: dict[int, str], epo
     tpm = TcpSwtpm(state)
 
     def tpm2(*args: str) -> str:
-        return subprocess.run(["tpm2_" + args[0], *args[1:]], cwd=wd, env=tpm.env, check=True,
-                              capture_output=True, text=True).stdout
+        return tpm.tpm2(*args, cwd=wd)
 
     try:
-        parent = f"{ap.PARENT_HANDLE:#x}"
-        tpm2("createprimary", "-Q", "-C", "o", "-g", "sha256", "-G", "ecc256:aes128cfb", "-c", "primary.ctx")
-        tpm2("evictcontrol", "-Q", "-C", "o", "-c", "primary.ctx", parent)
-        tpm2("flushcontext", "-t")   # swtpm has no resource manager
-        tpm2("readpublic", "-Q", "-c", parent, "-n", str(data / "parent.name"))
-
-        nv = f"{ap.EPOCH_NV_INDEX:#x}"
-        tpm2("nvdefine", "-Q", nv, "-C", "o", "-s", str(ap.EPOCH_NV_SIZE), "-a", EPOCH_NV_ATTRIBUTES)
-        tpm2("nvsetbits", "-Q", nv, "-C", "o", "-i", "0")
-        nv_public = tpm2("nvreadpublic", nv)
-        nv_name_tpm = re.search(r"name:\s*([0-9a-f]+)", nv_public).group(1)
-        nv_attrs_tpm = int(re.search(r"attributes:.*?value:\s*(0x[0-9a-fA-F]+)", nv_public, re.S).group(1), 16)
+        parent, nv = PARENT, EPOCH_NV
+        nv_name_tpm, nv_attrs_tpm = cc_objects(tpm, wd, data / "parent.name")
 
         pem = subprocess.run(["openssl", "pkey", "-in", str(kpol_key), "-pubout"], check=True,
                              capture_output=True).stdout
@@ -171,7 +192,6 @@ def provision(work: Path, short: Path, kpol_key: Path, pcrs: dict[int, str], epo
                             "auth_policy": pub["auth_policy"].hex(), "name": pub["name"].hex()}
     finally:
         tpm.stop()
-    (state / ".lock").unlink(missing_ok=True)
 
     # The MSS approves this release (tools/approve_policy.py).
     approved = ap.approved_policy(pcrs, epoch)
@@ -209,8 +229,42 @@ def provisioning_checks(prov: Provisioned) -> list[dict]:
     return checks
 
 
-def copy_state(prov: Provisioned, dest: Path) -> Path:
-    """A private copy of the provisioned TPM for one boot."""
+def copy_state(src: Path, dest: Path) -> Path:
+    """A private copy of a provisioned TPM for one boot."""
     shutil.rmtree(dest, ignore_errors=True)
-    shutil.copytree(prov.state, dest, ignore=shutil.ignore_patterns("*.log", ".lock"))
+    shutil.copytree(src, dest, ignore=shutil.ignore_patterns("*.log", ".lock"))
     return dest
+
+
+def second_cc(work: Path, short: Path) -> tuple[Path, bytes]:
+    """Another CC's TPM, provisioned the same way (TC-07). Its seeds, and so its parent, differ."""
+    wd = work / "provision-second"
+    wd.mkdir(parents=True, exist_ok=True)
+    state = short / "tpm-second"
+    tpm = TcpSwtpm(state)
+    try:
+        cc_objects(tpm, wd, wd / "parent.name")
+    finally:
+        tpm.stop()
+    return state, (wd / "parent.name").read_bytes()
+
+
+def commit_epoch(src: Path, dest: Path, epoch: int, wd: Path) -> Path:
+    """A copy of the TPM at `src` after an update to `epoch` is committed: bit `epoch` set (section 3.5, step 4)."""
+    copy_state(src, dest)
+    wd.mkdir(parents=True, exist_ok=True)
+    tpm = TcpSwtpm(dest)
+    try:
+        tpm.tpm2("nvsetbits", "-Q", EPOCH_NV, "-C", "o", "-i", f"{1 << epoch:#x}", cwd=wd)
+    finally:
+        tpm.stop()
+    return dest
+
+
+def data_variant(prov: Provisioned, folder: Path, files: dict[str, bytes]) -> bytes:
+    """The provisioned CC data with some files replaced, packed for a data disk."""
+    shutil.rmtree(folder, ignore_errors=True)
+    shutil.copytree(prov.data, folder)
+    for rel, content in files.items():
+        (folder / rel).write_bytes(content)
+    return tar_folder(folder)

@@ -80,6 +80,18 @@ def nv_name(index: int = EPOCH_NV_INDEX, attributes: int = EPOCH_NV_ATTRIBUTES, 
     return struct.pack(">H", TPM_ALG_SHA256) + h(public)
 
 
+def ecc_public(spki_der: bytes) -> bytes:
+    """TPM2B_PUBLIC for an ECDSA P-256 public key (DER SubjectPublicKeyInfo), as
+    "tpm2_loadexternal -G ecc" builds it: sign|decrypt|userwithauth, null schemes."""
+    point = spki_der[-65:]
+    if point[0] != 0x04:
+        raise ValueError("not an uncompressed P-256 point")
+    area = struct.pack(">HHIH", 0x0023, TPM_ALG_SHA256, 0x00060040, 0) + struct.pack(">HHHH", 0x0010, 0x0010, 0x0003,
+                                                                                      0x0010)
+    area += struct.pack(">H", 32) + point[1:33] + struct.pack(">H", 32) + point[33:]
+    return struct.pack(">H", len(area)) + area
+
+
 def parse_public(tpm2b: bytes) -> dict:
     """The leading fields of a marshaled TPM2B_PUBLIC, and the object's name."""
     (size,) = struct.unpack_from(">H", tpm2b, 0)

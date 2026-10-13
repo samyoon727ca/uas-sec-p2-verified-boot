@@ -67,7 +67,7 @@ The epoch is an **NV bit field** in the TPM. Committing epoch *k* sets bit *k*. 
 1. **MSS:** build the release, predict PCRs 0, 1, 8 and 9, build the approved policy for epoch *E* and sign it with K-CC-POL. P3 moves the key into the HSM.
 2. **CC:** install the new FIT, and a new `flash.bin` if the boot loader changed, together with the signed policy. P3 owns update acceptance (SR-007).
 3. **Reboot:** the new chain unseals with the new policy. The sealed objects are untouched.
-4. **Commit:** if *E* is above the current epoch, set bit *E*. From then on, policies for older epochs fail.
+4. **Commit:** if *E* is above the current epoch, set bit *E* (`TPM2_NV_SetBits`, owner authorization in P2). From then on, policies for older epochs fail at `PolicyNV`.
 5. **If the new chain cannot unseal,** do not commit, and boot the previous chain. The A/B layout belongs to P3 and P4.
 
 Re-sealing on the CC during an update was rejected. It needs the keys in the clear on a running system, and it gives no rollback protection.
@@ -82,7 +82,7 @@ This stops passive sniffing. It does not stop an attacker who can reset the TPM 
 
 ## 3.7 Prototype findings
 
-A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was being chosen. Its results shaped the design. They are **not evidence**; TC-05 to TC-10 reproduce them in CI.
+A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was being chosen. Its results shaped the design. They are **not evidence**; TC-05 to TC-10 reproduce them in CI, and all but TC-09 have.
 
 - The policy in §3.3 unsealed in the approved state.
 - It unsealed for the next epoch before commit, and only for that epoch after commit.

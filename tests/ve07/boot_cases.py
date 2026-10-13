@@ -17,6 +17,15 @@ from the release artifacts:
   TC-05  with the TPM provisioned and the release approved by the MSS
          (tests/ve07/provision.py), p2-unseal in the initramfs unseals both
          keys, and their SHA-256 values equal those of the keys sealed
+  TC-06  chains that each differ in one measured item (boot-loader version,
+         kernel command line, devicetree, kernel, initramfs), all built and
+         signed like a release, boot but cannot unseal: no approved policy
+         covers them
+  TC-07  this CC's data on a second CC's TPM cannot unseal: the sealed
+         objects do not load there, even with the parent name fixed up
+  TC-08  after an update to epoch 1 is committed, the release-1 chain with
+         its epoch-0 policy cannot unseal, nor can a policy signed by a rogue
+         key; release 2 with its epoch-1 policy still unseals
   TC-10  tools/predict_pcrs.py predicts PCRs 0, 1, 8 and 9 from the signed
          FIT and the U-Boot binary; the PCRs the initramfs reads, and the
          replay of the event log Linux received, equal the prediction
@@ -25,7 +34,8 @@ Each attack that would succeed against a weaker setup has a control run that
 shows it succeeding there: the environment and legacy-image cases on stock
 qemu_arm64_defconfig, and the two console cases on the P2 build with exactly
 one setting changed (the autoboot delay, or the final reset). A negative case
-counts only if the positive control passed in the same run.
+counts only if the positive control passed in the same run: TC-01 for every
+case, and TC-05 as well for the sealing refusals (TC-06 to TC-08).
 
 Keys are generated per run in a temporary directory and deleted; evidence
 records only public-key SHA-256 values. Writes one console log per case and
@@ -44,6 +54,7 @@ import argparse
 import base64
 import dataclasses
 import datetime
+import gzip
 import hashlib
 import json
 import os
@@ -61,6 +72,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "cc" / "uboot"))
 sys.path.insert(0, str(ROOT / "tools"))
+import approve_policy  # noqa: E402
 import check_config  # noqa: E402
 import predict_pcrs  # noqa: E402
 import provision  # noqa: E402  (tests/ve07, next to this file)
@@ -81,7 +93,13 @@ CONTROL_FRAGMENTS = {
     "ctl-bootdelay": ROOT / "cc/uboot/controls/bootdelay.config",
     "ctl-noreset": ROOT / "cc/uboot/controls/noreset.config",
 }
-UBOOT_VARIANTS = ["hardened", "stock", *CONTROL_FRAGMENTS]
+# Builds that boot a CC no approved policy covers (TC-06): one setting changed, each measured.
+TEST_FRAGMENTS = {
+    "tc06-version": ROOT / "cc/uboot/variants/version.config",
+    "tc06-bootargs": ROOT / "cc/uboot/variants/bootargs.config",
+}
+ONE_SETTING_BUILDS = {**CONTROL_FRAGMENTS, **TEST_FRAGMENTS}
+UBOOT_VARIANTS = ["hardened", "stock", *ONE_SETTING_BUILDS]
 
 # Console patterns, matched after ANSI escape sequences are removed.
 VERIFIED = rf"sha256,rsa3072:{KEY_NAME}\+ OK"
@@ -103,6 +121,16 @@ PCR_LINE = r"(?m)^P2-PCR sha256 \d+ [0-9A-Fa-f]{64}$"   # printed by cc/initramf
 UNSEAL_OK = r"(?m)^P2-UNSEAL {} ok$"                   # printed by cc/initramfs/p2-unseal.c
 UNSEAL_REFUSED = r"(?m)^P2-UNSEAL \S+ refused at "
 KEY_LINE = re.compile(r"(?m)^P2-KEY (\S+) sha256 ([0-9a-f]{64})$")
+UNSEAL_ANY_OK = r"(?m)^P2-UNSEAL \S+ ok$"
+KEY_ANY = r"(?m)^P2-KEY "
+
+
+def refused(step: str) -> list[str]:
+    """Both keys refused at this step of p2-unseal."""
+    return [rf"(?m)^P2-UNSEAL {k} refused at {re.escape(step)}: " for k in provision.KEYS]
+
+
+NOT_UNSEALED = [UNSEAL_ANY_OK, KEY_ANY]
 EVENTLOG = re.compile(r"(?ms)^P2-EVENTLOG-BEGIN$(.*?)^P2-EVENTLOG-END$")
 CONSOLE = [PROMPT, AUTOBOOT, HELP_OUT, UNKNOWN_CMD]
 REFUSED = [KERNEL_START, BOOTED, ENV_MARK, *CONSOLE]
@@ -167,6 +195,23 @@ def fdt_prop(blob: bytes | bytearray, node: str, prop: str) -> tuple[int, int]:
             raise KeyError(f"{node}:{prop} not found")
         else:
             raise ValueError(f"bad FDT token {tok} at {pos - 4}")
+
+
+def cpio_newc(files: dict[str, bytes]) -> bytes:
+    """A cpio archive (newc) of regular files at the root; the kernel unpacks it after the initramfs it follows."""
+    out = bytearray()
+
+    def entry(ino: int, name: str, data: bytes, mode: int) -> None:
+        raw = name.encode() + b"\0"
+        fields = (ino, mode, 0, 0, 1, 0, len(data), 0, 0, 0, 0, len(raw), 0)
+        out.extend(b"070701" + "".join(f"{v:08X}" for v in fields).encode() + raw)
+        out.extend(b"\0" * (-len(out) % 4) + data)
+        out.extend(b"\0" * (-len(out) % 4))
+
+    for ino, (name, data) in enumerate(sorted(files.items()), start=1):
+        entry(ino, name, data, 0o100644)
+    entry(0, "TRAILER!!!", b"", 0)
+    return bytes(out)
 
 
 def flip_byte(src: Path, dst: Path, node: str) -> int:
@@ -325,6 +370,9 @@ class Artifacts:
         self.prediction: predict_pcrs.Prediction | None = None
         self.provisioned: provision.Provisioned | None = None
         self.data_disks: dict[str, Path] = {}
+        self.tpm_states: dict[str, Path] = {}
+        self.fits: dict[str, Path] = {}
+        self.predictions: dict[tuple[str, str], predict_pcrs.Prediction] = {}
 
     def keypair(self, keydir: Path, label: str) -> None:
         keydir.mkdir(parents=True, exist_ok=True)
@@ -414,15 +462,17 @@ class Artifacts:
         self.notes["key_required"] = run(["fdtget", str(self.work / "ctrl.dtb"),
                                           f"/signature/key-{KEY_NAME}", "required"]).stdout.strip()
 
+        self.fits["good"] = good
+
         # TC-10: what U-Boot will measure, from the release artifacts alone.
-        self.prediction = predict_pcrs.predict(good.read_bytes(), self.uboot["hardened"].read_bytes())
+        self.prediction = self.prediction_for("hardened", "good")
 
         # TC-05: a provisioned TPM, and the CC data with the MSS's approval of this release.
         kpol = self.ec_key(self.short / "kpol", "k-cc-pol-dev", "K-CC-POL dev")
         self.provisioned = provision.provision(self.work, self.short, kpol, self.prediction.pcrs)
-        path = self.work / "data-cc.img"
-        path.write_bytes(self.provisioned.disk)
-        self.data_disks["cc"] = path
+        self.data_disk("cc", self.provisioned.disk)
+        self.tpm_states["provisioned"] = self.provisioned.state
+        self.sealing_variants(kpol)
 
         # TC-03: one byte changed after signing, in each payload.
         for node in ("kernel", "ramdisk", "fdt"):
@@ -465,9 +515,87 @@ class Artifacts:
         run([str(self.mkenvimage), "-s", hex(ENV_SIZE), "-o", str(self.work / "env.bin"), str(self.work / "env.txt")])
         self.flash_image("env", (self.work / "env.bin").read_bytes())
 
+    def data_disk(self, name: str, payload: bytes) -> Path:
+        path = self.work / f"data-{name}.img"
+        path.write_bytes(payload)
+        self.data_disks[name] = path
+        return path
+
+    def prediction_for(self, uboot: str, slot: str) -> predict_pcrs.Prediction:
+        """What this U-Boot build measures when it boots this FIT."""
+        if (uboot, slot) not in self.predictions:
+            self.predictions[uboot, slot] = predict_pcrs.predict(self.fits[slot].read_bytes(),
+                                                                 self.uboot[uboot].read_bytes())
+        return self.predictions[uboot, slot]
+
+    def signed_variant(self, name: str, **payloads: bytes) -> Path:
+        """A FIT built and signed with K-CC-OS like good.itb, with some payloads replaced: a chain that
+        boots, but that no approved policy covers unless the MSS approves it."""
+        d = self.work / f"fit-{name}"
+        d.mkdir(exist_ok=True)
+        for f in ("fit.its", "ctrl.dtb", "Image.gz", "initramfs.cpio.gz", "kernel.dtb"):
+            shutil.copy(self.work / f, d / f)
+        for f, data in payloads.items():
+            (d / f).write_bytes(data)
+        run([str(self.mkimage), "-f", "fit.its", "-K", "ctrl.dtb", "-k", str(self.short / "keys"), "-r", "out.itb"],
+            cwd=d, env=self.env)   # -K writes the same public key into this copy of ctrl.dtb; it is not used
+        fit = self.work / f"{name}.itb"
+        shutil.move(d / "out.itb", fit)
+        self.disk(name, fit.read_bytes())
+        self.fits[name] = fit
+        return fit
+
+    def sealing_variants(self, kpol: Path) -> None:
+        """Chains, TPMs and CC data for the refusal cases TC-06 to TC-08."""
+        prov, initrd = self.provisioned, (self.work / "initramfs.cpio.gz").read_bytes()
+
+        # TC-06: one measured item changed in a chain built and signed like a release. The two U-Boot
+        # test builds (another version string, another command line) come from cc/build.sh.
+        kernel = bytearray((self.work / "Image.gz").read_bytes())
+        kernel[4:8] = struct.pack("<I", 1)   # gzip MTIME: the same kernel, other bytes
+        self.signed_variant("tc06-kernel", **{"Image.gz": bytes(kernel)})
+        extra = gzip.compress(cpio_newc({"p2-tc06": b"initramfs\n"}), mtime=0)
+        self.signed_variant("tc06-initramfs", **{"initramfs.cpio.gz": initrd + extra})
+        dtb = self.work / "kernel-tc06.dtb"
+        shutil.copy(self.work / "kernel.dtb", dtb)
+        run(["fdtput", "-t", "s", str(dtb), "/chosen", "p2-tc06", "devicetree"])
+        self.signed_variant("tc06-devicetree", **{"kernel.dtb": dtb.read_bytes()})
+        self.notes["tc06"] = ("tc06-version and tc06-bootargs: U-Boot test builds; tc06-kernel: gzip MTIME of "
+                              "Image.gz set to 1; tc06-initramfs: a cpio member p2-tc06 appended; tc06-devicetree: "
+                              "/chosen/p2-tc06 added. Each FIT signed with K-CC-OS")
+
+        # TC-07: another CC's TPM, and this CC's data with its parent name changed to that TPM's.
+        self.tpm_states["second"], second_name = provision.second_cc(self.work, self.short)
+        self.data_disk("cc-moved", provision.data_variant(prov, self.work / "ccdata-moved",
+                                                          {"parent.name": second_name}))
+
+        # TC-08: release 2 (one cpio member more), approved by the MSS at epoch 1, which is then committed.
+        extra = gzip.compress(cpio_newc({"p2-release": b"2\n"}), mtime=0)
+        self.signed_variant("r2", **{"initramfs.cpio.gz": initrd + extra})
+        approved = approve_policy.approved_policy(self.prediction_for("hardened", "r2").pcrs, 1)
+
+        def policy(key: Path) -> dict[str, bytes]:
+            return {"policy/approved": approved, "policy/approved.sig": approve_policy.sign(key, approved),
+                    "policy/epoch": b"1\n"}
+
+        self.data_disk("cc-r2", provision.data_variant(prov, self.work / "ccdata-r2", policy(kpol)))
+        rogue = self.ec_key(self.short / "rogue-pol", "k-cc-pol-rogue", "K-CC-POL rogue")
+        rogue_pub = approve_policy.ecc_public(subprocess.run(
+            ["openssl", "pkey", "-in", str(rogue), "-pubout", "-outform", "DER"], check=True,
+            capture_output=True).stdout)
+        self.data_disk("cc-r2-rogue-key", provision.data_variant(prov, self.work / "ccdata-r2-rogue-key",
+                                                                 {**policy(rogue), "kpol.pub": rogue_pub}))
+        self.data_disk("cc-r2-rogue-sig", provision.data_variant(prov, self.work / "ccdata-r2-rogue-sig",
+                                                                 policy(rogue)))
+        self.tpm_states["committed"] = provision.commit_epoch(prov.state, self.short / "tpm-committed", 1,
+                                                              self.work / "provision-commit")
+        self.notes["tc08"] = (f"r2: a cpio member p2-release appended, signed with K-CC-OS; approved at epoch 1 "
+                              f"({approved.hex()}); committed TPM: bits 0x2 set in {provision.EPOCH_NV}")
+
     def hashes(self) -> dict[str, str]:
         names = ["fit.its", "ctrl.dtb", "kernel.dtb", "good.itb", "unsigned.itb", "rogue.itb", "added-config.itb",
-                 "tamper-kernel.itb", "tamper-ramdisk.itb", "tamper-fdt.itb", "legacy.uimg", "env.bin", "data-cc.img"]
+                 "tamper-kernel.itb", "tamper-ramdisk.itb", "tamper-fdt.itb", "legacy.uimg", "env.bin"]
+        names += [f"{f}.itb" for f in self.fits if f != "good"] + [p.name for p in self.data_disks.values()]
         out = {n: sha256(self.work / n) for n in names}
         built = [f"u-boot-{v}.{ext}" for v in UBOOT_VARIANTS for ext in ("bin", "config")]
         for n in built + ["Image.gz", "initramfs.cpio.gz", "p2-unseal", "mkimage", "mkenvimage"]:
@@ -501,9 +629,11 @@ class Case:
     stop_count: int = 1
     control_for: str | None = None
     pcrs: bool = False              # compare the PCRs and event log the initramfs prints with the prediction
-    tpm: str = "blank"              # blank: a new TPM; provisioned: a copy of the provisioned TPM
+    tpm: str = "blank"              # blank: a new TPM; otherwise a copy of that provisioned TPM
     data: str | None = None         # CC data disk to attach
     unseal: bool = False            # compare the unsealed keys with those sealed
+    changes_pcr: int | None = None  # the policy PCR this chain moves away from the approved release
+    positive: str | None = None     # a further positive control that must pass in the same run
 
 
 CASES = [
@@ -554,16 +684,57 @@ CASES = [
     Case("TC-05", "TC-05", "test", "Keys unseal in the measured, unmodified boot state", tpm="provisioned", data="cc",
          expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
          forbid=[UNSEAL_REFUSED, ENV_MARK, *CONSOLE], pcrs=True, unseal=True),
+    # TC-06: each chain is signed with K-CC-OS and boots, but no approved policy covers it.
+    Case("TC-06a", "TC-06", "test", "Boot loader with another version string (PCR 0)", uboot="tc06-version",
+         tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
+         changes_pcr=0, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
+         forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
+    Case("TC-06b", "TC-06", "test", "Kernel command line with one more argument (PCR 1)", uboot="tc06-bootargs",
+         tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
+         changes_pcr=1, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
+         forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
+    Case("TC-06c", "TC-06", "test", "Devicetree with one more property, re-signed (PCR 1)", slot="tc06-devicetree",
+         tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
+         changes_pcr=1, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
+         forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
+    Case("TC-06d", "TC-06", "test", "Kernel image with other bytes, re-signed (PCR 8)", slot="tc06-kernel",
+         tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
+         changes_pcr=8, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
+         forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
+    Case("TC-06e", "TC-06", "test", "Initramfs with one more file, re-signed (PCR 9)", slot="tc06-initramfs",
+         tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
+         changes_pcr=9, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
+         forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
+    # TC-07: this CC's storage moved to another CC.
+    Case("TC-07a", "TC-07", "test", "This CC's data on a second CC's TPM", tpm="second", data="cc", pcrs=True,
+         positive="TC-05", expect=[VERIFIED, BOOTED, *refused("parent name")], forbid=[*NOT_UNSEALED, *CONSOLE]),
+    Case("TC-07b", "TC-07", "test", "The same, with the parent name changed to the second TPM's", tpm="second",
+         data="cc-moved", pcrs=True, positive="TC-05", expect=[VERIFIED, BOOTED, *refused("Load")],
+         forbid=[*NOT_UNSEALED, *CONSOLE]),
+    # TC-08: epoch 1 committed on this CC's TPM.
+    Case("TC-08a", "TC-08", "test", "Release 1 with its epoch-0 policy, after epoch 1 is committed", tpm="committed",
+         data="cc", pcrs=True, positive="TC-05", expect=[VERIFIED, BOOTED, *refused("PolicyNV")],
+         forbid=[*NOT_UNSEALED, *CONSOLE]),
+    Case("TC-08b", "TC-08", "test", "Release 2 with its epoch-1 policy, after the commit, still unseals",
+         tpm="committed", slot="r2", data="cc-r2", pcrs=True, unseal=True, positive="TC-05",
+         expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, *CONSOLE]),
+    Case("TC-08c", "TC-08", "test", "Release 2 with a policy signed by a rogue key, rogue public key on storage",
+         tpm="committed", slot="r2", data="cc-r2-rogue-key", pcrs=True, positive="TC-05",
+         expect=[VERIFIED, BOOTED, *refused("Unseal")], forbid=[*NOT_UNSEALED, *CONSOLE]),
+    Case("TC-08d", "TC-08", "test", "Release 2 with a policy signed by a rogue key, K-CC-POL public key on storage",
+         tpm="committed", slot="r2", data="cc-r2-rogue-sig", pcrs=True, positive="TC-05",
+         expect=[VERIFIED, BOOTED, *refused("VerifySignature")], forbid=[*NOT_UNSEALED, *CONSOLE]),
     Case("TC-10", "TC-10", "test", "Predicted PCRs equal the measured PCRs and the event-log replay",
          expect=[VERIFIED, BOOTED, (PCR_LINE, 10)], forbid=[ENV_MARK, *CONSOLE], pcrs=True),
 ]
 
 
 def check_configs(build: Path) -> list[dict]:
-    """TC-04a: the hardened .config holds every P2 setting, and each control
-    build differs from it in exactly the one setting its fragment changes."""
+    """TC-04a: the hardened .config holds every P2 setting, and each control or
+    test build differs from it in exactly the one setting its fragment changes."""
     checks = check_config.check(build / "u-boot-hardened.config", FRAGMENTS)
-    for variant, frag in CONTROL_FRAGMENTS.items():
+    for variant, frag in ONE_SETTING_BUILDS.items():
         want = sorted(check_config.expected([frag]).values())
         got = check_config.diff(build / f"u-boot-{variant}.config", build / "u-boot-hardened.config")
         checks.append({"kind": "control-diff", "pattern": f"{variant} differs from hardened only by {want}",
@@ -613,6 +784,17 @@ def pcr_checks(pred: predict_pcrs.Prediction, text: str) -> list[dict]:
                        "observed": f"{type(exc).__name__}: {exc}" if m else "no event log in the console output"})
         log = None
     return checks + predict_pcrs.compare(pred, log, measured)
+
+
+def moved_pcrs(pred: predict_pcrs.Prediction, approved: predict_pcrs.Prediction, pcr: int) -> dict:
+    """TC-06: this chain's predicted policy PCRs differ from the approved release's in exactly `pcr`."""
+    moved = [i for i in predict_pcrs.POLICY_PCRS if pred.pcrs[i] != approved.pcrs[i]]
+    return {"kind": "moved", "pattern": f"only PCR {pcr} differs from the approved release", "ok": moved == [pcr],
+            "observed": moved}
+
+
+def unseal_lines(text: str) -> list[str]:
+    return [line[len("P2-UNSEAL "):] for line in clean(text).splitlines() if line.startswith("P2-UNSEAL ")]
 
 
 def unseal_checks(prov: provision.Provisioned, text: str) -> list[dict]:
@@ -702,6 +884,13 @@ def write_markdown(out: Path, summary: dict) -> None:
         for name, want in prov["secrets_sha256"].items():
             c = found.get(name)
             lines.append(f"| {name} | `{want}` | {'equal' if c and c['ok'] else '**' + str(c and c['observed']) + '**'} |")
+    sealing = [r for r in summary["runs"] if r.get("data") or r.get("tpm", "blank") != "blank"]
+    if sealing:
+        lines += ["", "Sealing runs: what `p2-unseal` reported for each key.", "",
+                  "| Run | U-Boot | FIT | TPM | CC data | p2-unseal |", "|---|---|---|---|---|---|"]
+        for r in sealing:
+            said = "; ".join(sorted(set(re.sub(r"^\S+ ", "", u) for u in r.get("unseal", [])))) or "–"
+            lines.append(f"| {r['id']} | {r['uboot']} | {r['slot']} | {r['tpm']} | {r['data'] or '–'} | {said} |")
     pcr_run = next((r for r in summary["runs"] if r["tc"] == "TC-10"), None)
     if pcr_run:
         found = {(c["kind"], c["pattern"].split(":")[0]): c for c in pcr_run["checks"]}
@@ -749,11 +938,13 @@ def main(argv: list[str] | None = None) -> int:
                      "title": "Built .config holds every P2 setting; each control build changes exactly one",
                      "ok": all(c["ok"] for c in cfg_checks), "checks": cfg_checks, "log": None})
 
-        selected = [c for c in CASES if not args.only or c.id in args.only or c.id == "TC-01"]
+        wanted = set(args.only or [c.id for c in CASES]) | {"TC-01"}
+        wanted |= {c.positive for c in CASES if c.id in wanted and c.positive}
+        selected = [c for c in CASES if c.id in wanted]
         for case in selected:
             state = short / f"tpm-{case.id}"
-            if case.tpm == "provisioned":
-                provision.copy_state(art.provisioned, state)
+            if case.tpm != "blank":
+                provision.copy_state(art.tpm_states[case.tpm], state)
             tpm = Swtpm(state)
             try:
                 m = Machine(art.uboot[case.uboot], art.slots[case.slot], art.flash[case.flash],
@@ -766,25 +957,32 @@ def main(argv: list[str] | None = None) -> int:
             (out / log).write_text(res.text)
             checks = evaluate(case, res.text, res.reason, res.keys_sent, res.key_marks)
             if case.pcrs:
-                checks += pcr_checks(art.prediction, res.text)
+                checks += pcr_checks(art.prediction_for(case.uboot, case.slot), res.text)
+            if case.changes_pcr is not None:
+                checks.append(moved_pcrs(art.prediction_for(case.uboot, case.slot), art.prediction, case.changes_pcr))
             if case.unseal:
                 checks += unseal_checks(art.provisioned, res.text)
             ok = all(c["ok"] for c in checks)
             runs.append({"id": case.id, "tc": case.tc, "role": case.role, "title": case.title,
                          "control_for": case.control_for, "uboot": case.uboot, "slot": case.slot,
                          "flash": case.flash, "tpm": case.tpm, "data": case.data, "keys_from": case.keys_from, "keys_until": case.keys_until, "keys_sent": res.keys_sent,
-                         "reboot": case.reboot, "ok": ok, "checks": checks, "end": res.reason,
+                         "reboot": case.reboot, "positive": case.positive, "unseal": unseal_lines(res.text),
+                         "ok": ok, "checks": checks, "end": res.reason,
                          "seconds": round(res.seconds, 1), "log": log, "log_sha256": sha256(out / log)})
             print(f"{'PASS' if ok else 'FAIL'}  {case.id:15} {case.title} ({res.seconds:.0f}s, {res.reason})",
                   flush=True)
 
         positive = next(r for r in runs if r["role"] == "positive")
+        passed = {r["id"]: r["ok"] for r in runs}
         test_cases = {}
         for r in runs:
             tc = r["tc"]
             if not positive["ok"] and r is not positive:
                 r["ok"] = False
                 r["note"] = "not counted: the positive control (TC-01) failed in this run"
+            elif r.get("positive") and not passed.get(r["positive"]):
+                r["ok"] = False
+                r["note"] = f"not counted: its positive control ({r['positive']}) did not pass in this run"
             test_cases[tc] = "passed" if test_cases.get(tc, "passed") == "passed" and r["ok"] else "failed"
 
         env = environment()

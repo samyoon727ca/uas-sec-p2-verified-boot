@@ -89,7 +89,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`docs/references.md`](docs/references.md) | Sources and tools, with pinned versions | Baselined |
 | [`data/`](data/) | Child requirements, trace and test cases (CSV); pinned P1 snapshot | Populated |
 | [`cc/`](cc/) | Pinned U-Boot release and P2 configuration, host and guest package pins, build script for the emulated chain, and the initramfs with its unseal agent ([`p2-unseal.c`](cc/initramfs/p2-unseal.c)) | Built |
-| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03, TC-04, TC-05, TC-10 built |
+| [`tests/ve07/`](tests/ve07/) | VE-07 emulated harness: QEMU `virt` + U-Boot + swtpm, with control runs on stock U-Boot and on one-setting variants of the P2 build | TC-01, TC-03 to TC-08, TC-10 built |
 | [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
 | [`tools/predict_pcrs.py`](tools/predict_pcrs.py) | Predicts PCRs 0, 1, 8 and 9 from the signed FIT and U-Boot binary; checks an event log and measured PCRs against the prediction (TC-10) | Built |
 | [`tools/approve_policy.py`](tools/approve_policy.py) | The MSS side of sealing: builds a release's approved policy (PCRs and epoch) and signs it with K-CC-POL | Built |
