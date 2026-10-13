@@ -1,0 +1,49 @@
+name: ve08-host
+
+# VE-08 on the host: the FC secure-boot pair built at the pinned PX4 commit
+# with a per-run key, and each image checked with PX4's own verification code
+# (TC-11; tests/ve08).
+on:
+  push:
+    paths: ["fc/**", "tests/ve08/**", "cc/emu/install-host-packages.sh", ".github/workflows/ve08-host.yml"]
+  pull_request:
+    paths: ["fc/**", "tests/ve08/**", "cc/emu/install-host-packages.sh", ".github/workflows/ve08-host.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fc-images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # Actions are pinned to full commit SHAs; the tag is noted for review.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned host packages from the Ubuntu snapshot
+        run: cc/emu/install-host-packages.sh fc/host-packages.txt
+      - name: Clone PX4 at the pinned commit
+        run: fc/clone-px4.sh "$RUNNER_TEMP/px4"
+      - name: Pull the PX4 build container by digest
+        run: docker pull "$(awk '$1 == "container:" {print $2}' fc/px4/pin.txt)"
+      - name: Build the boot loader and firmware with a per-run key, in the container
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/p2:ro" -v "$RUNNER_TEMP:/work" \
+            -e PX4=/work/px4 -e KEYS=/work/keys -e OUT=/work/fc \
+            "$(awk '$1 == "container:" {print $2}' fc/px4/pin.txt)" bash /p2/fc/build.sh
+          df -h / | tail -1
+      - name: Check the images with PX4's verification code (TC-11)
+        run: python3 tests/ve08/image_cases.py --px4 "$RUNNER_TEMP/px4" --fc "$RUNNER_TEMP/fc" --out "$RUNNER_TEMP/ve08-ci"
+      - name: Check the evidence holds no private key material
+        if: always()
+        run: |
+          test -z "$(ls "$RUNNER_TEMP/keys"/*.json 2>/dev/null)"   # fc/build.sh deletes the per-run private key
+          python3 tools/check_no_secrets.py --root "$RUNNER_TEMP/ve08-ci"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: ve08-ci-evidence
+          path: ${{ runner.temp }}/ve08-ci
+          if-no-files-found: error

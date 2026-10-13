@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Install the pinned Ubuntu 24.04 host packages from the Ubuntu archive
-# snapshot named in host-packages.txt, then check every installed version.
+# snapshot named in a package list (default: host-packages.txt next to this
+# script), then check every installed version.
+#   cc/emu/install-host-packages.sh [list]
 # Uses only the snapshot source, so the runner's own mirrors are not consulted.
 # apt verifies the snapshot's signed Release file and each package's SHA-256.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
-LIST=$HERE/host-packages.txt
+LIST=${1:-$HERE/host-packages.txt}
 TS=$(awk '$1 == "snapshot:" {print $2}' "$LIST")
 [[ $TS =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || { echo "bad snapshot timestamp in $LIST" >&2; exit 1; }
 mapfile -t PKGS < <(grep -Ev '^(#|snapshot:|$)' "$LIST")
