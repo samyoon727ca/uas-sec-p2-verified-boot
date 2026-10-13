@@ -11,7 +11,7 @@ Each step traces back to P1's threats and verification events.
 
 > **Notional and unclassified.** Built only from public sources: U-Boot, NXP, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; verified boot, measured boot and key sealing pass in emulation.** VE-07's verified-boot cases TC-01, TC-03 and TC-04, its measured-boot case TC-10 and its sealing cases TC-05 to TC-08 pass under QEMU emulation with swtpm ([evidence](evidence/ve07-ci/20261013-cf38809/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. TC-05 shows that the CC's keys unseal in that boot under the MSS-signed policy, and TC-06 to TC-08 that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy. TC-09 (encrypted unseal traffic), the FC and all hardware runs are still planned; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
+**Status: design baselined; every VE-07 case that emulation can prove passes.** VE-07's verified-boot cases TC-01, TC-03 and TC-04, its measured-boot case TC-10 and its sealing cases TC-05 to TC-09 pass under QEMU emulation with swtpm ([evidence](evidence/ve07-ci/20261013-d9149f6/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. TC-05 shows that the CC's keys unseal in that boot under the MSS-signed policy, TC-06 to TC-08 that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy, and TC-09 that they cross the TPM interface only encrypted. VE-07 still needs its nine hardware runs; the FC (VE-08) and all hardware runs are planned; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 
@@ -58,12 +58,12 @@ flowchart LR
 
 ## Verification evidence
 
-CI runs QEMU `virt` with U-Boot and swtpm. So far it proves the boot-loader configuration and the tamper cases (TC-01, TC-03, TC-04), that what U-Boot measures can be predicted from the release artifacts (TC-10), that the keys unseal in the approved boot state (TC-05), and that they do not unseal from a changed boot state, on another TPM, after rollback or under a rogue-signed policy (TC-06 to TC-08). TC-09, the encrypted unseal traffic, is planned for the same harness. Only hardware can prove the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
+CI runs QEMU `virt` with U-Boot and swtpm. So far it proves the boot-loader configuration and the tamper cases (TC-01, TC-03, TC-04), that what U-Boot measures can be predicted from the release artifacts (TC-10), that the keys unseal in the approved boot state (TC-05), and that they do not unseal from a changed boot state, on another TPM, after rollback or under a rogue-signed policy (TC-06 to TC-08), and that the unsealed keys cross the TPM interface only encrypted (TC-09). Only hardware can prove the root of trust, a real TPM, and PX4's check at reset ([§6](docs/06-verification.md)). An event passes only when all its CI and hardware runs pass; then a P1 pull request records it.
 
 <!-- BEGIN GENERATED: ve-status -->
 | Event | Verifies (P1) | CI runs passed | Hardware runs passed | P2 status | P1 status |
 |---|---|---|---|---|---|
-| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 8 of 9 | 0 of 9 | in progress | planned |
+| VE-07 CC verified boot and key sealing | SR-005, SR-010 | 9 of 9 | 0 of 9 | in progress | planned |
 | VE-08 FC boots only signed firmware | SR-018 | 0 of 1 | 0 of 3 | planned | planned |
 <!-- END GENERATED: ve-status -->
 
