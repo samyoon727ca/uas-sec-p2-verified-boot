@@ -53,15 +53,15 @@ Each of these is an **assumption**: accepted for analysis, not yet shown. Test c
 
 ## 1.4 Changes proposed to P1
 
-P2 corrects P1 rather than diverging from it. Each item becomes a small P1 pull request; the P1 PR column is filled in when it is opened.
+P2 corrects P1 rather than diverging from it. Each item becomes a small P1 pull request; the P1 PR column is filled in when it is opened. Changes 1 to 5 are merged, and the P1 snapshot in [`data/p1/`](../data/p1/) includes them.
 
 | # | Proposed change | Reason | P1 PR |
 |---|---|---|---|
 | 1 | Add an `evidence` column to `verification.csv`: required when the status is `passed` or `failed`, optional while `planned`. Keep the validator, generated views and SysML generator green | P1 has no place to link the evidence that P2–P6 produce | [#12](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/12), merged |
-| 2 | Add a threat: an older signed FC firmware is loaded over USB. Disposition to be decided in P1: accept with rationale, or mitigate by procedure | The PX4 boot loader checks the signature only; `image_cert_t` carries creation and expiry fields, but the boot loader never reads them [PX4-BL]. SR-018 as written does not cover rollback | — |
-| 3 | Record that SR-018's root of trust is the FC boot-loader sector and depends on SR-024 | The PX4 boot loader sets no flash write-protection [PX4-BL]. Anyone with SWD access can replace it | — |
-| 4 | Add to THR-034's residual risk: a TPM bus probe or a TPM reset with replayed measurements on a captured CC | SR-010.4 stops passive sniffing of unsealed keys; reset-and-replay depends on A2-02 | — |
-| 5 | Reword A-04 to separate the two roots of trust: SoC secure boot verifies the chain (SR-005); the TPM measures and seals (SR-010) | A TPM does not verify boot. A-04 currently names TPM 2.0 as the example hardware root of trust | — |
+| 2 | Add a threat: an older signed FC firmware is loaded over USB. Disposition to be decided in P1: accept with rationale, or mitigate by procedure | The PX4 boot loader checks the signature only; `image_cert_t` carries creation and expiry fields, but the boot loader never reads them [PX4-BL]. SR-018 as written does not cover rollback | [#16](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/16), merged. The owner chose to mitigate: THR-066 on DF-11, closed by SR-045 (the GCS refuses to arm a vehicle whose FC reports firmware older than the minimum approved release), verified by P3's VE-17 |
+| 3 | Record that SR-018's root of trust is the FC boot-loader sector and depends on SR-024 | The PX4 boot loader sets no flash write-protection [PX4-BL]. Anyone with SWD access can replace it | [#14](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/14), merged: SR-018's and SR-024's rationales |
+| 4 | Add to THR-034's residual risk: a TPM bus probe or a TPM reset with replayed measurements on a captured CC | SR-010.4 stops passive sniffing of unsealed keys; reset-and-replay depends on A2-02 | [#15](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/15), merged: THR-034's description and P1 §5.5 |
+| 5 | Reword A-04 to separate the two roots of trust: SoC secure boot verifies the chain (SR-005); the TPM measures and seals (SR-010) | A TPM does not verify boot. A-04 named TPM 2.0 as the example hardware root of trust | [#13](https://github.com/samyoon727ca/uas-sec-p1-architecture/pull/13), merged |
 | 6 | **Withdrawn 2026-10-12.** ~~Record a residual risk: the CC root boot key is limited to 112-bit strength on the chosen hardware~~ | The Raspberry Pi boot loader fixes RSA-2048, which NIST SP 800-57 disallows for applying protection from 2031. DD2-01 moved the CC to the i.MX 8M Plus, whose ROM takes RSA-4096 root keys ([§5.1](05-key-management.md)), so the risk no longer exists | Not opened |
 
 ## 1.5 Out of scope

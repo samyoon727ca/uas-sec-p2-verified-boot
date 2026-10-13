@@ -6,7 +6,7 @@ Every external source P2 relies on, with the version pinned. Facts were checked 
 
 | Tag | Source | Version pinned | Used for |
 |---|---|---|---|
-| [P1] | [samyoon727ca/uas-sec-p1-architecture](https://github.com/samyoon727ca/uas-sec-p1-architecture) | Commit `83c6d2dd39aafe14ff97764c8cbb730b6426fe0b` (baseline 1.0 plus change 1, the `evidence` column); CSVs copied to [`data/p1/`](../data/p1/) | Parent requirements SR-005, SR-010 and SR-018, their threats, VE-07 and VE-08, assumptions A-04, A-08 and A-14, DD-06; the `evidence` column that records a result |
+| [P1] | [samyoon727ca/uas-sec-p1-architecture](https://github.com/samyoon727ca/uas-sec-p1-architecture) | Commit `e539aa638d3e44c1982341e927d974b4396e0576` (baseline 1.0 plus changes 1 to 5 proposed by P2); CSVs copied to [`data/p1/`](../data/p1/) | Parent requirements SR-005, SR-010 and SR-018, their threats, VE-07 and VE-08, assumptions A-04, A-08 and A-14, DD-06; the `evidence` column that records a result |
 
 ## Companion computer
 

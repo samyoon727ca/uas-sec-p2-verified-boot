@@ -15,7 +15,7 @@ Each step traces back to P1's threats and verification events.
 
 ## Threat
 
-P2's three parent requirements answer nine P1 threats, eight of them rated MI-1 (P1 snapshot at `83c6d2d`):
+P2's three parent requirements answer nine P1 threats, eight of them rated MI-1 (P1 snapshot at `e539aa6`):
 
 | Threat | Impact | Answered by |
 |---|---|---|
@@ -53,7 +53,7 @@ flowchart LR
 - **Verified boot (SR-005).** Two stages ([§2](docs/02-cc-boot-chain.md)). The i.MX 8M Plus boot ROM (NXP HAB) checks the boot loader against a table of RSA-4096 keys whose hash is burned into fuses. So U-Boot itself is verified from hardware, with no vendor-signed stage before the project's key. HAB enforces this only once the chip is closed, a separate permanent step. U-Boot then accepts only a FIT configuration signed with K-CC-OS that covers the kernel, initramfs and devicetree. It reads no environment from storage, offers no console and boots no legacy images.
 - **Measured boot and sealing (SR-010).** U-Boot is built to extend PCRs 0, 1, 8 and 9 before running anything ([§3](docs/03-measured-boot-sealing.md)). The keys are sealed once to `TPM2_PolicyAuthorize`. Each release ships an MSS-signed policy for its predicted PCRs, so updates need no re-sealing.
 - **Anti-rollback.** Neither U-Boot nor the boot ROM provides it in P2, so it is enforced at key release: an NV bit-field epoch in the policy denies keys to an older signed chain.
-- **FC (SR-018).** PX4 Bootloader Secure Boot at `v1.18.0-rc1`: Ed25519 via monocypher, with an offline recovery key in a second slot ([§4](docs/04-fc-secure-boot.md)). PX4 has no firmware anti-rollback; that is proposed to P1 as a new threat.
+- **FC (SR-018).** PX4 Bootloader Secure Boot at `v1.18.0-rc1`: Ed25519 via monocypher, with an offline recovery key in a second slot ([§4](docs/04-fc-secure-boot.md)). PX4 has no firmware anti-rollback; P1 records that as THR-066 and closes it with a firmware-version check at the GCS (SR-045, P3).
 - **Keys.** Five signing keys, all dev keys in P2, with a documented hand-off to P3's offline root and HSM tiers ([§5](docs/05-key-management.md)). The root key is RSA-4096 (128-bit). The fuses fix the key table, so the root can rotate only among the four keys fused at provisioning.
 
 ## Verification evidence
