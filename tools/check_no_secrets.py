@@ -2,8 +2,11 @@
 """Fail if any tracked or untracked, non-ignored file contains private key material.
 
 P2 uses dev/test keys that are generated per run or held locally; none may be
-committed. This catches PEM/OpenSSH/TSS private keys and PX4 secure-boot key
-files (JSON with a 32-byte hex "private" value). Standard library only.
+committed. This catches PEM/OpenSSH/TSS private keys, PX4 secure-boot key
+files (JSON with a 32-byte hex "private" value) and WireGuard private keys in
+wg-quick form ("PrivateKey = <base64>"). It cannot recognize raw key bytes,
+such as a MAVLink signing key; harnesses record only their SHA-256.
+Standard library only.
 
 Usage:
     python tools/check_no_secrets.py [--root .]
@@ -22,6 +25,8 @@ ROOT = Path(__file__).resolve().parent.parent
 PATTERNS = {
     "PEM private key": re.compile(rb"-----BEGIN (?:[A-Z0-9]+ )*" + rb"PRIVATE KEY-----"),
     "PX4 secure-boot private key": re.compile(rb'"priv' + rb'ate"\s*:\s*"[0-9a-fA-F]{64}'),
+    # wg-quick configuration: a 32-byte key in base64 is 43 characters and one "=".
+    "WireGuard private key": re.compile(rb"Private" + rb"Key\s*=\s*[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]="),
 }
 
 
