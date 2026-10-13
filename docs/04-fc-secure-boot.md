@@ -18,8 +18,8 @@ Checked in the source and docs at `v1.18.0-rc1` [PX4-SECBOOT], [PX4-BL]:
 - **Build-time keys.** The boot loader build takes the slot-0 key file from a `PUBLIC_KEY0` environment variable, and the firmware build signs with the key file named by `BOARD_SECUREBOOT_KEY`, so a build with another key needs no change to PX4's files.
 
 **Gaps relevant to SR-018:**
-- **No anti-rollback.** The boot loader checks the signature only. `image_cert_t` carries creation and expiry dates, but the boot loader never reads them. An older signed image still boots (P1 change 2).
-- **No write-protection.** The boot loader sets no flash write-protection or readout protection. Its integrity rests on the debug port being disabled or sealed (SR-024, P5; P1 change 3).
+- **No anti-rollback.** The boot loader checks the signature only. `image_cert_t` carries creation and expiry dates, but the boot loader never reads them. An older signed image still boots. P1 records this as THR-066 and closes it with SR-045: the GCS refuses to arm a vehicle whose FC reports firmware older than the minimum approved release (P3, VE-17).
+- **No write-protection.** The boot loader sets no flash write-protection or readout protection. Its integrity rests on the debug port being disabled or sealed (SR-024, P5). P1 records this dependency in SR-018's rationale.
 - **Raw-key signing.** `Tools/secure_bootloader/sign_firmware.py` reads the raw private key, in hex, from a JSON file (OI2-04).
 
 ## 4.2 Workflow

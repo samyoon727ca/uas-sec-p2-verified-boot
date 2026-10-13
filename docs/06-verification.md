@@ -69,4 +69,4 @@ Each list says what that kind of run is able to prove. So far CI has proved the 
 
 ## 6.5 Reporting to P1
 
-When every case of an event has passed, a pull request to P1 sets the event's status in `data/verification.csv` to `passed` and links this repo's evidence. That uses the `evidence` column proposed as P1 change 1 ([§1.4](01-scope-and-trace.md)). P1's validator, generated views and SysML generator must stay green.
+When every case of an event has passed, a pull request to P1 sets the event's status in `data/verification.csv` to `passed` and links this repo's evidence. That uses the `evidence` column P1 added as change 1 ([§1.4](01-scope-and-trace.md)). P1's validator, generated views and SysML generator must stay green.

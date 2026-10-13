@@ -78,7 +78,7 @@ A discrete TPM answers over SPI. Without parameter encryption, the unsealed key 
 - **salted** to the parent storage key (§3.2), whose name is recorded at provisioning;
 - set to **encrypt the response**, with AES-128 in CFB mode.
 
-This stops passive sniffing. It does not stop an attacker who can reset the TPM alone and replay approved measurements (A2-02); that is P1 change 4 and P5's scope.
+This stops passive sniffing. It does not stop an attacker who can reset the TPM alone and replay approved measurements (A2-02); P1 records it as THR-034's residual risk, and it is P5's scope.
 
 ## 3.7 Prototype findings
 
