@@ -93,7 +93,8 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`evidence/`](evidence/) | Captured logs and summaries, one folder per run | Populated |
 | [`tools/predict_pcrs.py`](tools/predict_pcrs.py) | Predicts PCRs 0, 1, 8 and 9 from the signed FIT and U-Boot binary; checks an event log and measured PCRs against the prediction (TC-10) | Built |
 | [`tools/approve_policy.py`](tools/approve_policy.py) | The MSS side of sealing: builds a release's approved policy (PCRs and epoch) and signs it with K-CC-POL | Built |
-| `fc/`, `tests/ve08/` | PX4 secure-boot build, signing and host checks | Planned |
+| [`fc/`](fc/) | PX4 pin, and the build of the secure boot loader and signed firmware with a per-run key in the pinned PX4 container | Built |
+| [`tests/ve08/`](tests/ve08/) | VE-08 host harness: each image checked with PX4's own verification code on a 32-bit host | TC-11 built |
 
 ## Run the checks locally
 
