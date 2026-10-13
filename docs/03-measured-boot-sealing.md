@@ -2,7 +2,7 @@
 
 U-Boot measures what it boots into four SHA-256 PCRs before running it. The CC's WireGuard private key and its copy of the MAVLink signing key are sealed once, to a policy that the MSS approves with a signature. Each release carries a signed policy covering its predicted PCR values and its anti-rollback epoch. A legitimate update therefore needs no re-sealing, and an older release cannot unseal once a newer epoch is committed (SR-010, SR-010.1 to SR-010.4).
 
-Status: design, informed by a throwaway prototype (§3.7). The emulated build enables `MEASURED_BOOT`, but no run has read the PCRs or the event log yet, and a boot that passes says nothing about them, because `bootm` ignores a failed measurement (§3.1). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
+Status: the measurements (§3.1) pass in emulation; sealing (§3.2 to §3.6) is design, informed by a throwaway prototype (§3.7). TC-10 shows that the PCRs U-Boot measures into swtpm, and the replay of the event log Linux receives, equal the values `tools/predict_pcrs.py` predicts from the release artifacts ([evidence](../evidence/ve07-ci/20261013-1c9867e/summary.md)). A real TPM over SPI has not been shown (OI2-01), and TC-05 to TC-09 are planned. Nothing here is shown working until its test case passes ([§6](06-verification.md)).
 
 ## 3.1 Measurements (SR-010.1)
 
@@ -13,9 +13,11 @@ Status: design, informed by a throwaway prototype (§3.7). The emulated build en
 | 8 | Kernel image as stored in the FIT | `EV_COMPACT_HASH` "linux" | Kernel changes |
 | 9 | Initramfs | `EV_COMPACT_HASH` "initrd" | Initramfs changes, including the unseal logic |
 
+After the last of these, U-Boot closes PCRs 0 to 7 with an `EV_SEPARATOR` event: `0xFFFFFFFF`, or `0x00000001` if a measurement failed. The separator is part of PCRs 0 and 1. U-Boot extends and logs every active PCR bank; the policy uses only SHA-256. The emulated swtpm, started without `swtpm_setup`, has SHA-1, SHA-256, SHA-384 and SHA-512 active.
+
 Sources: `boot/bootm.c` and `lib/tpm_tcg2.c` at `v2026.07` [UBOOT]. Three properties follow.
 
-- **Predictable.** `bootm` measures right after finding the images: before loading or decompressing them, and before any devicetree fixups. So the MSS can compute every PCR value from the release artifacts alone. `tools/predict_pcrs.py` (planned) will do this, and TC-10 will check the prediction against the measured PCRs and the event log.
+- **Predictable.** `bootm` measures right after finding the images: before loading or decompressing them, and before any devicetree fixups. So the MSS can compute every PCR value from the release artifacts alone. [`tools/predict_pcrs.py`](../tools/predict_pcrs.py) does this from the signed FIT and the U-Boot binary, which holds the version string and the compiled-in kernel command line. It refuses what it cannot predict, such as two version strings in the binary or a compressed devicetree. TC-10 checks the prediction against the measured PCRs and the event log.
 - **Logged.** The event log goes to Linux through `linux,sml-base`/`linux,sml-size` on the TPM node [UBOOT-MB], so the measurements can be replayed and checked.
 - **Fails open for boot, closed for keys.** `bootm` ignores a measurement failure and boots anyway [UBOOT]. The PCRs then hold no approved values, so the keys stay sealed. The CC boots without them and cannot join C2.
 

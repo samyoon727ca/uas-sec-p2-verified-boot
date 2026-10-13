@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""VE-07, emulated: verified-boot test cases TC-01, TC-03 and TC-04.
+"""VE-07, emulated: verified-boot test cases TC-01, TC-03 and TC-04, and measured boot (TC-10).
 
 Boots the hardened U-Boot built by cc/build.sh on QEMU virt with swtpm and
-checks that only the chain signed with the dev K-CC-OS key boots:
+checks that only the chain signed with the dev K-CC-OS key boots, and that
+what it measures can be predicted from the release artifacts:
 
   TC-01  the signed chain boots to the initramfs (positive control)
   TC-03  a FIT with one byte changed in the kernel, initramfs or devicetree
@@ -12,6 +13,9 @@ checks that only the chain signed with the dev K-CC-OS key boots:
          FIT signed by a rogue key with the same key name, a legacy uImage
          and an environment injected into flash are all refused or ignored;
          keystrokes never reach a console prompt
+  TC-10  tools/predict_pcrs.py predicts PCRs 0, 1, 8 and 9 from the signed
+         FIT and the U-Boot binary; the PCRs the initramfs reads, and the
+         replay of the event log Linux received, equal the prediction
 
 Each attack that would succeed against a weaker setup has a control run that
 shows it succeeding there: the environment and legacy-image cases on stock
@@ -32,6 +36,7 @@ fdtget and fdtput on PATH, and mkimage/mkenvimage from the U-Boot build.
 from __future__ import annotations
 
 import argparse
+import base64
 import dataclasses
 import datetime
 import hashlib
@@ -50,7 +55,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "cc" / "uboot"))
+sys.path.insert(0, str(ROOT / "tools"))
 import check_config  # noqa: E402
+import predict_pcrs  # noqa: E402
 
 KEY_NAME = "cc-os-dev"
 FIT_SOURCE = ROOT / "cc/fit/cc.its"
@@ -86,6 +93,8 @@ RESET = r"resetting \.\.\."
 ENV_MARK = r"(?m)^P2-ENV-INJECTED$"
 REQUIRED_FAIL = rf"Failed to verify required signature 'key-{KEY_NAME}'"
 BAD_KERNEL = r"Bad hash value for 'hash' hash node in 'kernel' image node"
+PCR_LINE = r"(?m)^P2-PCR sha256 \d+ [0-9A-Fa-f]{64}$"   # printed by cc/initramfs/init
+EVENTLOG = re.compile(r"(?ms)^P2-EVENTLOG-BEGIN$(.*?)^P2-EVENTLOG-END$")
 CONSOLE = [PROMPT, AUTOBOOT, HELP_OUT, UNKNOWN_CMD]
 REFUSED = [KERNEL_START, BOOTED, ENV_MARK, *CONSOLE]
 ANSI = re.compile(r"\x1b(?:\[[0-9;?]*[ -/]*[@-~]|[78])")
@@ -296,6 +305,7 @@ class Artifacts:
         self.flash: dict[str, Path] = {}
         self.public_keys: dict[str, str] = {}
         self.notes: dict[str, str] = {}
+        self.prediction: predict_pcrs.Prediction | None = None
 
     def keypair(self, keydir: Path, label: str) -> None:
         keydir.mkdir(parents=True, exist_ok=True)
@@ -375,6 +385,9 @@ class Artifacts:
         self.notes["key_required"] = run(["fdtget", str(self.work / "ctrl.dtb"),
                                           f"/signature/key-{KEY_NAME}", "required"]).stdout.strip()
 
+        # TC-10: what U-Boot will measure, from the release artifacts alone.
+        self.prediction = predict_pcrs.predict(good.read_bytes(), self.uboot["hardened"].read_bytes())
+
         # TC-03: one byte changed after signing, in each payload.
         for node in ("kernel", "ramdisk", "fdt"):
             dst = self.work / f"tamper-{node}.itb"
@@ -448,6 +461,7 @@ class Case:
     stop: str | None = None
     stop_count: int = 1
     control_for: str | None = None
+    pcrs: bool = False              # compare the PCRs and event log the initramfs prints with the prediction
 
 
 CASES = [
@@ -495,6 +509,8 @@ CASES = [
     Case("TC-04h-control", "TC-04", "control", "The same keystrokes reach a prompt when only the reset is removed",
          uboot="ctl-noreset", slot="tamper-kernel", keys_from=BAD_KERNEL, control_for="TC-04h", stop=HELP_OUT,
          expect=[BAD_KERNEL, PROMPT, HELP_OUT], forbid=[KERNEL_START, RESET]),
+    Case("TC-10", "TC-10", "test", "Predicted PCRs equal the measured PCRs and the event-log replay",
+         expect=[VERIFIED, BOOTED, (PCR_LINE, 10)], forbid=[ENV_MARK, *CONSOLE], pcrs=True),
 ]
 
 
@@ -535,6 +551,23 @@ def evaluate(case: Case, text: str, reason: str, keys_sent: int = 0,
     ended_ok = reason == ("stopped" if case.stop else "exited")
     checks.append({"kind": "end", "pattern": f"run ended: {reason}", "ok": ended_ok})
     return checks
+
+
+def pcr_checks(pred: predict_pcrs.Prediction, text: str) -> list[dict]:
+    """TC-10: the PCRs and event log the initramfs printed, against the prediction."""
+    text = clean(text)
+    measured = predict_pcrs.parse_measured(text)
+    checks = [{"kind": "measured", "pattern": "every policy PCR moved from its reset value (all zeros)",
+               "ok": all(measured.get(i, "0" * 64) != "0" * 64 for i in predict_pcrs.POLICY_PCRS),
+               "observed": {str(i): measured.get(i) for i in predict_pcrs.POLICY_PCRS}}]
+    m = EVENTLOG.search(text)
+    try:
+        log = predict_pcrs.parse_event_log(base64.b64decode("".join(m.group(1).split()), validate=True))
+    except (AttributeError, ValueError, struct.error) as exc:
+        checks.append({"kind": "eventlog", "pattern": "the initramfs printed a TCG2 event log", "ok": False,
+                       "observed": f"{type(exc).__name__}: {exc}" if m else "no event log in the console output"})
+        log = None
+    return checks + predict_pcrs.compare(pred, log, measured)
 
 
 # --- provenance --------------------------------------------------------------
@@ -588,7 +621,7 @@ def write_markdown(out: Path, summary: dict) -> None:
     where = f"GitHub Actions run [{env['run_id']}]({env['run_url']}) ({env['runner_image']})" \
         if env["kind"] == "ci" else "local run (not CI evidence)"
     lines = [
-        "# VE-07 emulated run: verified boot (TC-01, TC-03, TC-04)", "",
+        f"# VE-07 emulated run: {', '.join(summary['test_cases'])}", "",
         f"- Date (UTC): {summary['date_utc']}",
         f"- Where: {where}",
         f"- Code commit: `{summary['git']['commit']}` (cc/ or tests/ modified: {summary['git']['cc_or_tests_modified']})",
@@ -604,6 +637,19 @@ def write_markdown(out: Path, summary: dict) -> None:
         role = r["role"] + (f" for {r['control_for']}" if r.get("control_for") else "")
         lines.append(f"| {r['id']} | {role} | {r['title']} | {'pass' if r['ok'] else '**FAIL**'} | "
                      f"{r.get('seconds', 0):.0f} | {log} |")
+    pcr_run = next((r for r in summary["runs"] if r["tc"] == "TC-10"), None)
+    if pcr_run:
+        found = {(c["kind"], c["pattern"].split(":")[0]): c for c in pcr_run["checks"]}
+        lines += ["", "TC-10, SHA-256 PCRs (predicted by `tools/predict_pcrs.py` from `good.itb` and "
+                  "`u-boot-hardened.bin`):", "", "| PCR | Predicted | Measured | Event-log replay |", "|---|---|---|---|"]
+        for i, value in summary["pcr_prediction"]["pcrs_sha256"].items():
+            if int(i) not in predict_pcrs.POLICY_PCRS:
+                continue
+            cells = []
+            for kind in ("measured", "replayed"):
+                c = found.get((kind, f"PCR {i}"))
+                cells.append("–" if c is None else ("equal" if c["ok"] else f"**{c['observed']}**"))
+            lines.append(f"| {i} | `{value}` | {cells[0]} | {cells[1]} |")
     lines += ["", "Every check behind each result is in `summary.json`. Logs are the raw console output; "
               "patterns are matched with ANSI escape sequences removed.", ""]
     (out / "summary.md").write_text("\n".join(lines))
@@ -650,6 +696,8 @@ def main(argv: list[str] | None = None) -> int:
             log = f"{case.id}.log"
             (out / log).write_text(res.text)
             checks = evaluate(case, res.text, res.reason, res.keys_sent, res.key_marks)
+            if case.pcrs:
+                checks += pcr_checks(art.prediction, res.text)
             ok = all(c["ok"] for c in checks)
             runs.append({"id": case.id, "tc": case.tc, "role": case.role, "title": case.title,
                          "control_for": case.control_for, "uboot": case.uboot, "slot": case.slot,
@@ -696,6 +744,7 @@ def main(argv: list[str] | None = None) -> int:
             "public_keys_sha256_der": art.public_keys,
             "artifacts_sha256": art.hashes(),
             "notes": art.notes,
+            "pcr_prediction": art.prediction.to_json(),
             "runs": runs,
         }
         if env["kind"] == "ci" and not pkgs["all_match"]:

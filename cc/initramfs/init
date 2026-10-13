@@ -1,6 +1,17 @@
 #!/bin/busybox sh
 # Emulated CC initramfs. Reports that the verified kernel reached userspace,
-# then powers off. Key unsealing is added with TC-05 to TC-10.
-/bin/busybox mount -t proc proc /proc
-/bin/busybox echo "P2-INITRAMFS-OK kernel=$(/bin/busybox uname -r)"
-/bin/busybox poweroff -f
+# prints the SHA-256 PCRs 0 to 9 and the TPM event log for TC-10, then powers
+# off. Key unsealing is added with TC-05 to TC-09.
+bb=/bin/busybox
+$bb mount -t proc proc /proc
+$bb mount -t sysfs sysfs /sys
+$bb mount -t securityfs securityfs /sys/kernel/security
+echo 1 > /proc/sys/kernel/printk   # keep kernel messages from splitting the lines below
+echo "P2-INITRAMFS-OK kernel=$($bb uname -r)"
+for i in 0 1 2 3 4 5 6 7 8 9; do
+	echo "P2-PCR sha256 $i $($bb cat /sys/class/tpm/tpm0/pcr-sha256/$i)"
+done
+echo "P2-EVENTLOG-BEGIN"
+$bb base64 /sys/kernel/security/tpm0/binary_bios_measurements
+echo "P2-EVENTLOG-END"
+$bb poweroff -f

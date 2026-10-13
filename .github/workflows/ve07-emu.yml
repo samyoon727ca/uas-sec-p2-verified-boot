@@ -1,11 +1,12 @@
 name: ve07-emu
 
-# VE-07 emulated test cases on QEMU virt + U-Boot + swtpm (tests/ve07).
+# VE-07 emulated test cases on QEMU virt + U-Boot + swtpm (tests/ve07), and the
+# PCR prediction TC-10 checks (tools/predict_pcrs.py).
 on:
   push:
-    paths: ["cc/**", "tests/ve07/**", ".github/workflows/ve07-emu.yml"]
+    paths: ["cc/**", "tests/ve07/**", "tools/predict_pcrs.py", ".github/workflows/ve07-emu.yml"]
   pull_request:
-    paths: ["cc/**", "tests/ve07/**", ".github/workflows/ve07-emu.yml"]
+    paths: ["cc/**", "tests/ve07/**", "tools/predict_pcrs.py", ".github/workflows/ve07-emu.yml"]
   workflow_dispatch:
 
 permissions:
@@ -29,7 +30,7 @@ jobs:
           key: ve07-dl-${{ hashFiles('cc/uboot/pin.txt', 'cc/emu/guest.lock') }}
       - name: Build U-Boot (hardened, stock and control variants), kernel and initramfs
         run: cc/build.sh
-      - name: Run VE-07 verified-boot cases (TC-01, TC-03, TC-04)
+      - name: Run VE-07 cases (TC-01, TC-03, TC-04, TC-10)
         run: python3 tests/ve07/boot_cases.py --build build --out "$RUNNER_TEMP/ve07-ci"
       - name: Check the evidence holds no private key material
         if: always()
