@@ -8,7 +8,8 @@
 #       tc06-version   hardened + cc/uboot/variants/version.config (TC-06 only)
 #       tc06-bootargs  hardened + cc/uboot/variants/bootargs.config (TC-06 only)
 #   - the pinned Ubuntu arm64 kernel and a busybox initramfs holding the
-#     unseal agent (cc/initramfs/p2-unseal.c) and the TPM libraries it needs.
+#     unseal agent (cc/initramfs/p2-unseal.c) and the TPM libraries it needs,
+#     plus initramfs-ctl-clear with the agent's TC-09 control build.
 # Every download is checked against a pinned SHA-256, and every variant's
 # .config is checked against its fragments. Output goes to $OUT.
 set -euo pipefail
@@ -75,35 +76,48 @@ done < "$ROOT/cc/emu/guest.lock"
 cp "$GUEST"/boot/vmlinuz-* "$OUT/Image.gz"
 
 # The unseal agent, built against the pinned arm64 TPM libraries (headers from
-# libtss2-dev), and every shared library it needs, found by following DT_NEEDED.
+# libtss2-dev). The control build for TC-09 leaves the unseal response in the
+# clear; it boots only in that control run, under its own approved policy.
 SYSLIB=$GUEST/usr/lib/aarch64-linux-gnu
-"${CROSS_COMPILE}gcc" -std=gnu11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
-  -ffile-prefix-map="$ROOT"=. -I"$GUEST/usr/include" -L"$SYSLIB" -Wl,-rpath-link,"$SYSLIB" \
-  -o "$OUT/p2-unseal" "$ROOT/cc/initramfs/p2-unseal.c" -ltss2-esys -ltss2-mu -ltss2-rc -ltss2-tcti-device
+agent() { # output, extra compiler flags...
+  local out=$1; shift
+  "${CROSS_COMPILE}gcc" -std=gnu11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
+    -ffile-prefix-map="$ROOT"=. -I"$GUEST/usr/include" -L"$SYSLIB" -Wl,-rpath-link,"$SYSLIB" "$@" \
+    -o "$out" "$ROOT/cc/initramfs/p2-unseal.c" -ltss2-esys -ltss2-mu -ltss2-rc -ltss2-tcti-device
+}
+agent "$OUT/p2-unseal"
+agent "$OUT/p2-unseal-ctl-clear" -DP2_CONTROL_CLEAR_RESPONSE
 
-RD=$OUT/initramfs && rm -rf "$RD" && mkdir -p "$RD"/{bin,dev,proc,run,sys,usr/bin,usr/lib/aarch64-linux-gnu}
-cp "$GUEST/usr/bin/busybox" "$RD/bin/busybox"
-cp "$ROOT/cc/initramfs/init" "$RD/init"
-cp "$OUT/p2-unseal" "$RD/usr/bin/p2-unseal"
-chmod 0755 "$RD/init" "$RD/bin/busybox" "$RD/usr/bin/p2-unseal"
-ln -s usr/lib "$RD/lib"
-ln -s aarch64-linux-gnu/ld-linux-aarch64.so.1 "$RD/usr/lib/ld-linux-aarch64.so.1"
+# An initramfs with busybox, the init script, an agent and every shared
+# library the agent needs, found by following DT_NEEDED.
 needed() { "${CROSS_COMPILE}readelf" -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]$/\1/p'; }
-queue=("$OUT/p2-unseal")
-declare -A copied=()
-while (( ${#queue[@]} )); do
-  for lib in $(needed "${queue[0]}"); do
-    [[ -n ${copied[$lib]:-} ]] && continue
-    [[ -e $SYSLIB/$lib ]] || { echo "$lib, needed by ${queue[0]##*/}, is not in guest.lock" >&2; exit 1; }
-    cp -L "$SYSLIB/$lib" "$RD/usr/lib/aarch64-linux-gnu/$lib"
-    copied[$lib]=1
-    queue+=("$SYSLIB/$lib")
+initramfs() { # agent, output name
+  local RD=$OUT/$2 lib
+  rm -rf "$RD" && mkdir -p "$RD"/{bin,dev,proc,run,sys,usr/bin,usr/lib/aarch64-linux-gnu}
+  cp "$GUEST/usr/bin/busybox" "$RD/bin/busybox"
+  cp "$ROOT/cc/initramfs/init" "$RD/init"
+  cp "$1" "$RD/usr/bin/p2-unseal"
+  chmod 0755 "$RD/init" "$RD/bin/busybox" "$RD/usr/bin/p2-unseal"
+  ln -s usr/lib "$RD/lib"
+  ln -s aarch64-linux-gnu/ld-linux-aarch64.so.1 "$RD/usr/lib/ld-linux-aarch64.so.1"
+  local queue=("$1")
+  local -A copied=()
+  while (( ${#queue[@]} )); do
+    for lib in $(needed "${queue[0]}"); do
+      [[ -n ${copied[$lib]:-} ]] && continue
+      [[ -e $SYSLIB/$lib ]] || { echo "$lib, needed by ${queue[0]##*/}, is not in guest.lock" >&2; exit 1; }
+      cp -L "$SYSLIB/$lib" "$RD/usr/lib/aarch64-linux-gnu/$lib"
+      copied[$lib]=1
+      queue+=("$SYSLIB/$lib")
+    done
+    queue=("${queue[@]:1}")
   done
-  queue=("${queue[@]:1}")
-done
-find "$RD" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
-(cd "$RD" && find . -mindepth 1 | LC_ALL=C sort | cpio -o -H newc --reproducible --owner 0:0 --quiet) \
-  | gzip -9 -n > "$OUT/initramfs.cpio.gz"
+  find "$RD" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
+  (cd "$RD" && find . -mindepth 1 | LC_ALL=C sort | cpio -o -H newc --reproducible --owner 0:0 --quiet) \
+    | gzip -9 -n > "$OUT/$2.cpio.gz"
+}
+initramfs "$OUT/p2-unseal" initramfs
+initramfs "$OUT/p2-unseal-ctl-clear" initramfs-ctl-clear
 
 # --- Record the toolchain that produced these binaries ------------------------
 {
@@ -114,5 +128,5 @@ find "$RD" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
     | grep -E '^(gcc|cpp|g\+\+|binutils|libgcc|libc6|libstdc|gzip|cpio|device-tree-compiler|libssl|openssl)' || true
 } > "$OUT/toolchain.txt"
 
-(cd "$OUT" && sha256sum u-boot-*.bin u-boot-*.config Image.gz initramfs.cpio.gz p2-unseal mkimage mkenvimage) \
+(cd "$OUT" && sha256sum u-boot-*.bin u-boot-*.config Image.gz initramfs*.cpio.gz p2-unseal* mkimage mkenvimage) \
   | tee "$OUT/SHA256SUMS"
