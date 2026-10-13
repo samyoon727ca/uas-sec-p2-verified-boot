@@ -20,6 +20,9 @@ mkdir -p "$KEYS" "$OUT"
 trap 'rm -f "$KEYS"/*.json' EXIT
 git config --global --add safe.directory '*'   # the checkout belongs to the runner's user, not the container's
 export CI=true                                  # PX4 then updates submodules without asking
+# PyNaCl for PX4's key and signing tools; the container lacks it (fc/px4/requirements-secureboot.txt).
+python3 -m pip install --quiet --no-cache-dir --break-system-packages --only-binary :all: --require-hashes \
+  -r "$(dirname "$0")/px4/requirements-secureboot.txt"
 cd "$PX4"
 
 python3 Tools/secure_bootloader/generate_signing_keys.py "$KEYS/k-fc-fw-dev" > /dev/null
