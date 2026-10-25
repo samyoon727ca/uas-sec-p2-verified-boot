@@ -20,12 +20,14 @@
 <rect x="349.25" y="73.0" width="24" height="16" rx="2" fill="#d5d9de" stroke="#6e7781"/>
 <circle cx="361.25" cy="81.0" r="5" fill="#ffffff" stroke="#6e7781"/>
 <text x="361.25" y="62" font-size="11" text-anchor="middle" fill="#57606a">RST</text>
-<rect x="385.0" y="74.0" width="30" height="18" rx="2" fill="#d5d9de" stroke="#0969da" stroke-width="2.5"/>
-<rect x="390.0" y="78.0" width="8" height="10" fill="#ffffff" stroke="#6e7781"/>
-<rect x="402.0" y="78.0" width="8" height="10" fill="#ffffff" stroke="#6e7781"/>
+<rect x="385.0" y="74.0" width="30" height="18" rx="2" fill="none" stroke="#0969da" stroke-width="2" stroke-dasharray="4 3"/>
+<rect x="389.5" y="77.0" width="5" height="4" fill="#6e7781"/>
+<rect x="389.5" y="85.0" width="5" height="4" fill="#6e7781"/>
+<rect x="405.5" y="77.0" width="5" height="4" fill="#6e7781"/>
+<rect x="405.5" y="85.0" width="5" height="4" fill="#6e7781"/>
 <polyline points="400.0,74.0 400.0,40 425.0,40" fill="none" stroke="#0969da" stroke-width="1.2"/>
-<text x="429.0" y="44" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">SW1: boot-mode switch</text>
-<text x="429.0" y="60" font-size="12" text-anchor="start" fill="#57606a">legend beside it: USB / eMMC / TF</text>
+<text x="429.0" y="44" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">SW1 boot-mode switch: not fitted here</text>
+<text x="429.0" y="60" font-size="12" text-anchor="start" fill="#57606a">empty footprint; legend beside it: USB / eMMC / TF</text>
 <rect x="285.5" y="420.0" width="79.0" height="91.49999999999999" rx="3" fill="#d5d9de" stroke="#6e7781"/>
 <text x="325.0" y="469.75" font-size="13" text-anchor="middle" fill="#57606a">USB</text>
 <rect x="375.5" y="420.0" width="78.99999999999999" height="91.49999999999999" rx="3" fill="#d5d9de" stroke="#6e7781"/>

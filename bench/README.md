@@ -46,7 +46,7 @@ PC software: [PuTTY](https://www.chiark.greenend.org.uk/~sgtatham/putty/) and [b
 
 Lay the board flat with the Ethernet and USB ports toward you. Every diagram here uses that view.
 - **Left edge:** two USB-C ports. The upper one is **PWR** (power in) and the lower one is **OTG** (data to the PC).
-- **Top edge:** the ON/OFF and RST buttons, and the **SW1** boot-mode switch.
+- **Top edge:** the ON/OFF and RST buttons, and the place for the **SW1** boot-mode switch. SW1 is not fitted on this board.
 - **Right edge:** the 40-pin header **J2**. Pin 1 is at the end nearest the Ethernet jack, and the odd pins run along the board edge. On the underside, pin 1 has a square pad.
 
 The positions are drawn from the DEBIX Model A mechanical drawing. Step 1 checks them on the board with photos.
@@ -119,9 +119,8 @@ Working with them:
 
 1. **Photo:** the whole board, top side, then underside, in good light.
 2. Find J2's pin 1: the square pad on the underside at the Ethernet end of J2. **Photo:** a close-up.
-3. Find SW1 on the top edge, right of the RST button. The legend printed beside it gives a two-digit code for each boot source: USB, eMMC and TF (microSD). Record the switch's current position. **Photo:** a close-up where the legend can be read.
-4. Set SW1 to the code the legend gives for **TF**. DEBIX's manual gives it as `11`. On a DIP switch a 1 usually means ON; check the ON marking on the switch body. **Photo:** SW1 again.
-5. If SW1 isn't fitted on your board, record that and carry on.
+3. Find SW1's place on the top edge, right of the RST button. **On this board SW1 is not fitted.** Only its footprint is there, with the legend that gives a two-digit code for each boot source: USB, eMMC and TF (microSD). There is nothing to set: with a card in, the board should boot from it, and this step confirms that. **Photo:** a close-up of the empty footprint, with the legend readable.
+4. If your board has SW1 fitted, set it to the code the legend gives for **TF**. DEBIX's manual gives it as `11`. On a DIP switch a 1 usually means ON; check the ON marking on the switch body. **Photo:** SW1 before and after.
 
 ### 1.4 Wire the console (unpowered)
 
@@ -171,8 +170,8 @@ Check before any power goes on:
 | Record | From | Bears on |
 |---|---|---|
 | Image file name and the MD5 you computed | 1.1 | Recreating card A |
-| Photos: top, underside, pin 1, SW1 before and after | 1.3 | Board facts the diagrams assume |
-| Whether SW1 is fitted, its legend, and its positions | 1.3 | OI2-07 (recovery), in Step 2 |
+| Photos: top, underside, pin 1, SW1's footprint and legend | 1.3 | Board facts the diagrams assume |
+| That SW1 is not fitted, and the legend's codes | 1.3 | OI2-07 (recovery), in Step 2 |
 | Wiring close-up | 1.4 | This manual |
 | PuTTY log: U-Boot banner, kernel log, the three commands | 1.5, saved automatically | Baseline |
 | The `spidev` name for `30830000.spi` | 1.5 | Step 4 |
@@ -185,7 +184,7 @@ Check before any power goes on:
 | Still blank | Wrong COM port, black wire loose, or speed not 115200 | Check each in turn |
 | Garbled characters | Wrong speed | Set 115200, 8N1, no flow control |
 | Messages appear but typing does nothing | Orange not reaching pin 9 | Reseat housing A and the orange pin |
-| No U-Boot messages at all | Card not seated or not written, or SW1 not on TF | Reseat the card, rewrite it, check SW1 |
+| No U-Boot messages at all | Card not seated or not written | Reseat the card; if that fails, write it again |
 | No `30830000.spi` in the listing | The image's devicetree differs from the one P2 checked | Record it. Don't change the devicetree; ask first |
 
 ## Steps 2 to 5
