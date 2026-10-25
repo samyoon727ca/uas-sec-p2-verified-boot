@@ -95,6 +95,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 | [`tools/approve_policy.py`](tools/approve_policy.py) | The MSS side of sealing: builds a release's approved policy (PCRs and epoch) and signs it with K-CC-POL | Built |
 | [`fc/`](fc/) | PX4 pin, and the build of the secure boot loader and signed firmware with a per-run key in the pinned PX4 container | Built |
 | [`tests/ve08/`](tests/ve08/) | VE-08 host harness: each image checked with PX4's own verification code on a 32-bit host | TC-11 built |
+| [`bench/`](bench/) | Bench manual for the hardware runs, step by step with wiring diagrams, and the bench log | Step 1 written |
 
 ## Run the checks locally
 

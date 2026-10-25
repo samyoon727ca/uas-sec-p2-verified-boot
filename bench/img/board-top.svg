@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="640" viewBox="0 0 840 640" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<title>DEBIX Model A, top view</title>
+<desc>The board with Ethernet and USB toward the viewer: PWR and OTG USB-C ports on the left edge, ON/OFF and RST buttons and the SW1 boot switch on the top edge, and the 40-pin J2 header on the right edge with pin 1 at the Ethernet end.</desc>
+<rect x="0.5" y="0.5" width="839" height="639" rx="8" fill="#ffffff" stroke="#d0d7de"/>
+<rect x="280" y="70" width="280" height="425" rx="15" fill="#eef3ee" stroke="#2f4f3a" stroke-width="2"/>
+<circle cx="297.5" cy="87.5" r="8" fill="#ffffff" stroke="#6e7781" stroke-width="1.5"/>
+<circle cx="542.5" cy="87.5" r="8" fill="#ffffff" stroke="#6e7781" stroke-width="1.5"/>
+<circle cx="297.5" cy="377.5" r="8" fill="#ffffff" stroke="#6e7781" stroke-width="1.5"/>
+<circle cx="542.5" cy="377.5" r="8" fill="#ffffff" stroke="#6e7781" stroke-width="1.5"/>
+<rect x="373.5" y="237.0" width="87.5" height="91.5" rx="4" fill="#d5d9de" stroke="#6e7781"/>
+<text x="417.25" y="278.0" font-size="13" text-anchor="middle" fill="#57606a">SoC</text>
+<text x="417.25" y="294.0" font-size="11" text-anchor="middle" fill="#57606a">i.MX 8M Plus</text>
+<rect x="275" y="103.5" width="40" height="45" rx="4" fill="#d5d9de" stroke="#0969da" stroke-width="2.5"/>
+<rect x="273.0" y="108.0" width="6" height="36.0" rx="3" fill="#57606a"/>
+<rect x="275" y="164.35000000000002" width="40" height="45" rx="4" fill="#d5d9de" stroke="#6e7781" stroke-width="1"/>
+<rect x="273.0" y="168.85" width="6" height="36.0" rx="3" fill="#57606a"/>
+<rect x="316.65" y="73.0" width="24" height="16" rx="2" fill="#d5d9de" stroke="#6e7781"/>
+<circle cx="328.65" cy="81.0" r="5" fill="#ffffff" stroke="#6e7781"/>
+<text x="328.65" y="62" font-size="11" text-anchor="middle" fill="#57606a">ON/OFF</text>
+<rect x="349.25" y="73.0" width="24" height="16" rx="2" fill="#d5d9de" stroke="#6e7781"/>
+<circle cx="361.25" cy="81.0" r="5" fill="#ffffff" stroke="#6e7781"/>
+<text x="361.25" y="62" font-size="11" text-anchor="middle" fill="#57606a">RST</text>
+<rect x="385.0" y="74.0" width="30" height="18" rx="2" fill="#d5d9de" stroke="#0969da" stroke-width="2.5"/>
+<rect x="390.0" y="78.0" width="8" height="10" fill="#ffffff" stroke="#6e7781"/>
+<rect x="402.0" y="78.0" width="8" height="10" fill="#ffffff" stroke="#6e7781"/>
+<polyline points="400.0,74.0 400.0,40 425.0,40" fill="none" stroke="#0969da" stroke-width="1.2"/>
+<text x="429.0" y="44" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">SW1: boot-mode switch</text>
+<text x="429.0" y="60" font-size="12" text-anchor="start" fill="#57606a">legend beside it: USB / eMMC / TF</text>
+<rect x="285.5" y="420.0" width="79.0" height="91.49999999999999" rx="3" fill="#d5d9de" stroke="#6e7781"/>
+<text x="325.0" y="469.75" font-size="13" text-anchor="middle" fill="#57606a">USB</text>
+<rect x="375.5" y="420.0" width="78.99999999999999" height="91.49999999999999" rx="3" fill="#d5d9de" stroke="#6e7781"/>
+<text x="415.0" y="469.75" font-size="13" text-anchor="middle" fill="#57606a">USB</text>
+<rect x="467.0" y="402.5" width="83.0" height="108.99999999999999" rx="3" fill="#d5d9de" stroke="#6e7781"/>
+<text x="508.5" y="461.0" font-size="13" text-anchor="middle" fill="#57606a">Ethernet</text>
+<rect x="539.0" y="141.0" width="21.0" height="200" rx="2" fill="#ffffff" stroke="#0969da" stroke-width="2.5"/>
+<rect x="552.0" y="333.0" width="6" height="6" fill="#1f2328"/>
+<circle cx="545.0" cy="336.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="326.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="326.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="316.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="316.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="306.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="306.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="296.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="296.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="286.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="286.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="276.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="276.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="266.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="266.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="256.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="256.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="246.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="246.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="236.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="236.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="226.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="226.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="216.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="216.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="206.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="206.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="196.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="196.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="186.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="186.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="176.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="176.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="166.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="166.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="156.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="156.0" r="2.3" fill="#8c959f"/>
+<circle cx="555.0" cy="146.0" r="2.3" fill="#8c959f"/>
+<circle cx="545.0" cy="146.0" r="2.3" fill="#8c959f"/>
+<line x1="267.5" y1="126.0" x2="240" y2="126.0" stroke="#57606a" stroke-width="1.2"/>
+<text x="235" y="123.0" font-size="13" text-anchor="end" fill="#1f2328" font-weight="600">PWR port: power in</text>
+<text x="235" y="139.0" font-size="12" text-anchor="end" fill="#57606a">5.1 V 3 A USB-C supply (Step 1)</text>
+<line x1="267.5" y1="186.85000000000002" x2="240" y2="186.85000000000002" stroke="#57606a" stroke-width="1.2"/>
+<text x="235" y="183.85000000000002" font-size="13" text-anchor="end" fill="#1f2328" font-weight="600">OTG port: data to the PC</text>
+<text x="235" y="199.85000000000002" font-size="12" text-anchor="end" fill="#57606a">USB recovery check (Step 2)</text>
+<line x1="563" y1="146.0" x2="595" y2="146.0" stroke="#57606a" stroke-width="1.2"/>
+<text x="600" y="150.0" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">Pins 39 and 40</text>
+<line x1="563" y1="240.0" x2="595" y2="240.0" stroke="#57606a" stroke-width="1.2"/>
+<text x="600" y="244.0" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">J2: 40-pin header</text>
+<text x="600" y="261.0" font-size="12" text-anchor="start" fill="#57606a">2.0 mm pitch, two rows of 20</text>
+<text x="600" y="278.0" font-size="12" text-anchor="start" fill="#57606a">odd pins on the outer row</text>
+<text x="600" y="295.0" font-size="12" text-anchor="start" fill="#57606a">no 3.3 V pin</text>
+<line x1="563" y1="336.0" x2="595" y2="336.0" stroke="#57606a" stroke-width="1.2"/>
+<text x="600" y="340.0" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">Pin 1: square pad</text>
+<text x="600" y="357.0" font-size="12" text-anchor="start" fill="#57606a">the end nearest the Ethernet jack</text>
+<text x="420" y="541.5" font-size="13" text-anchor="middle" fill="#1f2328" font-weight="600">↓ Ethernet and USB ports toward you</text>
+<text x="420" y="561.5" font-size="11" text-anchor="middle" fill="#57606a">Top view, to scale from the DEBIX Model A mechanical drawing</text>
+</svg>
