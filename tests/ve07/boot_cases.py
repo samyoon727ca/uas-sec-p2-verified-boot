@@ -1208,13 +1208,17 @@ def host_packages(path: Path = ROOT / "cc/emu/host-packages.txt") -> dict:
     return {"snapshot": snapshot, "all_match": all(p["ok"] for p in packages), "packages": packages}
 
 
+# Everything a run's result depends on: the chain it builds, the harness, and the tools the harness imports.
+HARNESS_INPUTS = ("cc", "tests", "tools")
+
+
 def git_state() -> dict[str, str]:
     try:
         commit = run(["git", "-C", str(ROOT), "rev-parse", "HEAD"]).stdout.strip()
-        dirty = bool(run(["git", "-C", str(ROOT), "status", "--porcelain", "--", "cc", "tests"]).stdout.strip())
-        return {"commit": commit, "cc_or_tests_modified": str(dirty).lower()}
+        dirty = bool(run(["git", "-C", str(ROOT), "status", "--porcelain", "--", *HARNESS_INPUTS]).stdout.strip())
+        return {"commit": commit, "inputs": " ".join(HARNESS_INPUTS), "inputs_modified": str(dirty).lower()}
     except (OSError, subprocess.CalledProcessError):
-        return {"commit": "unknown", "cc_or_tests_modified": "unknown"}
+        return {"commit": "unknown", "inputs": " ".join(HARNESS_INPUTS), "inputs_modified": "unknown"}
 
 
 def write_markdown(out: Path, summary: dict) -> None:
@@ -1225,7 +1229,8 @@ def write_markdown(out: Path, summary: dict) -> None:
         f"# VE-07 emulated run: {', '.join(summary['test_cases'])}", "",
         f"- Date (UTC): {summary['date_utc']}",
         f"- Where: {where}",
-        f"- Code commit: `{summary['git']['commit']}` (cc/ or tests/ modified: {summary['git']['cc_or_tests_modified']})",
+        f"- Code commit: `{summary['git']['commit']}` ({summary['git']['inputs']} modified since that commit: "
+        f"{summary['git']['inputs_modified']})",
         f"- Host packages match the pins (snapshot {summary['host_packages']['snapshot']}): "
         f"{'yes' if summary['host_packages']['all_match'] else '**no**'}",
         f"- Result: **{'PASS' if summary['passed'] else 'FAIL'}**",

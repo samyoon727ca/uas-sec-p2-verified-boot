@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Fail if any tracked or untracked, non-ignored file contains private key material.
 
+Outside a git checkout it scans every file under --root except .git and
+Python's compiled caches.
+
 P2 uses dev/test keys that are generated per run or held locally; none may be
 committed. This catches PEM/OpenSSH/TSS private keys, PX4 secure-boot key
 files (JSON with a 32-byte hex "private" value) and WireGuard private keys in
@@ -30,13 +33,20 @@ PATTERNS = {
 }
 
 
+SKIPPED_OUTSIDE_GIT = {".git", "__pycache__"}
+
+
 def tracked_files(root: Path) -> list[Path]:
     try:
         out = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"], check=True,
                              capture_output=True).stdout
         return [root / p for p in out.decode().split("\0") if p]
     except (OSError, subprocess.CalledProcessError):
-        return [p for p in root.rglob("*") if p.is_file() and ".git" not in p.parts]
+        # Not a git checkout: an exported tree, or an evidence folder a harness just wrote. Everything
+        # is scanned, a local keys/ folder included, except Python's compiled caches: the compiled
+        # unit test of this scanner holds the very patterns it searches for.
+        return [p for p in root.rglob("*") if p.is_file() and not SKIPPED_OUTSIDE_GIT.intersection(p.parts)
+                and p.suffix != ".pyc"]
 
 
 def scan(root: Path) -> list[str]:
