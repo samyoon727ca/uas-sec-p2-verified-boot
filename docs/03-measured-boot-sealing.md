@@ -46,7 +46,12 @@ PolicyNV ( epoch index, operandB = bits above E, TPM_EO_BITCLEAR )
 To unseal, the initramfs runs [`p2-unseal`](../cc/initramfs/p2-unseal.c), a small C program on the TPM software stack's ESAPI [TPM2-TSS]. It:
 1. checks that the persistent parent has the name recorded at provisioning;
 2. loads the K-CC-POL public key into the owner hierarchy and checks the signature with `TPM2_VerifySignature` to get a ticket. A key loaded into the NULL hierarchy yields a NULL ticket, which `PolicyAuthorize` rejects;
-3. for each key, runs `PolicyPCR`, then `PolicyNV`, then `PolicyAuthorize` with the ticket, in a policy session salted to the parent and set to encrypt the response (§3.6), and unseals in that session.
+3. for each key, runs `PolicyPCR`, then `PolicyNV`, then `PolicyAuthorize` with the ticket, in a policy session salted to the parent and set to encrypt the response (§3.6), and unseals in that session;
+4. caps the boot state: it extends each of PCRs 0, 1, 8 and 9 with a fixed event (`TPM2_PCR_Event`), whether or not anything unsealed.
+
+**One release per boot (DD2-18).** `PolicyPCR` reads the PCRs as they are when it runs. Without step 4 they would keep their approved values for the rest of the boot, and the same signed policy would release the keys again to any program that ran later, with the files on CC storage and the TPM. After step 4 the PCRs match no approved policy until the TPM is next reset, so a boot state is good for one release, and a refused one for none. If the cap fails, the agent removes the keys it wrote and reports the failure. TC-05 shows both halves: a test build of the agent that tries again after the cap is refused at `PolicyAuthorize`, and a control build without the cap gets both keys a second time.
+
+The cap limits what the TPM will do. It does not limit what the initramfs does with the keys it already holds: they are in memory, and they go to whatever it starts next. In P2 nothing verifies that next stage; the root filesystem is P4's (SR-006). So SR-010's "only to the measured boot state" holds up to the hand-over, and beyond it only once the root filesystem is verified from the signed chain ([§1.4](01-scope-and-trace.md#14-changes-proposed-to-p1), change 7).
 
 It prints which step refused, with the TPM's response code, and never prints a key. On the MSS side, [`tools/approve_policy.py`](../tools/approve_policy.py) builds the approved policy for a release from its predicted PCRs (§3.1) and epoch, computing the digests offline as the TPM does, and signs it. Unit tests check its digests against tpm2-tools 5.6.
 
@@ -100,6 +105,7 @@ A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was
 | DD2-10 | NV bit-field epoch in the approved policy | Same policy on every CC; bits can only be set | NV counter: per-device starting value |
 | DD2-11 | K-CC-POL is ECDSA P-256 | Same strength as RSA-3072 [SP800-57]; loads in swtpm 0.7.3 | RSA-3072: rejected by swtpm 0.7.3 |
 | DD2-12 | Salted session with response encryption for unseal | SR-010.4 | Unencrypted session (control run in TC-09) |
+| DD2-18 | The unseal agent extends every policy PCR after it runs, so the TPM releases the keys at most once per boot (§3.3) | Without it the approved PCR values last for the whole boot, and any later program could unseal again (control run in TC-05) | Extending one PCR: enough for today's policy, but a later policy over fewer PCRs could miss it. A PCR of its own for the boot phase, as systemd does with PCR 11: needs that PCR in every signed policy |
 
 ## 3.9 Open items
 

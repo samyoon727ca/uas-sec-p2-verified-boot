@@ -22,8 +22,15 @@
  * then unseals and writes the secret to <outdir>/<name> with mode 0600.
  *
  * It prints one line per name, "P2-UNSEAL <name> ok" or "P2-UNSEAL <name>
- * refused at <step>: <reason>", and never prints secret bytes. Exit status 0
- * only if every name unsealed.
+ * refused at <step>: <reason>", and never prints secret bytes.
+ *
+ * Then it caps the boot state: it extends every policy PCR with a fixed
+ * event, whether or not anything unsealed, and prints "P2-CAP ok" or "P2-CAP
+ * failed at <step>: <reason>". After the cap the PCRs match no approved
+ * policy until the next TPM reset, so nothing that runs later in this boot
+ * can unseal the keys again. If the cap fails, the keys it wrote are removed.
+ *
+ * Exit status 0 only if every name unsealed and the cap succeeded.
  */
 #define _DEFAULT_SOURCE
 #include <fcntl.h>
@@ -55,6 +62,23 @@
 #define SESSION_ATTRIBUTES (TPMA_SESSION_ENCRYPT | TPMA_SESSION_CONTINUESESSION)
 #endif
 
+/*
+ * The cap (docs/03 section 3.3). The PCRs are those of the policy, SHA-256
+ * PCRs 0, 1, 8 and 9; tests/test_approve_policy.py keeps the two lists equal.
+ */
+#define CAP_EVENT "p2/cc-keys released"
+#define CAP_PCRS { ESYS_TR_PCR0, ESYS_TR_PCR1, ESYS_TR_PCR8, ESYS_TR_PCR9 }
+
+/*
+ * Two builds for TC-05's second-unseal case (cc/build.sh). Each boots only in
+ * that case, under its own approved policy. Never used to boot a CC.
+ *   -DP2_TEST_SECOND_UNSEAL  after the cap, try to unseal everything again,
+ *                            as any later program in the same boot could
+ *   -DP2_CONTROL_NO_CAP      leave the PCRs as they are, to show that the
+ *                            second attempt succeeds without the cap
+ */
+static const char *tag = "P2-UNSEAL";   /* "P2-AGAIN" during the second attempt */
+
 static const char *ccdir;
 
 static int read_file(const char *rel, uint8_t *buf, size_t cap, size_t *len)
@@ -84,7 +108,7 @@ static int read_file(const char *rel, uint8_t *buf, size_t cap, size_t *len)
 
 static void refused(const char *name, const char *step, const char *reason)
 {
-	printf("P2-UNSEAL %s refused at %s: %s\n", name, step, reason);
+	printf("%s %s refused at %s: %s\n", tag, name, step, reason);
 }
 
 struct release {
@@ -96,7 +120,9 @@ struct release {
 	TPMT_TK_VERIFIED ticket;
 };
 
-static int unseal_one(ESYS_CONTEXT *esys, const struct release *rel, const char *name, const char *outdir)
+/* Unseal sealed/<name> and write the secret to <outdir>/<out>. */
+static int unseal_one(ESYS_CONTEXT *esys, const struct release *rel, const char *name, const char *outdir,
+		      const char *out)
 {
 	const TPMT_SYM_DEF sym = { .algorithm = TPM2_ALG_AES, .keyBits.aes = 128, .mode.aes = TPM2_ALG_CFB };
 	const TPML_PCR_SELECTION pcrs = {
@@ -155,7 +181,7 @@ static int unseal_one(ESYS_CONTEXT *esys, const struct release *rel, const char 
 		goto out;
 
 	step = "write";
-	snprintf(path, sizeof(path), "%s/%s", outdir, name);
+	snprintf(path, sizeof(path), "%s/%s", outdir, out);
 	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
 	if (fd < 0)
 		goto out;
@@ -164,7 +190,7 @@ static int unseal_one(ESYS_CONTEXT *esys, const struct release *rel, const char 
 
 out:
 	if (ok)
-		printf("P2-UNSEAL %s ok\n", name);
+		printf("%s %s ok\n", tag, name);
 	else
 		refused(name, step, rc ? Tss2_RC_Decode(rc) : "cannot read or write a file");
 	if (secret) {
@@ -255,12 +281,68 @@ static const char *prepare(ESYS_CONTEXT *esys, struct release *rel, TSS2_RC *rc)
 	return *rc ? "VerifySignature" : NULL;
 }
 
+/*
+ * Extend every policy PCR with CAP_EVENT. The TPM hashes the event for each
+ * active bank, so nothing is hashed here. Returns 1 only if all were extended.
+ */
+#ifndef P2_CONTROL_NO_CAP
+static int cap(ESYS_CONTEXT *esys)
+{
+	static const ESYS_TR cap_pcrs[] = CAP_PCRS;
+	TPM2B_EVENT event = { .size = sizeof(CAP_EVENT) - 1 };
+	TPML_DIGEST_VALUES *digests;
+	TSS2_RC rc = TSS2_RC_SUCCESS;
+	size_t i;
+
+	memcpy(event.buffer, CAP_EVENT, event.size);
+	for (i = 0; i < sizeof(cap_pcrs) / sizeof(cap_pcrs[0]) && !rc; i++) {
+		digests = NULL;
+		rc = Esys_PCR_Event(esys, cap_pcrs[i], ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, &event, &digests);
+		Esys_Free(digests);
+	}
+	if (rc)
+		printf("P2-CAP failed at PCR_Event: %s\n", Tss2_RC_Decode(rc));
+	else
+		printf("P2-CAP ok\n");
+	return !rc;
+}
+#endif
+
+#ifdef P2_TEST_SECOND_UNSEAL
+/* Is the file <dir>/<a> byte for byte the file <dir>/<b>? */
+static int same_file(const char *dir, const char *a, const char *b)
+{
+	uint8_t x[256], y[256];
+	char path[512];
+	size_t nx = 0, ny = 0;
+	FILE *f;
+
+	snprintf(path, sizeof(path), "%s/%s", dir, a);
+	f = fopen(path, "rb");
+	if (f) {
+		nx = fread(x, 1, sizeof(x), f);
+		fclose(f);
+	}
+	snprintf(path, sizeof(path), "%s/%s", dir, b);
+	f = fopen(path, "rb");
+	if (f) {
+		ny = fread(y, 1, sizeof(y), f);
+		fclose(f);
+	}
+	return nx && nx == ny && !memcmp(x, y, nx);
+}
+#endif
+
 int main(int argc, char **argv)
 {
 	TSS2_TCTI_CONTEXT *tcti = NULL;
 	ESYS_CONTEXT *esys = NULL;
 	struct release rel;
 	const char *step;
+	char path[512];
+#ifdef P2_TEST_SECOND_UNSEAL
+	char again[128];
+#endif
 	size_t size = 0;
 	TSS2_RC rc;
 	int i, all = 1;
@@ -291,8 +373,37 @@ int main(int argc, char **argv)
 		if (step)
 			refused(argv[i], step, rc ? Tss2_RC_Decode(rc) : "missing or wrong CC data");
 		else
-			all &= unseal_one(esys, &rel, argv[i], argv[2]);
+			all &= unseal_one(esys, &rel, argv[i], argv[2], argv[i]);
 	}
+
+#ifdef P2_CONTROL_NO_CAP
+	printf("P2-UNSEAL control build: PCRs not capped\n");
+#else
+	/* Always, so that a boot state is used for at most one release, and a refused one for none. */
+	if (esys && !cap(esys)) {
+		for (i = 3; i < argc; i++) {   /* a key must not outlive a boot state that can release it again */
+			snprintf(path, sizeof(path), "%s/%s", argv[2], argv[i]);
+			unlink(path);
+		}
+		all = 0;
+	}
+#endif
+
+#ifdef P2_TEST_SECOND_UNSEAL
+	/* What a later program in this boot could do with the same files and the same TPM. */
+	printf("P2-UNSEAL test build: a second attempt follows\n");
+	tag = "P2-AGAIN";
+	for (i = 3; i < argc && esys && !step; i++) {
+		snprintf(again, sizeof(again), "%s.again", argv[i]);
+		if (unseal_one(esys, &rel, argv[i], argv[2], again))
+			printf("P2-AGAIN %s %s\n", argv[i],
+			       same_file(argv[2], argv[i], again) ? "is the key released before" : "differs");
+	}
+#endif
+#ifdef P2_CONTROL_NO_CAP
+	(void)path;
+#endif
+
 	if (esys)
 		Esys_Finalize(&esys);
 	if (tcti) {

@@ -9,7 +9,9 @@
 #       tc06-bootargs  hardened + cc/uboot/variants/bootargs.config (TC-06 only)
 #   - the pinned Ubuntu arm64 kernel and a busybox initramfs holding the
 #     unseal agent (cc/initramfs/p2-unseal.c) and the TPM libraries it needs,
-#     plus initramfs-ctl-clear with the agent's TC-09 control build.
+#     plus initramfs-ctl-clear with the agent's TC-09 control build, and
+#     initramfs-tc05-again and initramfs-ctl-nocap with the two builds for
+#     TC-05's second-unseal case.
 # Every download is checked against a pinned SHA-256, and every variant's
 # .config is checked against its fragments. Output goes to $OUT.
 set -euo pipefail
@@ -95,6 +97,10 @@ agent() { # output, extra compiler flags...
 }
 agent "$OUT/p2-unseal"
 agent "$OUT/p2-unseal-ctl-clear" -DP2_CONTROL_CLEAR_RESPONSE
+# TC-05's second-unseal case: the agent tries to unseal again after the cap,
+# and a control build that also leaves the cap out.
+agent "$OUT/p2-unseal-tc05-again" -DP2_TEST_SECOND_UNSEAL
+agent "$OUT/p2-unseal-ctl-nocap" -DP2_TEST_SECOND_UNSEAL -DP2_CONTROL_NO_CAP
 
 # An initramfs with busybox, the init script, an agent and every shared
 # library the agent needs, found by following DT_NEEDED.
@@ -126,6 +132,8 @@ initramfs() { # agent, output name
 }
 initramfs "$OUT/p2-unseal" initramfs
 initramfs "$OUT/p2-unseal-ctl-clear" initramfs-ctl-clear
+initramfs "$OUT/p2-unseal-tc05-again" initramfs-tc05-again
+initramfs "$OUT/p2-unseal-ctl-nocap" initramfs-ctl-nocap
 
 # --- Record the toolchain that produced these binaries ------------------------
 {

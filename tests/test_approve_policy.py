@@ -138,6 +138,13 @@ class SharedConstantsTest(unittest.TestCase):
         self.assertEqual(bytes(int(b, 16) for b in bitmap), ap.pcr_selection()[-3:])
         self.assertIn("TPM2_EO_BITCLEAR", src)
 
+    def test_agent_caps_every_policy_pcr(self):
+        # The cap must cover each PCR a policy can name, or a policy over the others could unseal twice.
+        src = (ROOT / "cc/initramfs/p2-unseal.c").read_text()
+        capped = re.search(r"(?m)^#define CAP_PCRS \{ (.*) \}$", src).group(1)
+        self.assertEqual(sorted(int(n) for n in re.findall(r"ESYS_TR_PCR(\d+)", capped)), sorted(ap.POLICY_PCRS))
+        self.assertEqual(re.sub(r"ESYS_TR_PCR\d+", "", capped).replace(",", "").strip(), "")
+
     def test_provisioned_nv_attributes(self):
         bits = {"ownerwrite": ap.TPMA_NV_OWNERWRITE, "nt=bits": ap.TPM_NT_BITS, "authread": ap.TPMA_NV_AUTHREAD,
                 "no_da": ap.TPMA_NV_NO_DA}
