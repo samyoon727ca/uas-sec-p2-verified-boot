@@ -3,6 +3,10 @@
 version: 2026.07
 url: https://ftp.denx.de/pub/u-boot/u-boot-2026.07.tar.bz2
 sha256: 78e8bfc382fe388f9b55aa1daf8c563522a037779b5d4c349d1415e381f1243e
+# Mirrors carrying the same tarball, tried in order when the URL above does
+# not answer. The SHA-256 decides what is accepted, whichever host delivers it.
+mirror: https://sources.buildroot.net/uboot/u-boot-2026.07.tar.bz2
+mirror: https://sources.openwrt.org/u-boot-2026.07.tar.bz2
 # Tag commit, for reference; the tarball matches it apart from lib/lwip dot-files.
 commit: ece349ade2973e220f524ce59e59711cc919263f
 # Build timestamp fixed to the tag commit date, so the version string that
