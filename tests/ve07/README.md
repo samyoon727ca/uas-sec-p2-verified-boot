@@ -12,9 +12,13 @@ Ubuntu 24.04 (the same image as the CI runner):
 
 ```sh
 cc/emu/install-host-packages.sh           # pinned host packages from the Ubuntu snapshot (sudo)
-cc/build.sh                               # U-Boot hardened, stock and two control variants, kernel, initramfs -> build/
-python3 tests/ve07/boot_cases.py --build build --out evidence/ve07-ci/$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)
+cc/build.sh                               # six U-Boot variants (hardened, stock, two control, two TC-06 test builds), kernel, initramfs -> build/
+python3 tests/ve07/boot_cases.py --build build --out /tmp/ve07
 ```
+
+A run on your own machine is marked `local` in its summary and is not CI evidence, so write it outside `evidence/ve07-ci/`: that folder holds only the artifacts of GitHub Actions runs.
+
+These host packages cannot share a machine with the VE-08 ones. [`fc/host-packages.txt`](../../fc/host-packages.txt) brings in `gcc-multilib`, and installing it removes the arm64 cross compiler that `cc/build.sh` needs. CI uses separate runners. On one machine, re-run `cc/emu/install-host-packages.sh` before returning to VE-07.
 
 The harness:
 - generates a dev K-CC-OS key and a rogue key in a temporary directory, and deletes both on exit;
@@ -37,4 +41,4 @@ It writes one console log per case and `summary.json`/`summary.md`, and exits no
 
 ## What a pass does and does not show
 
-It shows that the hardened U-Boot configuration boots only the signed configuration and refuses every tamper and configuration change tried. It also shows that U-Boot measures what [docs/03 §3.1](../../docs/03-measured-boot-sealing.md#31-measurements-sr-0101) says, so the PCRs a sealing policy names can be computed before a release boots. TC-05 to TC-08 show, on swtpm (A2-04), that the CC's keys unseal through the MSS-approved policy for that boot, and that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy. TC-09 shows that the unsealed keys cross the TPM interface only encrypted; on hardware the same bytes cross SPI. It does not show measurement into a real TPM over SPI; that is OI2-01, on the DEBIX. Nor does it show a hardware root of trust. In emulation, QEMU loads `u-boot.bin` and supplies the control devicetree that holds K-CC-OS (A2-03). TC-02, on the DEBIX hardware, covers that.
+It shows that the hardened U-Boot configuration boots only the signed configuration and refuses every tamper and configuration change tried. It also shows that U-Boot measures what [docs/03 §3.1](../../docs/03-measured-boot-sealing.md#31-measurements-sr-0101) says, so the PCRs a sealing policy names can be computed before a release boots. TC-05 to TC-08 show, on swtpm (A2-04), that the CC's keys unseal through the MSS-approved policy for that boot, and that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy. TC-09 shows that the unsealed keys cross swtpm's interface only encrypted. Its record is swtpm's own log of each command and response, not a capture of a bus. That the same bytes cross SPI on the DEBIX is an assumption: TC-09 has no hardware run. The limits of these results are listed in [docs/06 §6.6](../../docs/06-verification.md#66-limits-of-the-ci-evidence). A pass does not show measurement into a real TPM over SPI; that is OI2-01, on the DEBIX. Nor does it show a hardware root of trust. In emulation, QEMU loads `u-boot.bin` and supplies the control devicetree that holds K-CC-OS (A2-03). TC-02, on the DEBIX hardware, covers that.

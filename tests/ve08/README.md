@@ -33,6 +33,8 @@ docker run --rm -v "$PWD:/p2:ro" -v /tmp:/work -e PX4=/work/px4 -e KEYS=/work/ke
 python3 tests/ve08/image_cases.py --px4 /tmp/px4 --fc /tmp/fc --out /tmp/ve08
 ```
 
+These host packages cannot share a machine with the VE-07 ones. `fc/host-packages.txt` brings in `gcc-multilib`, and installing it removes the arm64 cross compiler that `cc/build.sh` needs. CI uses separate runners. On one machine, re-run `cc/emu/install-host-packages.sh` with no argument before returning to VE-07.
+
 ## What a pass does and does not show
 
 It shows that the pinned PX4 builds a boot loader trusting only the run key, that the build signs the firmware the way the boot loader checks it, and that PX4's verification code accepts only that image. It does not show the boot loader enforcing the check at reset on the STM32H753, or the upload and recovery paths: TC-12 to TC-14 on a Pixhawk 6X.

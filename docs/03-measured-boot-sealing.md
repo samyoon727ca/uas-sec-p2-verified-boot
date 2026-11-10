@@ -82,14 +82,14 @@ This stops passive sniffing. It does not stop an attacker who can reset the TPM 
 
 ## 3.7 Prototype findings
 
-A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was being chosen. Its results shaped the design. They are **not evidence**; TC-05 to TC-10 have since reproduced them in CI.
+A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was being chosen. Its results shaped the design. They are **not evidence**. CI has since reproduced most of them; each line says which test case does, or that none does.
 
-- The policy in §3.3 unsealed in the approved state.
-- It unsealed for the next epoch before commit, and only for that epoch after commit.
-- It refused a rogue-signed policy and a changed PCR 8.
-- A second TPM refused to load the sealed blob.
-- swtpm 0.7.3 rejected an RSA-3072 public key for `TPM2_LoadExternal`. K-CC-POL is therefore ECDSA P-256, which has the same 128-bit strength [SP800-57].
-- Without a resource manager, swtpm runs out of object slots unless transient objects are flushed. The CC uses the kernel's `/dev/tpmrm0`.
+- The policy in §3.3 unsealed in the approved state. Reproduced by TC-05.
+- It unsealed for the next epoch before commit, and only for that epoch after commit. TC-08 reproduces the second half: after the commit, release 2 unseals and release 1 does not. No test case unseals for the next epoch before the commit, so that half is prototype-only.
+- It refused a rogue-signed policy and a changed PCR 8. Reproduced by TC-08 and TC-06.
+- A second TPM refused to load the sealed blob. Reproduced by TC-07.
+- swtpm 0.7.3 rejected an RSA-3072 public key for `TPM2_LoadExternal`. K-CC-POL is therefore ECDSA P-256, which has the same 128-bit strength [SP800-57]. Prototype-only: no test case tries an RSA-3072 policy key.
+- Without a resource manager, swtpm runs out of object slots unless transient objects are flushed. The CC uses the kernel's `/dev/tpmrm0`. The harness's provisioning flushes transient objects for the same reason; no test case shows the failure.
 
 ## 3.8 Design decisions
 

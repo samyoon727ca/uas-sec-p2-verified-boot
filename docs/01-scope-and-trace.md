@@ -1,6 +1,6 @@
 # 1. Scope and traceability
 
-P2 produces the verification evidence for three P1 requirements. On the companion computer (CC) they are SR-005 (verified boot) and SR-010 (keys sealed to the TPM). On the flight controller (FC) it is SR-018 (PX4 Bootloader Secure Boot). Evidence is produced through two P1 verification events, VE-07 and VE-08. P2 adds five child requirements where a P1 requirement needs refinement to be testable. Every other P2 statement traces to P1 at commit `83c6d2d`: baseline 1.0 plus change 1 ([P1]).
+P2 produces the verification evidence for three P1 requirements. On the companion computer (CC) they are SR-005 (verified boot) and SR-010 (keys sealed to the TPM). On the flight controller (FC) it is SR-018 (PX4 Bootloader Secure Boot). Evidence is produced through two P1 verification events, VE-07 and VE-08. P2 adds five child requirements where a P1 requirement needs refinement to be testable. Every other P2 statement traces to P1 at the commit pinned in [`data/p1/pin.txt`](../data/p1/pin.txt), `e539aa6`: baseline 1.0 plus changes 1 to 5 ([P1]).
 
 ## 1.1 P1 parents
 
@@ -47,7 +47,7 @@ Each of these is an **assumption**: accepted for analysis, not yet shown. Test c
 | A2-01 | Every `u-boot.itb` ever signed with K-CC-ROOT contains a U-Boot with measured boot enabled | A signed U-Boot that does not measure leaves PCRs 0–9 at their reset values. If it also had a verification flaw, the kernel it starts could extend the approved values itself and unseal the keys |
 | A2-02 | The TPM's reset input cannot be driven by software. With its reset pin left on the module's pull-up, the TPM resets only at power-on (DD2-17) | If the TPM can be reset on its own, its PCRs return to zero and approved measurements can be replayed. To check on the module bought; P5 covers physical attack |
 | A2-03 | In the emulated chain, QEMU loading `u-boot.bin` and its control devicetree stands in for the hardware root of trust | Emulation cannot show that a modified boot loader is refused (TC-02 is hardware only) |
-| A2-04 | swtpm 0.7.3 implements the TPM 2.0 commands P2 uses as the TCG Library specifies | swtpm is not a certified TPM, and its state is a host file. Hardware runs repeat the sealing cases on a real TPM |
+| A2-04 | swtpm 0.7.3 implements the TPM 2.0 commands P2 uses as the TCG Library specifies | swtpm is not a certified TPM, and its state is a host file. Hardware runs repeat the sealing cases TC-05 to TC-08 on a real TPM. TC-09 has no hardware run: nothing captures the SPI bus ([§6.6](06-verification.md#66-limits-of-the-ci-evidence)) |
 | A2-05 | PX4 Bootloader Secure Boot behaves the same at `v1.18.0` as at `v1.18.0-rc1` | Rechecked at the DD-06 re-pin |
 | A2-06 | U-Boot's ECSPI driver (`MXC_SPI`) can drive the chosen SPI TPM on ECSPI2 of the DEBIX Model A. A mainline board on the same SoC does this (Gateworks Venice GW71xx) | Measured boot on the hardware depends on it (OI2-01) |
 
