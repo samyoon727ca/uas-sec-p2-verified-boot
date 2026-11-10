@@ -58,14 +58,14 @@ Each list says what that kind of run is able to prove. So far CI has proved the 
 
 ## 6.4 Evidence rules
 
-- **Location.** Evidence lives in `evidence/<event>-<ci|hw>/<YYYYMMDD>-<commit>/`. A test case's evidence column points at that folder.
+- **Location.** Evidence lives in `evidence/<event>-<ci|hw>/<YYYYMMDD>-<commit>/`. A test case's evidence column points at that folder's `summary.md`. The validator accepts it only if the folder is for the same event and the same kind of run (`ci` or `hw`), and the `summary.json` beside it records that event, that kind of run and that test case with the same result.
 - **Contents.** Each run folder holds:
   - `summary.json`: tool versions, pins, SHA-256 of every built artifact and public key, and each case's result;
   - one console log per case.
 - **Scripted.** A harness exits non-zero if any case fails, and CI runs it on every change to `cc/` or the harness. VE-07's emulated harness is [`tests/ve07/boot_cases.py`](../tests/ve07/boot_cases.py), run by the [`ve07-emu`](../.github/workflows/ve07-emu.yml) workflow, which uploads its evidence as a build artifact.
 - **Provenance.** A `ci` folder is the unchanged artifact of a GitHub Actions run; its `summary.json` records the run ID, runner image and installed host package versions. Runs anywhere else are marked `local` and are not CI evidence.
 - **Controls first.** A negative case counts only if the positive control passed in the same run. Where the attack would succeed against a weaker setup (for example stock `qemu_arm64_defconfig`), a control run shows it succeeding there, so the test can be seen to detect it.
-- **Hardware runs** are run by the owner on owned devices with the scripts in this repo. Their logs are committed the same way.
+- **Hardware runs** are run by the owner on owned devices with the scripts in this repo. Their logs are committed the same way, in an `hw` folder whose `summary.json` records `environment.kind` as `hw`.
 
 ## 6.5 Reporting to P1
 

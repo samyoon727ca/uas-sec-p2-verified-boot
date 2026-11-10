@@ -7,6 +7,10 @@ test cases that produce evidence for P1's verification events. Every ID that
 P2 cites from P1 must exist in data/p1/, a byte-for-byte copy of P1 at the
 commit named in data/p1/pin.txt (tools/check_p1_snapshot.py checks the copy).
 
+A passed or failed result must cite the summary of the run that produced it:
+a run folder for the same event and the same kind of run (CI or hardware),
+whose summary.json records that test case with that result.
+
 Exits 1 if any error is found. Standard library only.
 
 Usage:
@@ -16,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import sys
 from pathlib import Path
@@ -47,6 +52,9 @@ TC_ID = re.compile(r"^TC-\d{2}$")
 SHALL = re.compile(r"\bshall\b", re.IGNORECASE)
 TC_STATUS = {"planned", "passed", "failed", "n/a"}
 EVIDENCE_DIR = "evidence/"
+# A result's evidence is the summary of one run folder (docs/06 section 6.4).
+EVIDENCE_FORM = "evidence/<event>-<ci|hw>/<YYYYMMDD>-<commit>/summary.md"
+EVIDENCE_PATH = re.compile(r"^evidence/(ve\d{2})-(ci|hw)/\d{8}-[0-9a-f]{7,40}/summary\.md$")
 
 
 class Report:
@@ -175,6 +183,49 @@ def check_trace(rows: list[dict], children: dict, p1: P1, report: Report) -> set
     return set(links)
 
 
+def check_evidence(root: Path, row: dict, env: str, report: Report) -> None:
+    """A passed or failed result must cite the run that produced it.
+
+    The evidence is the summary.md of a run folder for the same event and the
+    same kind of run (ci or hw), and the summary.json beside it must record
+    that event, that kind of run and this test case with this result.
+    """
+    where, status, evidence = row["_where"], row[f"{env}_status"], row[f"{env}_evidence"]
+    col = f"{env}_evidence"
+    if not evidence.startswith(EVIDENCE_DIR):
+        report.error(where, f"{col} '{evidence}' must be under {EVIDENCE_DIR}")
+        return
+    m = EVIDENCE_PATH.match(evidence)
+    if not m:
+        report.error(where, f"{col} '{evidence}' must have the form {EVIDENCE_FORM}")
+        return
+    if m.group(1) != row["ve_id"].replace("-", "").lower():
+        report.error(where, f"{col} '{evidence}' is not a {row['ve_id']} run folder")
+        return
+    if m.group(2) != env:
+        report.error(where, f"{col} '{evidence}' is a {m.group(2)} run folder, not {env}")
+        return
+    if not (root / evidence).is_file():
+        report.error(where, f"{col} '{evidence}' does not exist")
+        return
+    summary_path = (root / evidence).with_name("summary.json")
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        event = summary.get("event")
+        kind = (summary.get("environment") or {}).get("kind")
+        result = (summary.get("test_cases") or {}).get(row["tc_id"])
+    except (OSError, ValueError, AttributeError) as exc:
+        report.error(where, f"{col}: cannot read {summary_path.name} beside '{evidence}' ({type(exc).__name__})")
+        return
+    if event != row["ve_id"]:
+        report.error(where, f"{col}: the run's summary.json records event '{event}', not {row['ve_id']}")
+    if kind != env:
+        report.error(where, f"{col}: the run's summary.json records a '{kind}' run, not {env}")
+    if result != status:
+        report.error(where, f"{col}: the run's summary.json records {row['tc_id']} as '{result}', "
+                            f"but {env}_status is {status}")
+
+
 def check_testcases(rows: list[dict], children: dict, p1: P1, root: Path, report: Report) -> dict[str, dict]:
     index = index_unique(rows, "tc_id", TC_ID, report)
     covered: set[str] = set()
@@ -215,10 +266,8 @@ def check_testcases(rows: list[dict], children: dict, p1: P1, root: Path, report
             if status in ("passed", "failed"):
                 if not evidence:
                     report.error(where, f"{env}_status is {status} but {env}_evidence is empty")
-                elif not evidence.startswith(EVIDENCE_DIR):
-                    report.error(where, f"{env}_evidence '{evidence}' must be under {EVIDENCE_DIR}")
-                elif not (root / evidence).exists():
-                    report.error(where, f"{env}_evidence '{evidence}' does not exist")
+                else:
+                    check_evidence(root, row, env, report)
             elif evidence:
                 report.error(where, f"{env}_evidence must be empty while {env}_status is {status}")
         if statuses.get("ci") == "n/a" and statuses.get("hw") == "n/a":

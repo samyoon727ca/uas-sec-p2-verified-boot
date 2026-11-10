@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import sys
 import tempfile
 import unittest
@@ -68,6 +69,16 @@ def p2_baseline():
     }
 
 
+CI_RUN = "evidence/ve07-ci/20261013-d9149f6"
+HW_RUN = "evidence/ve07-hw/20261120-0123abc"
+
+
+def run_folder(folder: str, event: str, kind: str, test_cases: dict) -> dict:
+    """The two files of a run folder that the validator reads."""
+    summary = {"event": event, "environment": {"kind": kind}, "test_cases": test_cases}
+    return {f"{folder}/summary.md": "# run\n", f"{folder}/summary.json": json.dumps(summary)}
+
+
 def write(path: Path, header: list[str], rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as f:
@@ -88,7 +99,7 @@ class ValidatorTest(unittest.TestCase):
                 write(root / "data" / name, vt.SCHEMAS[name], rows)
             for rel in files:
                 (root / rel).parent.mkdir(parents=True, exist_ok=True)
-                (root / rel).write_text("log\n")
+                (root / rel).write_text(files[rel] if isinstance(files, dict) else "log\n")
             return vt.validate(root)
 
     def assertError(self, fragment, **kw):
@@ -207,19 +218,72 @@ class ValidatorTest(unittest.TestCase):
 
     def test_evidence_must_exist(self):
         p2 = p2_baseline()
-        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence="evidence/ve07-ci/run1")
-        self.assertError("ci_evidence 'evidence/ve07-ci/run1' does not exist", p2=p2)
+        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence=f"{CI_RUN}/summary.md")
+        self.assertError(f"ci_evidence '{CI_RUN}/summary.md' does not exist", p2=p2)
 
     def test_evidence_must_be_under_evidence_dir(self):
         p2 = p2_baseline()
         p2["testcases.csv"][0].update(hw_status="failed", hw_evidence="logs/run1.log")
         self.assertError("must be under evidence/", p2=p2, files=["logs/run1.log"])
 
-    def test_existing_evidence_is_accepted(self):
+    def test_run_summary_is_accepted(self):
         p2 = p2_baseline()
-        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence="evidence/ve07-ci/run1/summary.json")
-        report = self.run_validator(p2=p2, files=["evidence/ve07-ci/run1/summary.json"])
+        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence=f"{CI_RUN}/summary.md")
+        report = self.run_validator(p2=p2, files=run_folder(CI_RUN, "VE-07", "ci", {"TC-01": "passed"}))
         self.assertEqual(report.errors, [])
+
+    def test_hardware_run_summary_is_accepted(self):
+        p2 = p2_baseline()
+        p2["testcases.csv"][0].update(hw_status="failed", hw_evidence=f"{HW_RUN}/summary.md")
+        report = self.run_validator(p2=p2, files=run_folder(HW_RUN, "VE-07", "hw", {"TC-01": "failed"}))
+        self.assertEqual(report.errors, [])
+
+    def test_evidence_must_be_a_run_summary(self):
+        # Any existing file used to be accepted (audit 2026-10-13, D3).
+        for path in ("evidence/README.md", f"{CI_RUN}/summary.json", f"{CI_RUN}/TC-01.log", "evidence/ve07-ci/run1"):
+            with self.subTest(path=path):
+                p2 = p2_baseline()
+                p2["testcases.csv"][0].update(ci_status="passed", ci_evidence=path)
+                self.assertError("must have the form evidence/<event>-<ci|hw>/<YYYYMMDD>-<commit>/summary.md",
+                                 p2=p2, files=[path])
+
+    def test_hardware_pass_cannot_cite_a_ci_run(self):
+        # A hardware pass recorded against a CI folder of another event (D1).
+        p2 = p2_baseline()
+        p2["testcases.csv"][1].update(hw_status="passed", hw_evidence=f"{CI_RUN}/summary.md")
+        files = run_folder(CI_RUN, "VE-07", "ci", {"TC-01": "passed"})
+        self.assertError("is not a VE-08 run folder", p2=p2, files=files)
+        p2["testcases.csv"][0].update(hw_status="passed", hw_evidence=f"{CI_RUN}/summary.md")
+        self.assertError("is a ci run folder, not hw", p2=p2, files=files)
+
+    def test_run_must_have_run_the_case(self):
+        # A pass pointed at a run that never ran that case (D2).
+        p2 = p2_baseline()
+        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence=f"{CI_RUN}/summary.md")
+        self.assertError("records TC-01 as 'None', but ci_status is passed", p2=p2,
+                         files=run_folder(CI_RUN, "VE-07", "ci", {"TC-03": "passed"}))
+
+    def test_run_result_must_equal_status(self):
+        p2 = p2_baseline()
+        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence=f"{CI_RUN}/summary.md")
+        self.assertError("records TC-01 as 'failed', but ci_status is passed", p2=p2,
+                         files=run_folder(CI_RUN, "VE-07", "ci", {"TC-01": "failed"}))
+
+    def test_summary_must_record_the_same_event_and_kind(self):
+        p2 = p2_baseline()
+        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence=f"{CI_RUN}/summary.md")
+        self.assertError("records event 'VE-08', not VE-07", p2=p2,
+                         files=run_folder(CI_RUN, "VE-08", "ci", {"TC-01": "passed"}))
+        # A local run copied into a ci folder is not CI evidence.
+        self.assertError("records a 'local' run, not ci", p2=p2,
+                         files=run_folder(CI_RUN, "VE-07", "local", {"TC-01": "passed"}))
+
+    def test_summary_json_must_be_readable(self):
+        p2 = p2_baseline()
+        p2["testcases.csv"][0].update(ci_status="passed", ci_evidence=f"{CI_RUN}/summary.md")
+        self.assertError("cannot read summary.json", p2=p2, files=[f"{CI_RUN}/summary.md"])
+        self.assertError("cannot read summary.json", p2=p2,
+                         files={f"{CI_RUN}/summary.md": "x\n", f"{CI_RUN}/summary.json": "[1, 2]\n"})
 
     def test_planned_with_evidence_is_rejected(self):
         p2 = p2_baseline()
