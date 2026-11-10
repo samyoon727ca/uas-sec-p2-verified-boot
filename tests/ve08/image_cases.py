@@ -156,14 +156,19 @@ def host_packages() -> dict:
     return boot_cases.host_packages(ROOT / "fc/host-packages.txt")
 
 
+# What a run's result depends on. tests/ve07/boot_cases.py is imported for its provenance helpers, and it
+# imports cc/uboot/check_config.py and the tools.
+HARNESS_INPUTS = ("fc", "tests", "tools", "cc/uboot/check_config.py", "cc/emu/install-host-packages.sh")
+
+
 def git_state() -> dict[str, str]:
     try:
         run = lambda *a: subprocess.run(["git", "-C", str(ROOT), *a], check=True, capture_output=True,  # noqa: E731
                                         text=True).stdout.strip()
-        return {"commit": run("rev-parse", "HEAD"),
-                "fc_or_tests_modified": str(bool(run("status", "--porcelain", "--", "fc", "tests"))).lower()}
+        return {"commit": run("rev-parse", "HEAD"), "inputs": " ".join(HARNESS_INPUTS),
+                "inputs_modified": str(bool(run("status", "--porcelain", "--", *HARNESS_INPUTS))).lower()}
     except (OSError, subprocess.CalledProcessError):
-        return {"commit": "unknown", "fc_or_tests_modified": "unknown"}
+        return {"commit": "unknown", "inputs": " ".join(HARNESS_INPUTS), "inputs_modified": "unknown"}
 
 
 def write_markdown(out: Path, summary: dict) -> None:
@@ -174,7 +179,8 @@ def write_markdown(out: Path, summary: dict) -> None:
         "# VE-08 host run: FC images checked with PX4's verification code (TC-11)", "",
         f"- Date (UTC): {summary['date_utc']}",
         f"- Where: {where}",
-        f"- Code commit: `{summary['git']['commit']}` (fc/ or tests/ modified: {summary['git']['fc_or_tests_modified']})",
+        f"- Code commit: `{summary['git']['commit']}` ({summary['git']['inputs']} modified since that commit: "
+        f"{summary['git']['inputs_modified']})",
         f"- PX4: `{summary['build_info'].get('px4_commit', '?')}` ({summary['build_info'].get('px4_describe', '?')}), "
         f"built in `{summary['pins']['container']}`",
         f"- Host packages match the pins (snapshot {summary['host_packages']['snapshot']}): "

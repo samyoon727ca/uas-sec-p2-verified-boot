@@ -147,12 +147,12 @@ def main(argv: list[str] | None = None) -> int:
     for name, paths in VIEWS.items():
         body = RENDER[name]()
         for path in paths:
-            text = path.read_text(encoding="utf-8")
+            text = path.read_bytes().decode("utf-8")
             new = splice(text, name, body)
             if new != text:
                 stale.append(f"{path.relative_to(ROOT)} ({name})")
                 if not args.check:
-                    path.write_text(new, encoding="utf-8")
+                    path.write_bytes(new.encode("utf-8"))   # LF on every host; write_text gives CRLF on Windows
     if args.check and stale:
         for s in stale:
             print(f"STALE   {s}: run python tools/render_views.py")

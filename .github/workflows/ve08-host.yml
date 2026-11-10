@@ -2,12 +2,15 @@ name: ve08-host
 
 # VE-08 on the host: the FC secure-boot pair built at the pinned PX4 commit
 # with a per-run key, and each image checked with PX4's own verification code
-# (TC-11; tests/ve08).
+# (TC-11; tests/ve08). The path filters list everything the job runs or the
+# harness imports: tests/ve08/image_cases.py takes its provenance helpers from
+# tests/ve07/boot_cases.py, which imports provision.py, the two tools and
+# cc/uboot/check_config.py.
 on:
   push:
-    paths: ["fc/**", "tests/ve08/**", "cc/emu/install-host-packages.sh", ".github/workflows/ve08-host.yml"]
+    paths: ["fc/**", "tests/ve08/**", "tests/ve07/boot_cases.py", "tests/ve07/provision.py", "tools/predict_pcrs.py", "tools/approve_policy.py", "tools/check_no_secrets.py", "cc/uboot/check_config.py", "cc/emu/install-host-packages.sh", ".github/workflows/ve08-host.yml"]
   pull_request:
-    paths: ["fc/**", "tests/ve08/**", "cc/emu/install-host-packages.sh", ".github/workflows/ve08-host.yml"]
+    paths: ["fc/**", "tests/ve08/**", "tests/ve07/boot_cases.py", "tests/ve07/provision.py", "tools/predict_pcrs.py", "tools/approve_policy.py", "tools/check_no_secrets.py", "cc/uboot/check_config.py", "cc/emu/install-host-packages.sh", ".github/workflows/ve08-host.yml"]
   workflow_dispatch:
 
 permissions:

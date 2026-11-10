@@ -277,6 +277,13 @@ class ConfigCheckTest(unittest.TestCase):
 
 
 class ProvenanceTest(unittest.TestCase):
+    def test_modified_flag_covers_everything_the_harness_imports(self):
+        # boot_cases.py imports tools/predict_pcrs.py and tools/approve_policy.py (audit A-34).
+        self.assertEqual(set(bc.HARNESS_INPUTS), {"cc", "tests", "tools"})
+        state = bc.git_state()
+        self.assertEqual(state["inputs"], "cc tests tools")
+        self.assertIn(state["inputs_modified"], ("true", "false", "unknown"))
+
     def test_only_github_actions_counts_as_ci(self):
         with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": ""}):
             self.assertEqual(bc.environment(), {"kind": "local"})

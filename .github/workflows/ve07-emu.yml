@@ -2,11 +2,12 @@ name: ve07-emu
 
 # VE-07 emulated test cases on QEMU virt + U-Boot + swtpm (tests/ve07), and the
 # tools those cases use: PCR prediction (TC-10) and the MSS policy (TC-05).
+# The path filters list everything the job runs or the harness imports.
 on:
   push:
-    paths: ["cc/**", "tests/ve07/**", "tools/predict_pcrs.py", "tools/approve_policy.py", ".github/workflows/ve07-emu.yml"]
+    paths: ["cc/**", "tests/ve07/**", "tools/predict_pcrs.py", "tools/approve_policy.py", "tools/check_no_secrets.py", ".github/workflows/ve07-emu.yml"]
   pull_request:
-    paths: ["cc/**", "tests/ve07/**", "tools/predict_pcrs.py", "tools/approve_policy.py", ".github/workflows/ve07-emu.yml"]
+    paths: ["cc/**", "tests/ve07/**", "tools/predict_pcrs.py", "tools/approve_policy.py", "tools/check_no_secrets.py", ".github/workflows/ve07-emu.yml"]
   workflow_dispatch:
 
 permissions:
