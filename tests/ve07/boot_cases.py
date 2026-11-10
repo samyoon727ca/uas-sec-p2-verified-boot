@@ -29,7 +29,8 @@ from the release artifacts:
          objects do not load there, even with the parent name fixed up
   TC-08  after an update to epoch 1 is committed, the release-1 chain with
          its epoch-0 policy cannot unseal, nor can a policy signed by a rogue
-         key; release 2 with its epoch-1 policy still unseals
+         key, nor one the real K-CC-POL signed under another policyRef or
+         under none; release 2 with its epoch-1 policy still unseals
   TC-09  swtpm records every TPM command and response of a TC-05 boot; neither
          key appears in them, each Unseal runs in a session salted to the
          parent, and neither key decrypts from the recording alone. Controls:
@@ -102,6 +103,7 @@ CASE_TIMEOUT = 240
 KERNEL_TAIL = b"P2\0\0"                  # TC-06f: appended to the stored kernel, after its gzip stream
 # What U-Boot logs for the two images it measures whole, as stored in the FIT: (PCR, event data, FIT image node).
 WHOLE_IMAGE_EVENTS = [(8, b"linux\0", "kernel"), (9, b"initrd\0", "ramdisk")]
+OTHER_POLICY_REF = b"p2/another-use"     # TC-08e: a policyRef the MSS might sign under for something else
 KEY_TICK = 0.2                           # seconds between keystrokes
 MIN_KEYS = 5                             # a keystroke case must type at least this many
 
@@ -817,8 +819,8 @@ class Artifacts:
         self.notes["tc08"] = (f"r2: a cpio member p2-release appended, signed with K-CC-OS; approved at epoch 1 "
                               f"({approved.hex()}); committed TPM: bits 0x2 set in {provision.EPOCH_NV}")
 
-        def policy(key: Path) -> dict[str, bytes]:
-            return {"policy/approved": approved, "policy/approved.sig": approve_policy.sign(key, approved),
+        def policy(key: Path, ref: bytes = approve_policy.POLICY_REF) -> dict[str, bytes]:
+            return {"policy/approved": approved, "policy/approved.sig": approve_policy.sign(key, approved, ref),
                     "policy/epoch": b"1\n"}
 
         self.data_disk("cc-r2", provision.data_variant(prov, self.work / "ccdata-r2", policy(kpol)))
@@ -830,6 +832,12 @@ class Artifacts:
                                                                  {**policy(rogue), "kpol.pub": rogue_pub}))
         self.data_disk("cc-r2-rogue-sig", provision.data_variant(prov, self.work / "ccdata-r2-rogue-sig",
                                                                  policy(rogue)))
+        # The same policy, signed by the real K-CC-POL but for another use: under another policyRef, and
+        # under none. Only a signature the MSS made for this use may release the keys (docs/03 section 3.2).
+        self.data_disk("cc-r2-other-ref", provision.data_variant(prov, self.work / "ccdata-r2-other-ref",
+                                                                 policy(kpol, OTHER_POLICY_REF)))
+        self.data_disk("cc-r2-no-ref", provision.data_variant(prov, self.work / "ccdata-r2-no-ref",
+                                                              policy(kpol, b"")))
         self.tpm_states["committed"] = provision.commit_epoch(prov.state, self.short / "tpm-committed", 1,
                                                               self.work / "provision-commit")
 
@@ -1012,6 +1020,13 @@ CASES = [
          expect=[VERIFIED, BOOTED, *refused("Unseal")], forbid=[*NOT_UNSEALED, *CONSOLE]),
     Case("TC-08d", "TC-08", "test", "Release 2 with a policy signed by a rogue key, K-CC-POL public key on storage",
          tpm="committed", slot="r2", data="cc-r2-rogue-sig", pcrs=True, positive="TC-05",
+         expect=[VERIFIED, BOOTED, *refused("VerifySignature")], forbid=[*NOT_UNSEALED, *CONSOLE]),
+    # The real K-CC-POL signed release 2's policy, but not for this use.
+    Case("TC-08e", "TC-08", "test", "Release 2 with a policy K-CC-POL signed under another policyRef",
+         tpm="committed", slot="r2", data="cc-r2-other-ref", pcrs=True, positive="TC-05",
+         expect=[VERIFIED, BOOTED, *refused("VerifySignature")], forbid=[*NOT_UNSEALED, *CONSOLE]),
+    Case("TC-08f", "TC-08", "test", "Release 2 with a policy K-CC-POL signed under no policyRef",
+         tpm="committed", slot="r2", data="cc-r2-no-ref", pcrs=True, positive="TC-05",
          expect=[VERIFIED, BOOTED, *refused("VerifySignature")], forbid=[*NOT_UNSEALED, *CONSOLE]),
     # TC-09: the TPM traffic of an unseal, as a bus probe would record it.
     Case("TC-09", "TC-09", "test", "Neither key appears in the TPM traffic of a TC-05 boot", tpm="provisioned",
