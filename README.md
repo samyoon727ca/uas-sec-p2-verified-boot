@@ -11,7 +11,7 @@ Each step traces back to P1's threats and verification events.
 
 > **Notional and unclassified.** Built only from public sources: U-Boot, NXP, PX4, Raspberry Pi, TCG, tpm2-software and NIST documentation and source. It is not based on any real program or system. Assumptions are labeled as assumptions. All keys are dev/test keys; no private key is committed.
 
-**Status: design baselined; every case that CI can prove passes.** VE-07's verified-boot cases TC-01, TC-03 and TC-04, its measured-boot case TC-10 and its sealing cases TC-05 to TC-09 pass under QEMU emulation with swtpm ([evidence](evidence/ve07-ci/20261110-acca55a/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. TC-05 shows that the CC's keys unseal in that boot under the MSS-signed policy, TC-06 to TC-08 that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy, and TC-09 that they cross the TPM interface only encrypted. For the FC, TC-11 shows on the host that the pinned PX4 build, with a per-run key, yields a boot loader whose own verification code starts only the image signed with that key ([evidence](evidence/ve08-ci/20261013-aac4299/summary.md)). All hardware runs are planned: nine for VE-07 and three for VE-08; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
+**Status: design baselined; every case that CI can prove passes.** VE-07's verified-boot cases TC-01, TC-03 and TC-04, its measured-boot case TC-10 and its sealing cases TC-05 to TC-09 pass under QEMU emulation with swtpm ([evidence](evidence/ve07-ci/20261110-ec5ea72/summary.md)). TC-10 shows that the PCRs U-Boot measures equal those predicted from the release artifacts. TC-05 shows that the CC's keys unseal in that boot under the MSS-signed policy, TC-06 to TC-08 that the TPM refuses them to a changed boot state, another TPM, an older epoch and a rogue-signed policy, and TC-09 that they cross the TPM interface only encrypted. For the FC, TC-11 shows on the host that the pinned PX4 build, with a per-run key, yields a boot loader whose own verification code starts only the image signed with that key ([evidence](evidence/ve08-ci/20261013-aac4299/summary.md)). All hardware runs are planned: nine for VE-07 and three for VE-08; the CC board is on order. Nothing is called working until its test case passes; the evidence table at the end is generated from the data.
 
 ## Threat
 
@@ -71,10 +71,10 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 - a child requirement doesn't refine a P2 parent, or changes its component or method;
 - a child traces to a threat that P1 doesn't link to its parent;
 - a test case cites a requirement its verification event doesn't cover;
-- a passed or failed result has no evidence;
+- a passed or failed result does not cite the summary of a run of the same event and kind (CI or hardware) that records that result;
 - a requirement or event is left without a test case.
 
-[`tools/check_p1_snapshot.py`](tools/check_p1_snapshot.py) confirms the P1 snapshot matches P1 at the pinned commit. [`tools/check_no_secrets.py`](tools/check_no_secrets.py) fails on PEM-armored private keys (including OpenSSH and TSS), PX4 key files and WireGuard private keys in the tree.
+[`tools/check_p1_snapshot.py`](tools/check_p1_snapshot.py) confirms the P1 snapshot matches P1 at the pinned commit. [`tools/check_evidence.py`](tools/check_evidence.py) fails if any committed evidence file differs from the SHA-256 recorded for it when its run was added. [`tools/check_no_secrets.py`](tools/check_no_secrets.py) fails on PEM-armored private keys (including OpenSSH and TSS), PX4 key files and WireGuard private keys in the tree.
 
 ## Repository map
 
@@ -102,6 +102,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 python -m unittest discover -s tests
 python tools/validate_trace.py
 python tools/render_views.py --check
+python tools/check_evidence.py
 python tools/check_no_secrets.py
 python tools/check_p1_snapshot.py   # needs network
 ```

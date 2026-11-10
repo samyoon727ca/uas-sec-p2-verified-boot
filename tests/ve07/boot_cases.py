@@ -16,7 +16,10 @@ from the release artifacts:
          keystrokes never reach a console prompt
   TC-05  with the TPM provisioned and the release approved by the MSS
          (tests/ve07/provision.py), p2-unseal in the initramfs unseals both
-         keys, and their SHA-256 values equal those of the keys sealed
+         keys, and their SHA-256 values equal those of the keys sealed. It
+         then extends the policy PCRs, and a second attempt in the same boot
+         is refused. Control: an agent build without that cap gets both keys
+         a second time
   TC-06  chains that each differ in one measured item (boot-loader version,
          kernel command line, devicetree, kernel, initramfs), all built and
          signed like a release, boot but cannot unseal: no approved policy
@@ -128,6 +131,15 @@ UNSEAL_REFUSED = r"(?m)^P2-UNSEAL \S+ refused at "
 KEY_LINE = re.compile(r"(?m)^P2-KEY (\S+) sha256 ([0-9a-f]{64})$")
 UNSEAL_ANY_OK = r"(?m)^P2-UNSEAL \S+ ok$"
 AGENT_CONTROL = r"(?m)^P2-UNSEAL control build: response encryption off$"
+# The cap, and the second attempt of the two builds for TC-05b (cc/initramfs/p2-unseal.c).
+CAP_OK = r"(?m)^P2-CAP ok$"
+CAP_FAILED = r"(?m)^P2-CAP failed"
+AGENT_NO_CAP = r"(?m)^P2-UNSEAL control build: PCRs not capped$"
+AGENT_SECOND = r"(?m)^P2-UNSEAL test build: a second attempt follows$"
+AGAIN_OK = r"(?m)^P2-AGAIN {} ok$"
+AGAIN_SAME = r"(?m)^P2-AGAIN {} is the key released before$"
+AGAIN_ANY_OK = r"(?m)^P2-AGAIN \S+ (ok|is the key released before)$"
+AGAIN_REFUSED = r"(?m)^P2-AGAIN {} refused at PolicyAuthorize: "
 TPM_CC_UNSEAL = 0x0000015E
 KEY_ANY = r"(?m)^P2-KEY "
 
@@ -671,6 +683,13 @@ class Artifacts:
         self.data_disk("cc-ctl-clear", provision.data_variant(prov, self.work / "ccdata-ctl-clear", {
             "policy/approved": approved, "policy/approved.sig": approve_policy.sign(kpol, approved),
             "policy/epoch": b"0\n"}))
+        # TC-05b and its control: the chain with each of the agent's two second-unseal builds, approved at epoch 0.
+        for name in ("tc05-again", "ctl-nocap"):
+            self.signed_variant(name, **{"initramfs.cpio.gz": (self.build / f"initramfs-{name}.cpio.gz").read_bytes()})
+            again = approve_policy.approved_policy(self.prediction_for("hardened", name).pcrs, 0)
+            self.data_disk(f"cc-{name}", provision.data_variant(prov, self.work / f"ccdata-{name}", {
+                "policy/approved": again, "policy/approved.sig": approve_policy.sign(kpol, again),
+                "policy/epoch": b"0\n"}))
         self.notes["tc08"] = (f"r2: a cpio member p2-release appended, signed with K-CC-OS; approved at epoch 1 "
                               f"({approved.hex()}); committed TPM: bits 0x2 set in {provision.EPOCH_NV}")
 
@@ -680,8 +699,10 @@ class Artifacts:
         names += [f"{f}.itb" for f in self.fits if f != "good"] + [p.name for p in self.data_disks.values()]
         out = {n: sha256(self.work / n) for n in names}
         built = [f"u-boot-{v}.{ext}" for v in UBOOT_VARIANTS for ext in ("bin", "config")]
-        for n in built + ["Image.gz", "initramfs.cpio.gz", "initramfs-ctl-clear.cpio.gz", "p2-unseal",
-                          "p2-unseal-ctl-clear", "mkimage", "mkenvimage"]:
+        for n in built + ["Image.gz", "initramfs.cpio.gz", "initramfs-ctl-clear.cpio.gz",
+                          "initramfs-tc05-again.cpio.gz", "initramfs-ctl-nocap.cpio.gz", "p2-unseal",
+                          "p2-unseal-ctl-clear", "p2-unseal-tc05-again", "p2-unseal-ctl-nocap", "mkimage",
+                          "mkenvimage"]:
             out[n] = sha256(self.build / n)
         data = self.provisioned.data
         for f in sorted(p for p in data.rglob("*") if p.is_file()):
@@ -766,8 +787,22 @@ CASES = [
          uboot="ctl-noreset", slot="tamper-kernel", keys_from=BAD_KERNEL, control_for="TC-04h", stop=HELP_OUT,
          expect=[BAD_KERNEL, PROMPT, HELP_OUT], forbid=[KERNEL_START, RESET]),
     Case("TC-05", "TC-05", "test", "Keys unseal in the measured, unmodified boot state", tpm="provisioned", data="cc",
-         expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
-         forbid=[UNSEAL_REFUSED, AGENT_CONTROL, ENV_MARK, *CONSOLE], pcrs=True, unseal=True),
+         expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink"), CAP_OK],
+         forbid=[UNSEAL_REFUSED, CAP_FAILED, AGENT_CONTROL, AGENT_NO_CAP, AGENT_SECOND, ENV_MARK, *CONSOLE],
+         pcrs=True, unseal=True),
+    # TC-05b: the same boot state must not release the keys twice. The agent's test build tries again
+    # after the cap, as any later program in the boot could; the control build has no cap.
+    Case("TC-05b", "TC-05", "test", "A second unseal in the same boot is refused", slot="tc05-again",
+         tpm="provisioned", data="cc-tc05-again", pcrs=True, unseal=True, positive="TC-05",
+         expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink"), CAP_OK, AGENT_SECOND,
+                 AGAIN_REFUSED.format("wireguard"), AGAIN_REFUSED.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, CAP_FAILED, AGAIN_ANY_OK, AGENT_CONTROL, AGENT_NO_CAP, *CONSOLE]),
+    Case("TC-05b-control", "TC-05", "control", "Without the cap, the second unseal releases both keys again",
+         slot="ctl-nocap", tpm="provisioned", data="cc-ctl-nocap", pcrs=True, unseal=True, control_for="TC-05b",
+         expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink"), AGENT_NO_CAP,
+                 AGENT_SECOND, AGAIN_OK.format("wireguard"), AGAIN_SAME.format("wireguard"),
+                 AGAIN_OK.format("mavlink"), AGAIN_SAME.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, CAP_OK, CAP_FAILED, AGENT_CONTROL, *CONSOLE]),
     # TC-06: each chain is signed with K-CC-OS and boots, but no approved policy covers it.
     Case("TC-06a", "TC-06", "test", "Boot loader with another version string (PCR 0)", uboot="tc06-version",
          tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
@@ -890,6 +925,11 @@ def unseal_lines(text: str) -> list[str]:
     return [line[len("P2-UNSEAL "):] for line in clean(text).splitlines() if line.startswith("P2-UNSEAL ")]
 
 
+def after_lines(text: str) -> list[str]:
+    """What the agent reported after the release: the cap, and any second attempt."""
+    return [line[len("P2-"):] for line in clean(text).splitlines() if line.startswith(("P2-CAP ", "P2-AGAIN "))]
+
+
 def unseal_checks(prov: provision.Provisioned, text: str) -> list[dict]:
     """TC-05: the provisioned objects are as specified, and each unsealed key is the key sealed."""
     found = dict(KEY_LINE.findall(clean(text)))
@@ -979,14 +1019,20 @@ def write_markdown(out: Path, summary: dict) -> None:
             lines.append(f"| {name} | `{want}` | {'equal' if c and c['ok'] else '**' + str(c and c['observed']) + '**'} |")
     sealing = [r for r in summary["runs"] if r.get("data") or r.get("tpm", "blank") != "blank"]
     if sealing:
-        lines += ["", "Sealing runs: what `p2-unseal` reported for each key.", "",
-                  "| Run | U-Boot | FIT | TPM | CC data | p2-unseal |", "|---|---|---|---|---|---|"]
+        lines += ["", "Sealing runs: what `p2-unseal` reported for each key, and after the release: the cap that "
+                  "extends the policy PCRs and, in the two second-unseal builds, a second attempt (`AGAIN`).", "",
+                  "| Run | U-Boot | FIT | TPM | CC data | p2-unseal | After the release |",
+                  "|---|---|---|---|---|---|---|"]
         for r in sealing:
+            builds = [u.split(": ", 1)[1] for u in r.get("unseal", []) if u.startswith(("control build: ",
+                                                                                         "test build: "))]
             said = "; ".join(sorted(set(re.sub(r"^\S+ ", "", u) for u in r.get("unseal", [])
-                                        if not u.startswith("control build")))) or "–"
-            if any(u.startswith("control build") for u in r.get("unseal", [])):
-                said += " (agent control build: response in the clear)"
-            lines.append(f"| {r['id']} | {r['uboot']} | {r['slot']} | {r['tpm']} | {r['data'] or '–'} | {said} |")
+                                        if not u.startswith(("control build", "test build"))))) or "–"
+            if builds:
+                said += f" (agent build: {'; '.join(builds)})"
+            after = "; ".join(dict.fromkeys(re.sub(r"^(AGAIN) \S+ ", r"\1 ", a) for a in r.get("after_release", [])))
+            lines.append(f"| {r['id']} | {r['uboot']} | {r['slot']} | {r['tpm']} | {r['data'] or '–'} | {said} | "
+                         f"{after or '–'} |")
     io_runs = [r for r in summary["runs"] if r.get("io_log")]
     if io_runs:
         lines += ["", "TC-09: TPM commands and responses swtpm recorded during the boot, searched for each key. "
@@ -1081,6 +1127,7 @@ def main(argv: list[str] | None = None) -> int:
                          "control_for": case.control_for, "uboot": case.uboot, "slot": case.slot,
                          "flash": case.flash, "tpm": case.tpm, "data": case.data, "keys_from": case.keys_from, "keys_until": case.keys_until, "keys_sent": res.keys_sent,
                          "reboot": case.reboot, "positive": case.positive, "unseal": unseal_lines(res.text),
+                         "after_release": after_lines(res.text),
                          "ok": ok, "checks": checks, "end": res.reason,
                          "seconds": round(res.seconds, 1), "log": log, "log_sha256": sha256(out / log), **io})
             print(f"{'PASS' if ok else 'FAIL'}  {case.id:15} {case.title} ({res.seconds:.0f}s, {res.reason})",

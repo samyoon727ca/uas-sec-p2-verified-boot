@@ -40,16 +40,16 @@ Each list says what that kind of run is able to prove. So far CI has proved the 
 
 | ID | Event | Test case | Verifies | CI | Hardware | Pass criteria |
 |---|---|---|---|---|---|---|
-| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. On hardware, HAB also reports no events. |
+| TC-01 | VE-07 | Signed chain boots | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | U-Boot verifies the FIT configuration signature with the required key and the kernel reaches the initramfs. On hardware, HAB also reports no events. |
 | TC-02 | VE-07 | Modified boot loader refused by the hardware root of trust | SR-005 | – | planned | On the closed chip, both images are refused and U-Boot never runs. The open-chip run is a check only: HAB logs a failure event for each image, and none for the correct one, but boots them anyway. |
-| TC-03 | VE-07 | Modified kernel, initramfs or devicetree refused | SR-005 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | U-Boot reports a hash mismatch for the changed image, does not start the kernel and resets without offering a console. |
-| TC-04 | VE-07 | Modified boot configuration refused | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | Every attempt is refused or ignored and no console prompt appears. The control runs show the stock configuration accepts the injected environment and the legacy image, and the same keystrokes reach a prompt when either console setting is relaxed. |
-| TC-05 | VE-07 | Keys unseal in the measured, unmodified boot state | SR-010, SR-010.1, SR-010.2 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | Both keys unseal and match the provisioned values. |
-| TC-06 | VE-07 | Keys do not unseal from a modified boot state | SR-010, SR-010.1 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | Unseal fails in every case. |
-| TC-07 | VE-07 | Keys do not unseal from removed storage | SR-010 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | The sealed objects do not load on the second TPM. |
-| TC-08 | VE-07 | Rollback and unapproved policies refused | SR-010.2, SR-010.3 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | Unseal fails in both cases and the current chain still unseals. |
-| TC-09 | VE-07 | Unseal traffic is encrypted | SR-010.4 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | – | The unsealed key bytes never appear in the recorded traffic; in the control run they do. |
-| TC-10 | VE-07 | Predicted PCRs match the measured PCRs and the event log | SR-010.1 | [passed](../evidence/ve07-ci/20261110-acca55a/summary.md) | planned | The predicted, measured and replayed values are equal. |
+| TC-03 | VE-07 | Modified kernel, initramfs or devicetree refused | SR-005 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | U-Boot reports a hash mismatch for the changed image, does not start the kernel and resets without offering a console. |
+| TC-04 | VE-07 | Modified boot configuration refused | SR-005, SR-005.1 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | Every attempt is refused or ignored and no console prompt appears. The control runs show the stock configuration accepts the injected environment and the legacy image, and the same keystrokes reach a prompt when either console setting is relaxed. |
+| TC-05 | VE-07 | Keys unseal in the measured, unmodified boot state | SR-010, SR-010.1, SR-010.2 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | Both keys unseal and match the provisioned values. The second attempt is refused; in the control run it releases both keys again. |
+| TC-06 | VE-07 | Keys do not unseal from a modified boot state | SR-010, SR-010.1 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | Unseal fails in every case. |
+| TC-07 | VE-07 | Keys do not unseal from removed storage | SR-010 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | The sealed objects do not load on the second TPM. |
+| TC-08 | VE-07 | Rollback and unapproved policies refused | SR-010.2, SR-010.3 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | Unseal fails in both cases and the current chain still unseals. |
+| TC-09 | VE-07 | Unseal traffic is encrypted | SR-010.4 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | – | The unsealed key bytes never appear in the recorded traffic; in the control run they do. |
+| TC-10 | VE-07 | Predicted PCRs match the measured PCRs and the event log | SR-010.1 | [passed](../evidence/ve07-ci/20261110-ec5ea72/summary.md) | planned | The predicted, measured and replayed values are equal. |
 | TC-11 | VE-08 | FC images signed and checked on the host | SR-018 | [passed](../evidence/ve08-ci/20261013-aac4299/summary.md) | – | Only the image signed with the run key verifies. |
 | TC-12 | VE-08 | Signed firmware starts PX4 | SR-018 | – | planned | The board leaves the boot loader and PX4 starts, shown by the console log and USB enumeration. |
 | TC-13 | VE-08 | Unsigned, modified and wrong-key firmware stay in the boot loader | SR-018 | – | planned | The uploader reports a signature failure and, after each power cycle, the board stays in the boot loader. |
@@ -58,14 +58,14 @@ Each list says what that kind of run is able to prove. So far CI has proved the 
 
 ## 6.4 Evidence rules
 
-- **Location.** Evidence lives in `evidence/<event>-<ci|hw>/<YYYYMMDD>-<commit>/`. A test case's evidence column points at that folder.
+- **Location.** Evidence lives in `evidence/<event>-<ci|hw>/<YYYYMMDD>-<commit>/`. A test case's evidence column points at that folder's `summary.md`. The validator accepts it only if the folder is for the same event and the same kind of run (`ci` or `hw`), and the `summary.json` beside it records that event, that kind of run and that test case with the same result.
 - **Contents.** Each run folder holds:
   - `summary.json`: tool versions, pins, SHA-256 of every built artifact and public key, and each case's result;
   - one console log per case.
 - **Scripted.** A harness exits non-zero if any case fails, and CI runs it on every change to `cc/` or the harness. VE-07's emulated harness is [`tests/ve07/boot_cases.py`](../tests/ve07/boot_cases.py), run by the [`ve07-emu`](../.github/workflows/ve07-emu.yml) workflow, which uploads its evidence as a build artifact.
-- **Provenance.** A `ci` folder is the unchanged artifact of a GitHub Actions run; its `summary.json` records the run ID, runner image and installed host package versions. Runs anywhere else are marked `local` and are not CI evidence.
+- **Provenance.** A `ci` folder is the unchanged artifact of a GitHub Actions run; its `summary.json` records the run ID, runner image and installed host package versions. Runs anywhere else are marked `local` and are not CI evidence. GitHub deletes an artifact 90 days after its run, so [`evidence/README.md`](../evidence/README.md) records each artifact's ID and the digest GitHub reported for it, and [`evidence/SHA256SUMS`](../evidence/SHA256SUMS) records the SHA-256 of every file. A run folder is never edited after it is committed; [`tools/check_evidence.py`](../tools/check_evidence.py) fails the build if one is.
 - **Controls first.** A negative case counts only if the positive control passed in the same run. Where the attack would succeed against a weaker setup (for example stock `qemu_arm64_defconfig`), a control run shows it succeeding there, so the test can be seen to detect it.
-- **Hardware runs** are run by the owner on owned devices with the scripts in this repo. Their logs are committed the same way.
+- **Hardware runs** are run by the owner on owned devices with the scripts in this repo. Their logs are committed the same way, in an `hw` folder whose `summary.json` records `environment.kind` as `hw`.
 
 ## 6.5 Reporting to P1
 

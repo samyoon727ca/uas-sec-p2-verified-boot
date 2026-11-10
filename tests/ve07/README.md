@@ -4,7 +4,7 @@ Runs the CC boot chain on QEMU `virt` with swtpm and checks the VE-07 test cases
 
 | Script | Covers |
 |---|---|
-| [`boot_cases.py`](boot_cases.py), [`provision.py`](provision.py) | TC-01 signed chain boots; TC-03 modified kernel, initramfs or devicetree refused; TC-04 modified boot configuration refused, with control runs on stock U-Boot and on the P2 build with one console setting relaxed; TC-05 keys unseal in the measured, unmodified boot state; TC-06 keys do not unseal from a modified boot state; TC-07 keys do not unseal on another CC's TPM; TC-08 rollback and a rogue-signed policy refused; TC-09 unseal traffic holds neither key, with a control run on the agent's control build, which leaves the response in the clear; TC-10 predicted PCRs equal the measured PCRs and the event-log replay |
+| [`boot_cases.py`](boot_cases.py), [`provision.py`](provision.py) | TC-01 signed chain boots; TC-03 modified kernel, initramfs or devicetree refused; TC-04 modified boot configuration refused, with control runs on stock U-Boot and on the P2 build with one console setting relaxed; TC-05 keys unseal in the measured, unmodified boot state, and a second attempt in the same boot is refused, with a control run on an agent build that does not cap the PCRs; TC-06 keys do not unseal from a modified boot state; TC-07 keys do not unseal on another CC's TPM; TC-08 rollback and a rogue-signed policy refused; TC-09 unseal traffic holds neither key, with a control run on the agent's control build, which leaves the response in the clear; TC-10 predicted PCRs equal the measured PCRs and the event-log replay |
 
 ## Run
 
@@ -28,6 +28,7 @@ The harness:
 - provisions a TPM with tpm2-tools, as a factory would: a persistent parent, the epoch NV index, and a WireGuard key and a MAVLink key it generates and seals (`provision.py`). It keeps only the keys' SHA-256 values;
 - approves the release as the MSS would, with a K-CC-POL dev key generated for the run (`tools/approve_policy.py`), and packs the CC data as a tar for a second virtio disk;
 - builds what the refusal cases need: chains signed like a release but with one measured item changed (TC-06, with two one-setting U-Boot test builds from `cc/build.sh`), a second CC's TPM provisioned the same way (TC-07), a release 2 that the MSS approves at epoch 1, a copy of the TPM with epoch 1 committed, and CC data carrying policies signed by a rogue key (TC-08);
+- for TC-05's second-unseal case and its control, signs a chain for each of the agent's two builds that try to unseal again (with the cap, and without it) and approves each with its own policy;
 - for TC-09's control, signs a chain whose initramfs has the agent's control build and approves it with its own policy;
 - boots each case with a fresh swtpm, or with a copy of the provisioned, second or committed TPM. For TC-09, swtpm logs every TPM command and response (log level 20), and the harness searches them for the sealed keys, which it keeps in memory only. It writes each I/O log in swtpm's layout with any key bytes replaced by `--`, and records where and the SHA-256 of what it replaced.
 

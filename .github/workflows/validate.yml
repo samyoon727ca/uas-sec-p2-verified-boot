@@ -25,6 +25,8 @@ jobs:
         run: python tools/validate_trace.py
       - name: Check generated views are current
         run: python tools/render_views.py --check
+      - name: Check the committed evidence against its SHA-256 manifest
+        run: python tools/check_evidence.py
       - name: Check no private key material is committed
         run: python tools/check_no_secrets.py
       - name: Check the P1 snapshot matches P1 at the pinned commit
