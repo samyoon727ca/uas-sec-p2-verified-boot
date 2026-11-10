@@ -210,6 +210,67 @@ class ConfigCheckTest(unittest.TestCase):
             self.assertEqual(check_config.diff(cfg, base), ["CONFIG_B=2", "CONFIG_D=y"])
             self.assertEqual(check_config.diff(base, cfg), ["CONFIG_B=1", "# CONFIG_D removed"])
 
+    # A .config as cc/build.sh's hardened build has it, reduced to the lines the policy reads.
+    HARDENED = ("CONFIG_FIT_SIGNATURE=y\n# CONFIG_BOOTSTD_BOOTCOMMAND is not set\n"
+                "# CONFIG_LEGACY_IMAGE_FORMAT is not set\nCONFIG_MEASURED_BOOT=y\nCONFIG_MEASURE_DEVICETREE=y\n"
+                "CONFIG_BOOTDELAY=-2\nCONFIG_USE_BOOTCOMMAND=y\n"
+                'CONFIG_BOOTCOMMAND="virtio scan; virtio read 0x50000000 0 0x20000; bootm 0x50000000; reset"\n'
+                "# CONFIG_USE_PREBOOT is not set\nCONFIG_ENV_IS_NOWHERE=y\n# CONFIG_ENV_IS_IN_FLASH is not set\n"
+                "# CONFIG_ENV_IS_IN_MMC is not set\n")
+
+    def violated(self, old: str = "", new: str = "") -> list[str]:
+        self.assertTrue(not old or self.HARDENED.count(old) == 1, old)
+        with tempfile.TemporaryDirectory() as tmp:
+            return check_config.violated(self.write(tmp, ".config", self.HARDENED.replace(old, new) if old
+                                                    else self.HARDENED))
+
+    def test_policy_passes_on_the_hardened_settings(self):
+        self.assertEqual(self.violated(), [])
+
+    def test_policy_sees_what_a_dropped_fragment_line_leaves_behind(self):
+        # The audit's M01 to M03: with the line gone from p2.config, the defconfig's value returns.
+        self.assertEqual(self.violated("# CONFIG_LEGACY_IMAGE_FORMAT is not set", "CONFIG_LEGACY_IMAGE_FORMAT=y"),
+                         ["no-legacy-image"])
+        self.assertEqual(self.violated("# CONFIG_ENV_IS_IN_FLASH is not set", "CONFIG_ENV_IS_IN_FLASH=y"),
+                         ["env-not-stored"])
+        self.assertEqual(self.violated("CONFIG_MEASURED_BOOT=y\nCONFIG_MEASURE_DEVICETREE=y\n",
+                                       "# CONFIG_MEASURED_BOOT is not set\n"),
+                         ["measure-devicetree", "measured-boot"])
+
+    def test_policy_covers_the_debix_environment_location(self):
+        # imx8mp_debix_model_a_defconfig keeps the environment in MMC; ENV_IS_NOWHERE alone does not stop it.
+        self.assertEqual(self.violated("# CONFIG_ENV_IS_IN_MMC is not set", "CONFIG_ENV_IS_IN_MMC=y"),
+                         ["env-not-stored"])
+
+    def test_policy_rules_one_by_one(self):
+        for old, new, rule in [
+            ("CONFIG_FIT_SIGNATURE=y", "# CONFIG_FIT_SIGNATURE is not set", "fit-signature"),
+            ("CONFIG_ENV_IS_NOWHERE=y", "# CONFIG_ENV_IS_NOWHERE is not set", "env-nowhere"),
+            ("CONFIG_MEASURE_DEVICETREE=y", "# CONFIG_MEASURE_DEVICETREE is not set", "measure-devicetree"),
+            ("# CONFIG_BOOTSTD_BOOTCOMMAND is not set", "CONFIG_BOOTSTD_BOOTCOMMAND=y", "no-standard-boot"),
+            ("# CONFIG_USE_PREBOOT is not set", "CONFIG_USE_PREBOOT=y", "no-preboot"),
+            ("CONFIG_BOOTDELAY=-2", "CONFIG_BOOTDELAY=2", "no-autoboot-delay"),
+            ("CONFIG_BOOTDELAY=-2\n", "", "no-autoboot-delay"),
+            ('bootm 0x50000000; reset"', 'bootm 0x50000000"', "reset-after-boot-command"),
+            ('bootm 0x50000000; reset"', 'reset; bootm 0x50000000"', "reset-after-boot-command"),
+            ("CONFIG_USE_BOOTCOMMAND=y", "# CONFIG_USE_BOOTCOMMAND is not set", "reset-after-boot-command"),
+        ]:
+            with self.subTest(new=new or f"{old.strip()} removed"):
+                self.assertEqual(self.violated(old, new), [rule])
+
+    def test_each_control_must_break_one_policy_rule_and_test_builds_none(self):
+        self.assertEqual(sorted(bc.POLICY_BROKEN_BY), sorted(bc.CONTROL_FRAGMENTS))
+        self.assertTrue(all(len(rules) == 1 for rules in bc.POLICY_BROKEN_BY.values()))
+        self.assertFalse(set(bc.POLICY_BROKEN_BY) & set(bc.TEST_FRAGMENTS))
+
+    def test_policy_command_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            good = self.write(tmp, "good", self.HARDENED)
+            bad = self.write(tmp, "bad", self.HARDENED.replace("CONFIG_BOOTDELAY=-2", "CONFIG_BOOTDELAY=0"))
+            self.assertEqual(check_config.main(["--policy", str(good)]), 0)
+            with mock.patch("sys.stderr"):
+                self.assertEqual(check_config.main(["--policy", str(bad)]), 1)
+
     def test_each_control_fragment_changes_one_setting(self):
         for variant, frag in bc.ONE_SETTING_BUILDS.items():
             self.assertEqual(len(check_config.expected([frag])), 1, variant)
