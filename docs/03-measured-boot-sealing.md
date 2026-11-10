@@ -2,7 +2,7 @@
 
 U-Boot measures what it boots into four SHA-256 PCRs before running it. The CC's WireGuard private key and its copy of the MAVLink signing key are sealed once, to a policy that the MSS approves with a signature. Each release carries a signed policy covering its predicted PCR values and its anti-rollback epoch. A legitimate update therefore needs no re-sealing, and an older release cannot unseal once a newer epoch is committed (SR-010, SR-010.1 to SR-010.4).
 
-Status: the measurements (§3.1), key release in the approved state, its refusals and the session protection (§3.2 to §3.6) pass in emulation on swtpm ([evidence](../evidence/ve07-ci/20261110-3edd4f2/summary.md)). TC-10 shows that the PCRs U-Boot measures, and the replay of the event log Linux receives, equal the values `tools/predict_pcrs.py` predicts from the release artifacts. TC-05 shows that `p2-unseal` releases both keys in that boot under the policy `tools/approve_policy.py` signed, in a salted, response-encrypted session. The TPM refuses the keys to a boot state with any one measured item changed (TC-06, at `PolicyAuthorize`), to another CC's TPM (TC-07, at `Load`), to an older release after a newer epoch is committed (TC-08, at `PolicyNV`) and to a policy signed by a rogue key (TC-08, at `VerifySignature` or `Unseal`). In the TPM traffic swtpm recorded during an unseal, neither key appears; with the agent's control build, which leaves the response in the clear, both do (TC-09). A real TPM over SPI has not been shown (OI2-01), and the sealing cases still need their hardware runs on it (A2-04). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
+Status: the measurements (§3.1), key release in the approved state, its refusals and the session protection (§3.2 to §3.6) pass in emulation on swtpm ([evidence](../evidence/ve07-ci/20261110-c19a7fa/summary.md)). TC-10 shows that the PCRs U-Boot measures, and the replay of the event log Linux receives, equal the values `tools/predict_pcrs.py` predicts from the release artifacts. TC-05 shows that `p2-unseal` releases both keys in that boot under the policy `tools/approve_policy.py` signed, in a salted, response-encrypted session. The TPM refuses the keys to a boot state with any one measured item changed (TC-06, at `PolicyAuthorize`), to another CC's TPM (TC-07, at `Load`), to an older release after a newer epoch is committed (TC-08, at `PolicyNV`) and to a policy signed by a rogue key (TC-08, at `VerifySignature` or `Unseal`). In the TPM traffic swtpm recorded during an unseal, neither key appears; with the agent's control build, which leaves the response in the clear, both do (TC-09). A real TPM over SPI has not been shown (OI2-01), and the sealing cases still need their hardware runs on it (A2-04). Nothing here is shown working until its test case passes ([§6](06-verification.md)).
 
 ## 3.1 Measurements (SR-010.1)
 
@@ -83,7 +83,7 @@ A discrete TPM answers over SPI. Without parameter encryption, the unsealed key 
 - **salted** to the parent storage key (§3.2), whose name is recorded at provisioning;
 - set to **encrypt the response**, with AES-128 in CFB mode.
 
-This stops passive sniffing. It does not stop an attacker who can reset the TPM alone and replay approved measurements (A2-02); P1 records it as THR-034's residual risk, and it is P5's scope.
+This stops passive sniffing. Both parts are needed. A session with no salt still encrypts, but its key comes only from the two nonces, and those cross the bus: TC-09's second control run decrypts both keys from the recorded traffic of such a session. TC-09 therefore reads from the traffic how each unseal session was started, and fails unless it was salted to the parent. It does not stop an attacker who can reset the TPM alone and replay approved measurements (A2-02); P1 records it as THR-034's residual risk, and it is P5's scope.
 
 ## 3.7 Prototype findings
 
@@ -104,7 +104,7 @@ A throwaway prototype ran on swtpm 0.7.3 and tpm2-tools 5.6 while the design was
 | DD2-09 | `PolicyAuthorize` with an MSS-signed approved policy | Updates without re-sealing; no self-approval | PCR-only policy re-sealed on every update |
 | DD2-10 | NV bit-field epoch in the approved policy | Same policy on every CC; bits can only be set | NV counter: per-device starting value |
 | DD2-11 | K-CC-POL is ECDSA P-256 | Same strength as RSA-3072 [SP800-57]; loads in swtpm 0.7.3 | RSA-3072: rejected by swtpm 0.7.3 |
-| DD2-12 | Salted session with response encryption for unseal | SR-010.4 | Unencrypted session (control run in TC-09) |
+| DD2-12 | Salted session with response encryption for unseal | SR-010.4 | Unencrypted session, and an encrypted session with no salt (the two control runs in TC-09) |
 | DD2-18 | The unseal agent extends every policy PCR after it runs, so the TPM releases the keys at most once per boot (§3.3) | Without it the approved PCR values last for the whole boot, and any later program could unseal again (control run in TC-05) | Extending one PCR: enough for today's policy, but a later policy over fewer PCRs could miss it. A PCR of its own for the boot phase, as systemd does with PCR 11: needs that PCR in every signed policy |
 
 ## 3.9 Open items

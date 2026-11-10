@@ -9,9 +9,9 @@
 #       tc06-bootargs  hardened + cc/uboot/variants/bootargs.config (TC-06 only)
 #   - the pinned Ubuntu arm64 kernel and a busybox initramfs holding the
 #     unseal agent (cc/initramfs/p2-unseal.c) and the TPM libraries it needs,
-#     plus initramfs-ctl-clear with the agent's TC-09 control build, and
-#     initramfs-tc05-again and initramfs-ctl-nocap with the two builds for
-#     TC-05's second-unseal case.
+#     plus initramfs-ctl-clear and initramfs-ctl-unsalted with the agent's two
+#     TC-09 control builds, and initramfs-tc05-again and initramfs-ctl-nocap
+#     with the two builds for TC-05's second-unseal case.
 # Every download is checked against a pinned SHA-256, and every variant's
 # .config is checked against its fragments. Output goes to $OUT.
 set -euo pipefail
@@ -86,8 +86,9 @@ done < "$ROOT/cc/emu/guest.lock"
 cp "$GUEST"/boot/vmlinuz-* "$OUT/Image.gz"
 
 # The unseal agent, built against the pinned arm64 TPM libraries (headers from
-# libtss2-dev). The control build for TC-09 leaves the unseal response in the
-# clear; it boots only in that control run, under its own approved policy.
+# libtss2-dev). TC-09 has two control builds: one leaves the unseal response in
+# the clear, the other encrypts it in a session that is not salted. Each boots
+# only in its control run, under its own approved policy.
 SYSLIB=$GUEST/usr/lib/aarch64-linux-gnu
 agent() { # output, extra compiler flags...
   local out=$1; shift
@@ -97,6 +98,7 @@ agent() { # output, extra compiler flags...
 }
 agent "$OUT/p2-unseal"
 agent "$OUT/p2-unseal-ctl-clear" -DP2_CONTROL_CLEAR_RESPONSE
+agent "$OUT/p2-unseal-ctl-unsalted" -DP2_CONTROL_UNSALTED_SESSION
 # TC-05's second-unseal case: the agent tries to unseal again after the cap,
 # and a control build that also leaves the cap out.
 agent "$OUT/p2-unseal-tc05-again" -DP2_TEST_SECOND_UNSEAL
@@ -132,6 +134,7 @@ initramfs() { # agent, output name
 }
 initramfs "$OUT/p2-unseal" initramfs
 initramfs "$OUT/p2-unseal-ctl-clear" initramfs-ctl-clear
+initramfs "$OUT/p2-unseal-ctl-unsalted" initramfs-ctl-unsalted
 initramfs "$OUT/p2-unseal-tc05-again" initramfs-tc05-again
 initramfs "$OUT/p2-unseal-ctl-nocap" initramfs-ctl-nocap
 

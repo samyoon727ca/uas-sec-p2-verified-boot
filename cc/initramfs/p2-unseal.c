@@ -63,6 +63,19 @@
 #endif
 
 /*
+ * TC-09's second control build (-DP2_CONTROL_UNSALTED_SESSION) starts the
+ * session with no salt. The response is still encrypted, but with a key
+ * derived only from values that cross the TPM interface, so whoever records
+ * the traffic can decrypt it. It shows that TC-09 tells a salted session from
+ * an unsalted one. It boots only in that control run. Never used to boot a CC.
+ */
+#ifdef P2_CONTROL_UNSALTED_SESSION
+#define SESSION_SALT_KEY(rel) ESYS_TR_NONE
+#else
+#define SESSION_SALT_KEY(rel) ((rel)->parent)
+#endif
+
+/*
  * The cap (docs/03 section 3.3). The PCRs are those of the policy, SHA-256
  * PCRs 0, 1, 8 and 9; tests/test_approve_policy.py keeps the two lists equal.
  */
@@ -150,7 +163,7 @@ static int unseal_one(ESYS_CONTEXT *esys, const struct release *rel, const char 
 		goto out;
 
 	step = "StartAuthSession";   /* salted to the parent, so the session key never crosses the bus */
-	rc = Esys_StartAuthSession(esys, rel->parent, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
+	rc = Esys_StartAuthSession(esys, SESSION_SALT_KEY(rel), ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
 				   NULL, TPM2_SE_POLICY, &sym, TPM2_ALG_SHA256, &session);
 	if (rc)
 		goto out;
@@ -355,6 +368,9 @@ int main(int argc, char **argv)
 	setvbuf(stdout, NULL, _IOLBF, 0);
 #ifdef P2_CONTROL_CLEAR_RESPONSE
 	printf("P2-UNSEAL control build: response encryption off\n");
+#endif
+#ifdef P2_CONTROL_UNSALTED_SESSION
+	printf("P2-UNSEAL control build: session not salted\n");
 #endif
 	memset(&rel, 0, sizeof(rel));
 
