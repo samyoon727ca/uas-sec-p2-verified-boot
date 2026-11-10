@@ -74,7 +74,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 - a passed or failed result does not cite the summary of a run of the same event and kind (CI or hardware) that records that result;
 - a requirement or event is left without a test case.
 
-[`tools/check_p1_snapshot.py`](tools/check_p1_snapshot.py) confirms the P1 snapshot matches P1 at the pinned commit. [`tools/check_no_secrets.py`](tools/check_no_secrets.py) fails on PEM-armored private keys (including OpenSSH and TSS), PX4 key files and WireGuard private keys in the tree.
+[`tools/check_p1_snapshot.py`](tools/check_p1_snapshot.py) confirms the P1 snapshot matches P1 at the pinned commit. [`tools/check_evidence.py`](tools/check_evidence.py) fails if any committed evidence file differs from the SHA-256 recorded for it when its run was added. [`tools/check_no_secrets.py`](tools/check_no_secrets.py) fails on PEM-armored private keys (including OpenSSH and TSS), PX4 key files and WireGuard private keys in the tree.
 
 ## Repository map
 
@@ -102,6 +102,7 @@ Traceability is checked on every push. [`tools/validate_trace.py`](tools/validat
 python -m unittest discover -s tests
 python tools/validate_trace.py
 python tools/render_views.py --check
+python tools/check_evidence.py
 python tools/check_no_secrets.py
 python tools/check_p1_snapshot.py   # needs network
 ```
