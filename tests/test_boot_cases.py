@@ -81,6 +81,43 @@ class FdtTest(unittest.TestCase):
             self.assertTrue(off <= at < off + length)
 
 
+class WholeImageTest(unittest.TestCase):
+    """The harness's own check that U-Boot logged the SHA-256 of each whole image (audit A-03)."""
+    KERNEL, RAMDISK = b"K" * 5000, b"R" * 300
+    FIT = make_fdt({"images": {"kernel": {"data": KERNEL}, "ramdisk": {"data": RAMDISK}, "fdt": {"data": b"DTB!"}}})
+
+    def log(self, kernel: bytes, ramdisk: bytes) -> list:
+        ev = bc.predict_pcrs.Event
+        compact = bc.predict_pcrs.EV_COMPACT_HASH
+        return [ev(0, bc.predict_pcrs.EV_S_CRTM_VERSION, "00" * 32, b"U-Boot\0"),
+                ev(8, compact, bc.hashlib.sha256(kernel).hexdigest(), b"linux\0"),
+                ev(9, compact, bc.hashlib.sha256(ramdisk).hexdigest(), b"initrd\0")]
+
+    def ok(self, log: list) -> list[bool]:
+        return [c["ok"] for c in bc.whole_image_checks(self.FIT, log)]
+
+    def test_whole_images_pass(self):
+        self.assertEqual(self.ok(self.log(self.KERNEL, self.RAMDISK)), [True, True])
+
+    def test_partial_kernel_measurement_fails(self):
+        # What the audit's M04b did in U-Boot and in the predictor: only the first 4 KiB.
+        self.assertEqual(self.ok(self.log(self.KERNEL[:4096], self.RAMDISK)), [False, True])
+
+    def test_partial_initramfs_measurement_fails(self):
+        self.assertEqual(self.ok(self.log(self.KERNEL, self.RAMDISK[:-1])), [True, False])
+
+    def test_missing_or_repeated_event_fails(self):
+        log = self.log(self.KERNEL, self.RAMDISK)
+        self.assertEqual(self.ok(log[:1] + log[2:]), [False, True])
+        self.assertEqual(self.ok(log + [log[1]]), [False, True])
+
+    def test_both_ends_of_the_kernel_are_changed(self):
+        tc06 = {c.slot: c for c in bc.CASES if c.tc == "TC-06"}
+        for slot in ("tc06-kernel", "tc06-kernel-tail"):
+            self.assertEqual(tc06[slot].changes_pcr, 8, slot)
+        self.assertTrue(bc.KERNEL_TAIL)
+
+
 class EvaluateTest(unittest.TestCase):
     def case(self, **kw):
         return bc.Case("X", "TC-00", "test", "t", **kw)
