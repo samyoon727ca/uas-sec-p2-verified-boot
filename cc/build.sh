@@ -12,8 +12,10 @@
 #     plus initramfs-ctl-clear and initramfs-ctl-unsalted with the agent's two
 #     TC-09 control builds, and initramfs-tc05-again and initramfs-ctl-nocap
 #     with the two builds for TC-05's second-unseal case.
-# Every download is checked against a pinned SHA-256, and every variant's
-# .config is checked against its fragments. Output goes to $OUT.
+# Every download is checked against a pinned SHA-256, every variant's .config
+# is checked against its fragments, and the hardened and TC-06 builds are
+# checked against the boot-loader policy in cc/uboot/check_config.py.
+# Output goes to $OUT.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$ROOT/build}
@@ -70,6 +72,12 @@ for variant in "${VARIANTS[@]}"; do
     make -s -C "$SRC" O="$B" olddefconfig
     python3 "$ROOT/cc/uboot/check_config.py" "$B/.config" "${frags[@]}"
   fi
+  # Builds that boot like a CC must also meet the boot-loader policy, which
+  # does not depend on the fragments. The stock and control builds break it
+  # on purpose; tests/ve07 checks that each breaks exactly what it should.
+  case $variant in
+    hardened|tc06-*) python3 "$ROOT/cc/uboot/check_config.py" --policy "$B/.config" ;;
+  esac
   make -s -C "$SRC" O="$B" -j"$JOBS"
   cp "$B/u-boot.bin" "$OUT/u-boot-$variant.bin"
   cp "$B/.config" "$OUT/u-boot-$variant.config"

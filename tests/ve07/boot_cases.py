@@ -10,10 +10,11 @@ from the release artifacts:
   TC-03  a FIT with one byte changed in the kernel, initramfs or devicetree
          is refused
   TC-04  boot configuration cannot be changed: the built .config holds the
-         P2 settings; an added unsigned configuration, an unsigned FIT, a
-         FIT signed by a rogue key with the same key name, a legacy uImage
-         and an environment injected into flash are all refused or ignored;
-         keystrokes never reach a console prompt
+         P2 settings and meets the boot-loader policy, a fixed list that does
+         not depend on the fragments; an added unsigned configuration, an
+         unsigned FIT, a FIT signed by a rogue key with the same key name, a
+         legacy uImage and an environment injected into flash are all refused
+         or ignored; keystrokes never reach a console prompt
   TC-05  with the TPM provisioned and the release approved by the MSS
          (tests/ve07/provision.py), p2-unseal in the initramfs unseals both
          keys, and their SHA-256 values equal those of the keys sealed. It
@@ -1050,15 +1051,32 @@ CASES = [
 ]
 
 
+# The boot-loader policy rules (cc/uboot/check_config.py) each weaker build must break. A control build
+# breaks exactly the one its fragment relaxes; stock breaks at least the two its control runs rely on.
+POLICY_BROKEN_BY = {"ctl-bootdelay": ["no-autoboot-delay"], "ctl-noreset": ["reset-after-boot-command"]}
+STOCK_MUST_BREAK = ["env-not-stored", "no-legacy-image"]
+
+
 def check_configs(build: Path) -> list[dict]:
-    """TC-04a: the hardened .config holds every P2 setting, and each control or
-    test build differs from it in exactly the one setting its fragment changes."""
+    """TC-04a: the hardened .config holds every P2 setting and meets the boot-loader policy; each control
+    or test build differs from it in exactly the one setting its fragment changes; and the policy check
+    is seen to fail on the builds that are weaker on purpose."""
     checks = check_config.check(build / "u-boot-hardened.config", FRAGMENTS)
+    checks += check_config.policy(build / "u-boot-hardened.config")
     for variant, frag in ONE_SETTING_BUILDS.items():
         want = sorted(check_config.expected([frag]).values())
         got = check_config.diff(build / f"u-boot-{variant}.config", build / "u-boot-hardened.config")
         checks.append({"kind": "control-diff", "pattern": f"{variant} differs from hardened only by {want}",
                        "ok": got == want, "observed": got})
+        broken = check_config.violated(build / f"u-boot-{variant}.config")
+        want_broken = POLICY_BROKEN_BY.get(variant, [])
+        checks.append({"kind": "policy-control", "ok": broken == want_broken, "observed": broken,
+                       "pattern": f"{variant} breaks " + (f"only the policy rule {want_broken[0]}" if want_broken
+                                                          else "no policy rule")})
+    broken = check_config.violated(build / "u-boot-stock.config")
+    checks.append({"kind": "policy-control", "ok": all(rule in broken for rule in STOCK_MUST_BREAK),
+                   "pattern": f"stock breaks the policy rules its control runs rely on: {STOCK_MUST_BREAK}",
+                   "observed": broken})
     return checks
 
 
@@ -1301,7 +1319,8 @@ def main(argv: list[str] | None = None) -> int:
                            "ok": art.notes["key_required"] in ("conf", "image"),
                            "observed": art.notes["key_required"]})
         runs.append({"id": "TC-04a", "tc": "TC-04", "role": "test",
-                     "title": "Built .config holds every P2 setting; each control build changes exactly one",
+                     "title": "Built .config holds every P2 setting and meets the boot-loader policy; each control "
+                              "build changes exactly one setting",
                      "ok": all(c["ok"] for c in cfg_checks), "checks": cfg_checks, "log": None})
 
         wanted = set(args.only or [c.id for c in CASES]) | {"TC-01"}

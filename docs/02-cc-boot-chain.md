@@ -59,7 +59,7 @@ With `IMX_HAB` set, U-Boot's build signs SPL and `u-boot.itb` with NXP's Code-Si
 | `BOOTCOMMAND` | Read a fixed-size raw FIT slot, `bootm` it, then `reset` | Nothing reaches a prompt: any failure resets. No filesystem is parsed before the signature check (DD2-05) |
 | `MEASURED_BOOT` | on | §3 |
 
-The settings live in [`cc/uboot/p2.config`](../cc/uboot/p2.config), with the board-specific boot command in [`cc/uboot/qemu.config`](../cc/uboot/qemu.config). [`cc/build.sh`](../cc/build.sh) fails if any line is missing from the built `.config`, and TC-04 checks it again. The FIT source is [`cc/fit/cc.its`](../cc/fit/cc.its).
+The settings live in [`cc/uboot/p2.config`](../cc/uboot/p2.config), with the board-specific boot command in [`cc/uboot/qemu.config`](../cc/uboot/qemu.config). [`cc/build.sh`](../cc/build.sh) fails if any line is missing from the built `.config`, and TC-04 checks it again. That comparison is against the fragments, so it cannot notice a line dropped from a fragment. [`cc/uboot/check_config.py`](../cc/uboot/check_config.py) therefore also holds the table above as fixed rules that name no fragment and no board: the three settings that must be on, the three that must be off, no `ENV_IS_IN_*` location of any kind, `BOOTDELAY` `-2`, and a boot command that ends in `reset`. The build refuses a hardened `.config` that breaks one, and TC-04 checks that the stock and control builds break exactly the rules they are meant to. The FIT source is [`cc/fit/cc.its`](../cc/fit/cc.its).
 
 ## 2.4 Emulated chain
 
@@ -69,7 +69,7 @@ CI runs the same U-Boot configuration on QEMU's `virt` machine with swtpm. The d
 |---|---|---|
 | Root of trust | Boot ROM (HAB) and the fused SRK hash verify SPL and `u-boot.itb`; enforced only on a closed chip (§2.2) | None. QEMU loads `u-boot.bin`, trusted by assumption (A2-03) |
 | Where K-CC-OS lives | U-Boot control devicetree inside the HAB-signed `u-boot.itb` | U-Boot control devicetree passed by QEMU with `-dtb`. U-Boot on QEMU takes its devicetree from the prior stage and refuses `OF_SEPARATE` [UBOOT], [UBOOT-QEMU] |
-| Boot-loader configuration | `imx8mp_debix_model_a_defconfig`, `p2.config` and a DEBIX fragment. The defconfig keeps the environment in MMC (`ENV_IS_IN_MMC`) [UBOOT], so the DEBIX fragment must turn it off, and the `.config` check must cover it | `qemu_arm64_defconfig`, `p2.config` and `qemu.config` |
+| Boot-loader configuration | `imx8mp_debix_model_a_defconfig`, `p2.config` and a DEBIX fragment. The defconfig keeps the environment in MMC (`ENV_IS_IN_MMC`) [UBOOT], so the DEBIX fragment must turn it off. The policy check (§2.3) refuses any build with an `ENV_IS_IN_*` location on, and TC-04 on the DEBIX injects its environment into the MMC, not into flash | `qemu_arm64_defconfig`, `p2.config` and `qemu.config` |
 | TPM | SPI TPM on ECSPI2 through `MXC_SPI` | swtpm through `tpm-tis-device` and U-Boot's `TPM2_MMIO` [QEMU] |
 | FIT storage | Raw area on the SD card | Raw virtio disk |
 | CC data: sealed objects and signed policy (§3.2 of [docs/03](03-measured-boot-sealing.md)) | A partition on the SD card (layout not yet defined) | Tar on a second virtio disk. It is declared before the boot slot on the QEMU command line; declared after it, U-Boot's `virtio 0` becomes the data disk |
