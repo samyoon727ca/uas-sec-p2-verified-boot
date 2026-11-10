@@ -6,7 +6,7 @@ Nothing in Steps 1 to 4 changes the board permanently. The fuse steps that do (d
 
 | Step | What it does | Needs | Status |
 |---|---|---|---|
-| [1](#step-1-first-boot-with-the-serial-console) | First boot of the vendor image, with the serial console on the PC | Board, Debug Probe, card A | Ready |
+| [1](#step-1-first-boot-with-the-serial-console) | First boot of the vendor image, with the serial console on the PC | Board, Debug Probe, card A | Started 2026-10-24; wiring and boot (1.4 to 1.6) not yet recorded |
 | 2 | USB recovery check and a read-only fuse read | Step 1, USB-A to USB-C cable, NXP `uuu` | Not written yet |
 | 3 | 3.3 V supply for the TPM, measured before the TPM goes on | Step 2, breadboard, regulator, meter | Not written yet |
 | 4 | Check that the TPM answers on ECSPI2 | Step 3, the TPM (due about 2026-11-13) | Waiting for the TPM |
@@ -46,16 +46,21 @@ PC software: [PuTTY](https://www.chiark.greenend.org.uk/~sgtatham/putty/) and [b
 
 Lay the board flat with the Ethernet and USB ports toward you. Every diagram here uses that view.
 - **Left edge:** two USB-C ports. The upper one is **PWR** (power in) and the lower one is **OTG** (data to the PC).
-- **Top edge:** the ON/OFF and RST buttons, and the place for the **SW1** boot-mode switch. SW1 is not fitted on this board.
-- **Right edge:** the 40-pin header **J2**. Pin 1 is at the end nearest the Ethernet jack, and the odd pins run along the board edge. On the underside, pin 1 has a square pad.
+- **Top edge:** the ON/OFF and RST buttons, and the place for the **SW1** boot-mode switch. SW1 is not fitted on this board. The silk marks the buttons `ONOFF` and `RST`; the buttons themselves sit on the underside and are pressed from the edge.
+- **Right edge:** the 40-pin header **J2**, the two columns of pins nearest the board edge. Pin 1 is at the end nearest the Ethernet jack, and the odd pins run along the board edge. On the underside, pin 1 has a square pad.
+- **Beside J2, toward the SoC:** two more columns of pins at the same pitch. **They are not J2.** They are two surface-mount headers end to end: **J10** (LVDS display output, 30 pins) and **J6** (second Ethernet, 12 pins). Nothing in this manual connects to them.
 
-The positions are drawn from the DEBIX Model A mechanical drawing. Step 1 checks them on the board with photos.
+![Photo of the right edge from above: J2 is the pair of pin columns at the board edge, with 39 and 40 printed at its far end; J10 and J6 are the pair of columns beside it](img/j2-photo.jpg)
+
+To tell them apart on the board: the silk prints `40` and `39` at the far end of J2, and `30` and `29` at the far end of J10. From the underside only J2 shows, because its pins are soldered through the board and J10 and J6 are not.
+
+The positions are drawn from the DEBIX Model A mechanical drawing. They were checked against photos of this board on 2026-11-09 ([bench log](log.md)).
 
 ## The J2 header
 
 ![J2 pin map: all 40 pins with signals; pins 6 and 8 are 5 V, 10 and 12 are to be left empty, and housings A to E mark the jumper positions](img/j2-map.svg)
 
-J2 is two rows of 20 pins at **2.0 mm pitch**, smaller than a Raspberry Pi header. It has **no 3.3 V pin**, so Step 3 adds a regulator. The signals come from the DEBIX Model A schematic V05, and the ECSPI2 pins agree with the [DEBIX GPIO manual](https://debix.io/Software/blog_info/id/60.html). The SPI and UART pins run at 3.3 V, so no level shifter is needed.
+J2 is two rows of 20 pins at **2.0 mm pitch**, smaller than a Raspberry Pi header. Count pins on J2 only, never on J10 or J6 beside it ([Know your board](#know-your-board)). It has **no 3.3 V pin**, so Step 3 adds a regulator. The signals come from the DEBIX Model A schematic V05, and the ECSPI2 pins agree with the [DEBIX GPIO manual](https://debix.io/Software/blog_info/id/60.html). The SPI and UART pins run at 3.3 V, so no level shifter is needed.
 
 The pins this manual uses:
 
@@ -118,7 +123,7 @@ Working with them:
 ### 1.3 Look at the board and set SW1 (unpowered)
 
 1. **Photo:** the whole board, top side, then underside, in good light.
-2. Find J2's pin 1: the square pad on the underside at the Ethernet end of J2. **Photo:** a close-up.
+2. Find J2 from the top: the two columns of pins at the board edge, with `40` and `39` printed at the far end. The columns beside them, with `30` and `29`, are J10. Then find J2's pin 1: the square pad on the underside at the Ethernet end of J2, in the column at the board edge. **Photo:** a close-up.
 3. Find SW1's place on the top edge, right of the RST button. **On this board SW1 is not fitted.** Only its footprint is there, with the legend that gives a two-digit code for each boot source: USB, eMMC and TF (microSD). There is nothing to set: with a card in, the board should boot from it, and this step confirms that. **Photo:** a close-up of the empty footprint, with the legend readable.
 4. If your board has SW1 fitted, set it to the code the legend gives for **TF**. DEBIX's manual gives it as `11`. On a DIP switch a 1 usually means ON; check the ON marking on the switch body. **Photo:** SW1 before and after.
 
@@ -127,7 +132,7 @@ Working with them:
 ![Step 1 wiring: PC to Debug Probe over USB; the probe's U-port lead goes through #1919 wires to J2: orange to pin 9, yellow to pin 11, black to pin 39; housing A covers pins 9 and 11, housing B covers 39 and 40 with pin 40's wire spare](img/step1-console.svg)
 
 1. Peel two pairs off the #1919 ribbon.
-2. **Housing A:** push the first housing onto **pins 9 and 11**. They sit in the outer row at the board edge, the 5th and 6th pins from the Ethernet end. Pins 10 and 12 beside them stay bare.
+2. **Housing A:** push the first housing onto **pins 9 and 11**. They sit in J2's outer row at the board edge, the 5th and 6th pins from the Ethernet end. Pins 10 and 12 beside them, in J2's inner row, stay bare.
 3. Follow the two wires to their 2.54 mm ends. Flag the one from pin 9 with **9** and the one from pin 11 with **11**.
 4. **Housing B:** push the second housing across **pins 39 and 40**, the last pair at the far end from the Ethernet jack. Flag its wires **39** and **40**.
 5. Plug the JST-to-male lead into the probe's **U** port. Nothing goes in the D port.
@@ -139,6 +144,7 @@ Working with them:
 
 Check before any power goes on:
 - [ ] Pins 6, 8, 10 and 12 are bare.
+- [ ] Nothing is on J10 or J6, the pin columns beside J2.
 - [ ] Housing A is fully seated on 9 and 11; housing B on 39 and 40.
 - [ ] Orange goes to 9, yellow to 11 and black to 39.
 - [ ] **Photo:** a close-up of the wiring where the pins can be counted.
@@ -193,7 +199,7 @@ Each step will be written in this format before it is run: recovery check and fu
 
 ## Sources
 
-- DEBIX Model A schematic V05 and mechanical drawing, from Polyhex. They are kept outside the repo with SHA-256 `d8e6a773…b062b506` (schematic) and `2777cd11…08349358` (drawing).
+- DEBIX Model A schematic V05 and mechanical drawing, from Polyhex. The schematic names J10 (dual LVDS output, `SMT_2x15_2P0`) and J6 (second Ethernet, `SMT_2x6_2P0`), and gives SW1's boot-mode table. They are kept outside the repo with SHA-256 `d8e6a773…b062b506` (schematic) and `2777cd11…08349358` (drawing).
 - [DEBIX GPIO manual](https://debix.io/Software/blog_info/id/60.html), for J2 functions.
 - [DEBIX OS images](https://debix.io/Software/downloadn.html), read on 2026-10-24: image name, MD5 and default login.
 - [Adafruit #1919](https://www.adafruit.com/product/1919): each 2.0 mm housing holds two wires.
