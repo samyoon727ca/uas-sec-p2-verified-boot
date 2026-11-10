@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="540" viewBox="0 0 1000 540" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<title>Step 1 wiring: Debug Probe UART to DEBIX J2</title>
+<desc>The PC connects to the Debug Probe over USB. The probe&#x27;s U port lead plugs into three #1919 wires: orange to J2 pin 9, yellow to pin 11, black to pin 39. The housing on 39 and 40 leaves pin 40&#x27;s wire spare.</desc>
+<rect x="0.5" y="0.5" width="999" height="539" rx="8" fill="#ffffff" stroke="#d0d7de"/>
+<rect x="40" y="40" width="130" height="80" rx="4" fill="#f6f8fa" stroke="#1f2328" stroke-width="1.5"/>
+<rect x="48" y="48" width="114" height="64" rx="2" fill="#24292f"/>
+<text x="56" y="72" font-size="12" text-anchor="start" fill="#ffffff" font-weight="600" font-family="Consolas, Menlo, monospace">PuTTY</text>
+<text x="56" y="90" font-size="11" text-anchor="start" fill="#d0d7de" font-family="Consolas, Menlo, monospace">COMx 115200</text>
+<path d="M 28,120 L 182,120 L 192,132 L 18,132 Z" fill="#f6f8fa" stroke="#1f2328" stroke-width="1.5"/>
+<text x="206" y="72" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">PC</text>
+<text x="206" y="90" font-size="12" text-anchor="start" fill="#57606a">PuTTY on the</text>
+<text x="206" y="106" font-size="12" text-anchor="start" fill="#57606a">probe&#x27;s COM port</text>
+<path d="M 40,132 C 30,210 30,295 60,295" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="7" stroke-linecap="round"/>
+<path d="M 40,132 C 30,210 30,295 60,295" fill="none" stroke="#57606a" stroke-width="5" stroke-linecap="round"/>
+<text x="46" y="215" font-size="12" text-anchor="start" fill="#57606a">USB cable</text>
+<rect x="60" y="260" width="150" height="70" rx="10" fill="#f6f8fa" stroke="#1f2328" stroke-width="1.5"/>
+<text x="130" y="290" font-size="12" text-anchor="middle" fill="#57606a">Raspberry Pi</text>
+<text x="130" y="307" font-size="13" text-anchor="middle" fill="#1f2328" font-weight="600">Debug Probe</text>
+<rect x="206" y="272" width="16" height="16" rx="2" fill="#1f2328"/>
+<text x="200" y="285" font-size="13" text-anchor="end" fill="#1f2328" font-weight="700">U</text>
+<rect x="206" y="304" width="16" height="16" rx="2" fill="#8c959f"/>
+<text x="200" y="317" font-size="13" text-anchor="end" fill="#8c959f" font-weight="700">D</text>
+<text x="214" y="344" font-size="11" text-anchor="start" fill="#8c959f">D: not used</text>
+<path d="M 262,277 C 300,277 290,150 330,150" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round"/>
+<path d="M 262,277 C 300,277 290,150 330,150" fill="none" stroke="#1f2328" stroke-width="4" stroke-linecap="round"/>
+<path d="M 262,280 C 300,280 290,340 330,340" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round"/>
+<path d="M 262,280 C 300,280 290,340 330,340" fill="none" stroke="#f2c94c" stroke-width="4" stroke-linecap="round"/>
+<path d="M 262,283 C 300,283 290,360 330,360" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round"/>
+<path d="M 262,283 C 300,283 290,360 330,360" fill="none" stroke="#e8590c" stroke-width="4" stroke-linecap="round"/>
+<rect x="222" y="273" width="42" height="14" rx="3" fill="#57606a"/>
+<text x="135" y="250" font-size="11" text-anchor="middle" fill="#57606a">U port: JST-to-male lead</text>
+<rect x="330" y="145" width="20" height="10" rx="1" fill="#57606a"/>
+<rect x="350" y="148.5" width="8" height="3" fill="#bf8700"/>
+<rect x="356" y="144" width="28" height="12" rx="1" fill="#1f2328"/>
+<rect x="330" y="335" width="20" height="10" rx="1" fill="#57606a"/>
+<rect x="350" y="338.5" width="8" height="3" fill="#bf8700"/>
+<rect x="356" y="334" width="28" height="12" rx="1" fill="#1f2328"/>
+<rect x="330" y="355" width="20" height="10" rx="1" fill="#57606a"/>
+<rect x="350" y="358.5" width="8" height="3" fill="#bf8700"/>
+<rect x="356" y="354" width="28" height="12" rx="1" fill="#1f2328"/>
+<text x="357" y="120" font-size="11" text-anchor="middle" fill="#57606a">male pin into</text>
+<text x="357" y="134" font-size="11" text-anchor="middle" fill="#57606a">#1919 socket</text>
+<rect x="640" y="30" width="160" height="440" fill="#eef3ee"/>
+<line x1="640" y1="30" x2="640" y2="470" stroke="#2f4f3a" stroke-dasharray="5 4"/>
+<line x1="800" y1="30" x2="800" y2="470" stroke="#2f4f3a" stroke-width="3"/>
+<text x="720" y="18" font-size="12" text-anchor="middle" fill="#57606a">DEBIX right edge, top view</text>
+<text x="720" y="488" font-size="12" text-anchor="middle" fill="#57606a">Ethernet end ↓</text>
+<rect x="738" y="48" width="58" height="404" rx="3" fill="#f6f8fa" stroke="#6e7781"/>
+<path d="M 384,340 L 690,340 C 715,340 715,348.0 740,348.0 L 768,348.0 L 782,340" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="4.5" stroke-linecap="round"/>
+<path d="M 384,340 L 690,340 C 715,340 715,348.0 740,348.0 L 768,348.0 L 782,340" fill="none" stroke="#8c959f" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M 384,360 L 690,360 C 715,360 715,352.0 740,352.0 L 768,352.0 L 782,360" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="4.5" stroke-linecap="round"/>
+<path d="M 384,360 L 690,360 C 715,360 715,352.0 740,352.0 L 768,352.0 L 782,360" fill="none" stroke="#8c959f" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M 384,150 C 520,150 640,90 782,60" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="5" stroke-linecap="round"/>
+<path d="M 384,150 C 520,150 640,90 782,60" fill="none" stroke="#8c959f" stroke-width="3" stroke-linecap="round"/>
+<path d="M 752,60 C 752,30 640,36 540,36" fill="none" stroke="#1f2328" stroke-opacity="0.55" stroke-width="5" stroke-linecap="round"/>
+<path d="M 752,60 C 752,30 640,36 540,36" fill="none" stroke="#8c959f" stroke-width="3" stroke-linecap="round"/>
+<rect x="512" y="30" width="28" height="12" rx="1" fill="#1f2328"/>
+<rect x="464" y="25" width="42" height="22" rx="2" fill="#fff8c5" stroke="#9a6700"/>
+<text x="485" y="40" font-size="11" text-anchor="middle" fill="#1f2328" font-weight="600">spare</text>
+<text x="464" y="64" font-size="11" text-anchor="start" fill="#57606a">pin 40&#x27;s wire: tape the end</text>
+<text x="560" y="388" font-size="11" text-anchor="middle" fill="#57606a">#1919 pair to housing A</text>
+<text x="520" y="176" font-size="11" text-anchor="middle" fill="#57606a">#1919 pair to housing B</text>
+<rect x="776" y="434" width="12" height="12" fill="#afb8c1" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="752" cy="440" r="6" fill="#afb8c1" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="782" cy="420" r="6" fill="#afb8c1" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="752" cy="420" r="6" fill="#afb8c1" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="782" cy="400" r="6" fill="#1f2328" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="752" cy="400" r="6" fill="#cf222e" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="782" cy="380" r="6" fill="#1f2328" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="752" cy="380" r="6" fill="#cf222e" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="782" cy="360" r="6" fill="#e8590c" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="752" cy="360" r="6" fill="#d4a72c" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="782" cy="340" r="6" fill="#f2c94c" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="752" cy="340" r="6" fill="#d4a72c" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="782" cy="320" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="320" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="300" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="300" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="280" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="280" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="260" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="260" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="240" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="240" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="220" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="220" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="200" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="200" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="180" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="180" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="160" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="160" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="140" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="140" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="120" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="120" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="100" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="100" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="80" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="752" cy="80" r="6" fill="#ffffff" stroke="#8c959f" stroke-width="1.2"/>
+<circle cx="782" cy="60" r="6" fill="#1f2328" stroke="#1f2328" stroke-width="1.2"/>
+<circle cx="752" cy="60" r="6" fill="#1f2328" stroke="#1f2328" stroke-width="1.2"/>
+<rect x="770" y="328" width="24" height="44" rx="4" fill="#1f2328" fill-opacity="0.18" stroke="#1f2328" stroke-width="2.5"/>
+<rect x="740" y="48" width="54" height="24" rx="4" fill="#1f2328" fill-opacity="0.18" stroke="#1f2328" stroke-width="2.5"/>
+<text x="726" y="82" font-size="12" text-anchor="end" fill="#0969da" font-weight="700">B</text>
+<text x="732" y="326" font-size="12" text-anchor="end" fill="#0969da" font-weight="700">A</text>
+<text x="812" y="56" font-size="12" text-anchor="start" fill="#1f2328" font-weight="700" font-family="Consolas, Menlo, monospace">39</text>
+<text x="838" y="56" font-size="12" text-anchor="start" fill="#1f2328">GND ← black</text>
+<text x="812" y="74" font-size="12" text-anchor="start" fill="#57606a" font-weight="700" font-family="Consolas, Menlo, monospace">40</text>
+<text x="838" y="74" font-size="12" text-anchor="start" fill="#57606a">GND: spare wire</text>
+<text x="812" y="318" font-size="12" text-anchor="start" fill="#9a6700" font-weight="700" font-family="Consolas, Menlo, monospace">10, 12</text>
+<text x="874" y="318" font-size="12" text-anchor="start" fill="#9a6700">leave empty</text>
+<text x="812" y="344" font-size="12" text-anchor="start" fill="#1f2328" font-weight="700" font-family="Consolas, Menlo, monospace">11</text>
+<text x="838" y="344" font-size="12" text-anchor="start" fill="#1f2328">UART2_TXD ← yellow</text>
+<text x="812" y="364" font-size="12" text-anchor="start" fill="#1f2328" font-weight="700" font-family="Consolas, Menlo, monospace">9</text>
+<text x="829" y="364" font-size="12" text-anchor="start" fill="#1f2328">UART2_RXD ← orange</text>
+<text x="812" y="394" font-size="12" text-anchor="start" fill="#cf222e" font-weight="700" font-family="Consolas, Menlo, monospace">6, 8</text>
+<text x="856" y="394" font-size="12" text-anchor="start" fill="#cf222e">5 V: nothing here</text>
+<rect x="30" y="414" width="590" height="108" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="48" y="440" font-size="13" text-anchor="start" fill="#1f2328" font-weight="600">Power goes on last</text>
+<text x="48" y="462" font-size="12" text-anchor="start" fill="#1f2328">Card A goes in the microSD slot first. Nothing connects to OTG or to the probe&#x27;s D port.</text>
+<text x="48" y="482" font-size="12" text-anchor="start" fill="#1f2328">Then plug the 5.1 V 3 A USB-C supply into the PWR port on the board&#x27;s left edge.</text>
+<text x="48" y="502" font-size="12" text-anchor="start" fill="#1f2328">Power off (unplug PWR) before you touch any wire.</text>
+</svg>
