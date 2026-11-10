@@ -30,7 +30,7 @@ PCRs from 10 up change at runtime (IMA, for example) and are not in the policy. 
 | Contents | CC WireGuard private key; CC copy of the MAVLink signing key (P1 DS-CC-CRED) |
 | Parent | ECC P-256 storage key in the owner hierarchy, persistent at `0x81000001`. It also salts the unseal session (§3.6). Its name is recorded at provisioning, and the unseal agent refuses any other key |
 | Attributes | `fixedtpm`, `fixedparent`, `adminwithpolicy`; **no** `userwithauth`, so only the policy releases them |
-| Auth policy | `TPM2_PolicyAuthorize(K-CC-POL, policyRef)` with `policyRef` = `p2/cc-keys`. `policyRef` names this use, so a policy the MSS signs for another purpose cannot be reused here |
+| Auth policy | `TPM2_PolicyAuthorize(K-CC-POL, policyRef)` with `policyRef` = `p2/cc-keys`. `policyRef` names this use, so a policy the MSS signs for another purpose cannot be reused here: the agent refuses this release's policy when K-CC-POL signed it under another `policyRef` or under none (TC-08) |
 | Epoch index | `TPM_NT_BITS` NV index `0x01000001`, written once at provisioning with no bits set. `ownerwrite`, `authread` with an empty authValue, `no_da` (§3.4) |
 | Where the blob lives | CC storage, with the K-CC-POL public key, the parent's name and each release's signed policy. None of it is secret, and the sealed objects are useless away from their TPM (TC-07). Emulated: a tar on a second virtio disk ([§2.4](02-cc-boot-chain.md#24-emulated-chain)) |
 

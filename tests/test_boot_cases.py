@@ -118,6 +118,20 @@ class WholeImageTest(unittest.TestCase):
         self.assertTrue(bc.KERNEL_TAIL)
 
 
+class PolicyRefTest(unittest.TestCase):
+    """TC-08e and TC-08f mean something only while this use has a policyRef of its own (audit A-05)."""
+
+    def test_this_use_has_its_own_policy_ref(self):
+        self.assertTrue(bc.approve_policy.POLICY_REF)
+        self.assertNotEqual(bc.approve_policy.POLICY_REF, bc.OTHER_POLICY_REF)
+
+    def test_both_wrong_use_policies_must_be_refused(self):
+        cases = {c.data: c for c in bc.CASES if c.tc == "TC-08"}
+        for data in ("cc-r2-other-ref", "cc-r2-no-ref"):
+            self.assertIn(bc.UNSEAL_ANY_OK, cases[data].forbid, data)
+            self.assertEqual(cases[data].slot, "r2", data)
+
+
 class EvaluateTest(unittest.TestCase):
     def case(self, **kw):
         return bc.Case("X", "TC-00", "test", "t", **kw)
