@@ -23,6 +23,8 @@ GitHub deletes an artifact, and its run's logs, 90 days after the run. Until the
 
 | Run folder | Actions run | Artifact ID | Digest of the artifact zip, as GitHub reports it | GitHub deletes it |
 |---|---|---|---|---|
+| `ve07-ci/20261110-ec5ea72` | 42769477229 | 13742015765 | `sha256:20b443377c178daa2ba13549957ff6e89deaa6db47e680a00ab83b8ddadba43e` | 2027-02-08 |
+| `ve07-ci/20261110-acca55a` | 42756118017 | 13735767704 | `sha256:d42e398bf3f799e807f35956d54203622baed5e7b5bb32040bdeb6e6a07317aa` | 2027-02-08 |
 | `ve08-ci/20261013-aac4299` | 38351585198 | 11790723761 | `sha256:9dcaa56deabbc280d28344d1f596d91cf95f0f7117487f8a00fae08f53b47ac0` | 2027-01-11 |
 | `ve07-ci/20261013-d9149f6` | 38349138261 | 11791035439 | `sha256:953755016b7791871b6c0cf7b58d72fa36ac694c9f686b5bb292e798e71a77ab` | 2027-01-11 |
 | `ve07-ci/20261013-cf38809` | 38347668352 | 11788788970 | `sha256:aca26b914abdddf0733d5bf1d7caede5e590962f3e0e2dea8116938a54e7a550` | 2027-01-11 |
@@ -30,7 +32,7 @@ GitHub deletes an artifact, and its run's logs, 90 days after the run. Until the
 | `ve07-ci/20261013-1c9867e` | 38340963718 | 11787081162 | `sha256:fde0587dd310ba5362a97f781dc0e287c5445a586d66acf4cbcab4e44b47f6c7` | 2027-01-11 |
 | `ve07-ci/20261011-7bc523b` | 38120187352 | 11695296310 | `sha256:3301a9dda00161d2826dcd835e2adfaf63c462c841ef803daf2ac87d841fec2e` | 2027-01-09 |
 
-Checked on 2026-11-09: each artifact was downloaded again, its SHA-256 equalled the digest above, and it unpacked to exactly the files of its folder.
+Checked on 2026-11-09 for the six October runs, and on 2026-11-10 for the two runs of that day as each was committed: the artifact was downloaded, its SHA-256 equalled the digest above, and it unpacked to exactly the files of its folder.
 
 To repeat the check while an artifact exists:
 
