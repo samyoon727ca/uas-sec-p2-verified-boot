@@ -23,7 +23,8 @@ from the release artifacts:
   TC-06  chains that each differ in one measured item (boot-loader version,
          kernel command line, devicetree, kernel, initramfs), all built and
          signed like a release, boot but cannot unseal: no approved policy
-         covers them
+         covers them. The kernel is changed once at each end of the stored
+         image, so a measurement of only part of it lets one chain unseal
   TC-07  this CC's data on a second CC's TPM cannot unseal: the sealed
          objects do not load there, even with the parent name fixed up
   TC-08  after an update to epoch 1 is committed, the release-1 chain with
@@ -34,7 +35,9 @@ from the release artifacts:
          leaves the unseal response in the clear, both keys do
   TC-10  tools/predict_pcrs.py predicts PCRs 0, 1, 8 and 9 from the signed
          FIT and the U-Boot binary; the PCRs the initramfs reads, and the
-         replay of the event log Linux received, equal the prediction
+         replay of the event log Linux received, equal the prediction. The
+         digests logged for the kernel and the initramfs also equal the
+         SHA-256 of each whole image, computed without the predictor
 
 Each attack that would succeed against a weaker setup has a control run that
 shows it succeeding there: the environment and legacy-image cases on stock
@@ -92,6 +95,9 @@ FLASH_BYTES = 64 * 1024 * 1024           # QEMU virt flash bank size
 ENV_SIZE = 0x40000                       # stock qemu_arm64 CONFIG_ENV_SIZE (flash1 offset 0)
 EVENT_LOG = (0x60000000, 0x10000)        # TPM event-log region handed to Linux
 CASE_TIMEOUT = 240
+KERNEL_TAIL = b"P2\0\0"                  # TC-06f: appended to the stored kernel, after its gzip stream
+# What U-Boot logs for the two images it measures whole, as stored in the FIT: (PCR, event data, FIT image node).
+WHOLE_IMAGE_EVENTS = [(8, b"linux\0", "kernel"), (9, b"initrd\0", "ramdisk")]
 KEY_TICK = 0.2                           # seconds between keystrokes
 MIN_KEYS = 5                             # a keystroke case must type at least this many
 
@@ -638,9 +644,15 @@ class Artifacts:
 
         # TC-06: one measured item changed in a chain built and signed like a release. The two U-Boot
         # test builds (another version string, another command line) come from cc/build.sh.
-        kernel = bytearray((self.work / "Image.gz").read_bytes())
-        kernel[4:8] = struct.pack("<I", 1)   # gzip MTIME: the same kernel, other bytes
-        self.signed_variant("tc06-kernel", **{"Image.gz": bytes(kernel)})
+        # The kernel is changed twice, once at each end of the stored image, so that a measurement
+        # covering only part of the image leaves one of the two chains with the approved PCR 8.
+        # Both still decompress to the same kernel: gunzip ignores MTIME and stops at the end of
+        # the gzip stream.
+        kernel = (self.work / "Image.gz").read_bytes()
+        head = bytearray(kernel)
+        head[4:8] = struct.pack("<I", 1)   # gzip MTIME, bytes 4 to 7
+        self.signed_variant("tc06-kernel", **{"Image.gz": bytes(head)})
+        self.signed_variant("tc06-kernel-tail", **{"Image.gz": kernel + KERNEL_TAIL})
         extra = gzip.compress(cpio_newc({"p2-tc06": b"initramfs\n"}), mtime=0)
         self.signed_variant("tc06-initramfs", **{"initramfs.cpio.gz": initrd + extra})
         dtb = self.work / "kernel-tc06.dtb"
@@ -648,8 +660,9 @@ class Artifacts:
         run(["fdtput", "-t", "s", str(dtb), "/chosen", "p2-tc06", "devicetree"])
         self.signed_variant("tc06-devicetree", **{"kernel.dtb": dtb.read_bytes()})
         self.notes["tc06"] = ("tc06-version and tc06-bootargs: U-Boot test builds; tc06-kernel: gzip MTIME of "
-                              "Image.gz set to 1; tc06-initramfs: a cpio member p2-tc06 appended; tc06-devicetree: "
-                              "/chosen/p2-tc06 added. Each FIT signed with K-CC-OS")
+                              f"Image.gz set to 1; tc06-kernel-tail: {len(KERNEL_TAIL)} bytes appended to Image.gz "
+                              "after the gzip stream; tc06-initramfs: a cpio member p2-tc06 appended; "
+                              "tc06-devicetree: /chosen/p2-tc06 added. Each FIT signed with K-CC-OS")
 
         # TC-07: another CC's TPM, and this CC's data with its parent name changed to that TPM's.
         self.tpm_states["second"], second_name = provision.second_cc(self.work, self.short)
@@ -816,13 +829,17 @@ CASES = [
          tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
          changes_pcr=1, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
          forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
-    Case("TC-06d", "TC-06", "test", "Kernel image with other bytes, re-signed (PCR 8)", slot="tc06-kernel",
-         tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
+    Case("TC-06d", "TC-06", "test", "Kernel image with other bytes at its start, re-signed (PCR 8)",
+         slot="tc06-kernel", tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
          changes_pcr=8, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
          forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
     Case("TC-06e", "TC-06", "test", "Initramfs with one more file, re-signed (PCR 9)", slot="tc06-initramfs",
          tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
          changes_pcr=9, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
+         forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
+    Case("TC-06f", "TC-06", "test", "Kernel image with other bytes at its end, re-signed (PCR 8)",
+         slot="tc06-kernel-tail", tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
+         changes_pcr=8, expect=[VERIFIED, BOOTED, *refused("PolicyAuthorize")],
          forbid=[*NOT_UNSEALED, ENV_MARK, *CONSOLE]),
     # TC-07: this CC's storage moved to another CC.
     Case("TC-07a", "TC-07", "test", "This CC's data on a second CC's TPM", tpm="second", data="cc", pcrs=True,
@@ -897,8 +914,27 @@ def evaluate(case: Case, text: str, reason: str, keys_sent: int = 0,
     return checks
 
 
-def pcr_checks(pred: predict_pcrs.Prediction, text: str) -> list[dict]:
-    """TC-10: the PCRs and event log the initramfs printed, against the prediction."""
+def whole_image_checks(fit: bytes, log: list[predict_pcrs.Event]) -> list[dict]:
+    """The digest U-Boot logged for the kernel and for the initramfs is the SHA-256 of that whole image.
+
+    Computed here from the FIT's bytes with fdt_prop() and hashlib, without the predictor, so a
+    mistake shared by U-Boot and tools/predict_pcrs.py about how much of an image is measured
+    cannot pass as agreement between the two.
+    """
+    checks = []
+    for pcr, data, node in WHOLE_IMAGE_EVENTS:
+        off, length = fdt_prop(fit, f"/images/{node}", "data")
+        want = hashlib.sha256(fit[off:off + length]).hexdigest()
+        got = [e.digest for e in log if e.pcr == pcr and e.type == predict_pcrs.EV_COMPACT_HASH and e.data == data]
+        checks.append({"kind": "whole-image",
+                       "pattern": f"PCR {pcr}: the one logged {data.rstrip(bytes(1)).decode()} digest is the SHA-256 "
+                                  f"of all {length} bytes of /images/{node}/data",
+                       "ok": got == [want], "observed": got})
+    return checks
+
+
+def pcr_checks(pred: predict_pcrs.Prediction, text: str, fit: bytes | None = None) -> list[dict]:
+    """TC-10: the PCRs and event log the initramfs printed, against the prediction and, given the FIT, its images."""
     text = clean(text)
     measured = predict_pcrs.parse_measured(text)
     checks = [{"kind": "measured", "pattern": "every policy PCR moved from its reset value (all zeros)",
@@ -911,6 +947,8 @@ def pcr_checks(pred: predict_pcrs.Prediction, text: str) -> list[dict]:
         checks.append({"kind": "eventlog", "pattern": "the initramfs printed a TCG2 event log", "ok": False,
                        "observed": f"{type(exc).__name__}: {exc}" if m else "no event log in the console output"})
         log = None
+    if fit is not None and log is not None:
+        checks += whole_image_checks(fit, log)
     return checks + predict_pcrs.compare(pred, log, measured)
 
 
@@ -1109,7 +1147,8 @@ def main(argv: list[str] | None = None) -> int:
             (out / log).write_text(res.text)
             checks = evaluate(case, res.text, res.reason, res.keys_sent, res.key_marks)
             if case.pcrs:
-                checks += pcr_checks(art.prediction_for(case.uboot, case.slot), res.text)
+                checks += pcr_checks(art.prediction_for(case.uboot, case.slot), res.text,
+                                     art.fits[case.slot].read_bytes())
             if case.changes_pcr is not None:
                 checks.append(moved_pcrs(art.prediction_for(case.uboot, case.slot), art.prediction, case.changes_pcr))
             if case.unseal:
