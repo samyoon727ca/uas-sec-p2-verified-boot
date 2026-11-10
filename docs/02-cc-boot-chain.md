@@ -81,7 +81,7 @@ CI runs the same U-Boot configuration on QEMU's `virt` machine with swtpm. The d
 
 Neither stage provides it in P2. U-Boot `v2026.07` has no FIT anti-rollback option [UBOOT], and its HABv4 guides describe no image-version check [UBOOT-HAB].
 
-P2 enforces anti-rollback at **key release**: an older signed chain may boot, but cannot unseal the keys (SR-010.3, §3.4). Without the WireGuard key it cannot reach the GCS. Without the MAVLink signing key the FC rejects everything it sends. So a rolled-back CC cannot join C2, and the vehicle falls back to the data-link-loss failsafe (P1 DD-05). This holds while the TPM's epoch index keeps its bits. Nothing in P2 yet stops code with TPM access from removing the index and defining it again empty ([§6.6](06-verification.md#66-limits-of-the-ci-evidence)).
+P2 enforces anti-rollback at **key release**: an older signed chain may boot, but cannot unseal the keys (SR-010.3, §3.4). Without the WireGuard key it cannot reach the GCS. Without the MAVLink signing key the FC rejects everything it sends. So a rolled-back CC cannot join C2, and the vehicle falls back to the data-link-loss failsafe (P1 DD-05). This holds while the TPM's epoch index keeps its bits. Nothing in P2 yet stops code with TPM access from removing the index and defining it again empty, which lets the older chain unseal ([§6.6](06-verification.md#66-limits-of-the-ci-evidence)).
 
 Refusing to *boot* an older chain would need a U-Boot patch that reads the TPM epoch through `tpm2_nv_read_value` and compares it with a signed FIT property. U-Boot's `tpm2` shell command cannot read NV [UBOOT]. That option (SR-005.2) was considered and not adopted (DD2-07).
 
