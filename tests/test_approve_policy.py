@@ -235,11 +235,33 @@ class HarnessTest(unittest.TestCase):
             out += [" " + " ".join(f"{b:02X}" for b in data[i:i + 16]) + " " for i in range(0, len(data), 16)]
         return "\n".join(out) + "\n"
 
-    def unseal_frames(self, key_in_clear: bytes | None):
-        cmd = struct.pack(">HII", 0x8002, 27, bc.TPM_CC_UNSEAL) + bytes(17)
-        body = key_in_clear if key_in_clear is not None else bytes(range(32))
-        rsp = struct.pack(">HII", 0x8002, 10 + 4 + 2 + len(body), 0) + struct.pack(">IH", 2 + len(body), len(body)) + body
-        return [("cmd", cmd), ("rsp", rsp)]
+    NONCE_CALLER, NONCE_TPM = bytes(range(1, 33)), bytes(range(33, 65))
+
+    @staticmethod
+    def frame(tag: int, code: int, body: bytes) -> bytes:
+        return struct.pack(">HII", tag, 10 + len(body), code) + body
+
+    def unseal_frames(self, key_in_clear: bytes | None, salt: bool = True, encrypt: bool = True,
+                      out: bytes | None = None):
+        """One StartAuthSession and one Unseal, each with its answer, laid out as the TPM 2.0 Library gives them."""
+        b2 = lambda data: struct.pack(">H", len(data)) + data   # noqa: E731  (a TPM2B)
+        handle = 0x03000000
+        start = struct.pack(">II", ap.PARENT_HANDLE if salt else bc.TPM_RH_NULL, bc.TPM_RH_NULL) + \
+            b2(bytes(32)) + b2(bytes(68) if salt else b"") + bytes([bc.TPM_SE_POLICY]) + \
+            struct.pack(">HHHH", 0x0006, 128, 0x0043, 0x000B)
+        body = out if out is not None else key_in_clear if key_in_clear is not None else bytes(range(32))
+        auth = struct.pack(">I", handle) + b2(self.NONCE_CALLER) + bytes([0x41 if encrypt else 0x01]) + b2(bytes(32))
+        unseal = struct.pack(">II", 0x80000000, len(auth)) + auth
+        answer = struct.pack(">I", 2 + len(body)) + b2(body) + b2(self.NONCE_TPM) + bytes([0x41]) + b2(bytes(32))
+        return [("cmd", self.frame(0x8001, bc.TPM_CC_START_AUTH_SESSION, start)),
+                ("rsp", self.frame(0x8001, 0, struct.pack(">I", handle) + b2(bytes(32)))),
+                ("cmd", self.frame(0x8002, bc.TPM_CC_UNSEAL, unseal)),
+                ("rsp", self.frame(0x8002, 0, answer))]
+
+    def encrypt_as_unsalted(self, key: bytes) -> bytes:
+        material = bc.kdfa(b"", b"CFB", self.NONCE_TPM, self.NONCE_CALLER, 256)
+        return subprocess.run(["openssl", "enc", "-e", "-aes-128-cfb", "-nopad", "-K", material[:16].hex(),
+                               "-iv", material[16:].hex()], input=key, capture_output=True, check=True).stdout
 
     def test_parse_and_render_io_log(self):
         frames = [("cmd", bytes(range(40))), ("rsp", b"\x80\x01" + bytes(8))]
@@ -255,16 +277,71 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual([(r["frame"], r["offset"]) for r in redacted], [(0, 15), (1, 0)])
         self.assertTrue(all(r["sha256"] == __import__("hashlib").sha256(key).hexdigest() for r in redacted))
 
+    @unittest.skipUnless(shutil.which("openssl"), "openssl not on PATH")
     def test_io_checks(self):
         keys = {"wireguard": bytes(range(100, 132)), "mavlink": bytes(range(150, 182))}
         prov = provision.Provisioned(Path("."), Path("."), b"", {}, {}, keys)
         clear = self.unseal_frames(keys["wireguard"]) + self.unseal_frames(keys["mavlink"])
         hidden = self.unseal_frames(None) + self.unseal_frames(None)
-        self.assertTrue(all(c["ok"] for c in bc.io_checks(prov, hidden, clear=False)))
-        self.assertFalse(all(c["ok"] for c in bc.io_checks(prov, clear, clear=False)))
-        self.assertTrue(all(c["ok"] for c in bc.io_checks(prov, clear, clear=True)))
-        self.assertFalse(all(c["ok"] for c in bc.io_checks(prov, hidden, clear=True)))
-        self.assertFalse(bc.io_checks(prov, hidden[:2], clear=False)[0]["ok"])   # one Unseal, not two
+        self.assertTrue(all(c["ok"] for c in bc.io_checks(prov, hidden, "protected")))
+        self.assertFalse(all(c["ok"] for c in bc.io_checks(prov, clear, "protected")))
+        self.assertTrue(all(c["ok"] for c in bc.io_checks(prov, clear, "clear")))
+        self.assertFalse(all(c["ok"] for c in bc.io_checks(prov, hidden, "clear")))
+        self.assertFalse(bc.io_checks(prov, hidden[:4], "protected")[0]["ok"])   # one Unseal, not two
+        with self.assertRaises(ValueError):
+            bc.io_checks(prov, hidden, "anything else")
+
+    def failed(self, prov, frames, expect="protected"):
+        return [c["pattern"] for c in bc.io_checks(prov, frames, expect) if not c["ok"]]
+
+    def test_unseal_session_is_read_from_the_traffic(self):
+        (s,) = bc.unseal_sessions(self.unseal_frames(None))
+        self.assertTrue(s["ok"] and bc.salted(s["start"]))
+        self.assertEqual((s["session"], s["attributes"], s["start"]["tpm_key"], s["start"]["salt_bytes"]),
+                         (0x03000000, 0x41, ap.PARENT_HANDLE, 68))
+        self.assertEqual((s["nonce_caller"], s["nonce_tpm"], s["out"]),
+                         (self.NONCE_CALLER, self.NONCE_TPM, bytes(range(32))))
+        (s,) = bc.unseal_sessions(self.unseal_frames(None, salt=False))
+        self.assertFalse(bc.salted(s["start"]))
+        # An Unseal whose session was never seen starting, and a cut-off frame.
+        (s,) = bc.unseal_sessions(self.unseal_frames(None)[2:])
+        self.assertIsNone(s["start"])
+        cut = self.unseal_frames(None)
+        cut[2] = ("cmd", cut[2][1][:20])
+        self.assertFalse(bc.unseal_sessions(cut)[0]["ok"])
+
+    @unittest.skipUnless(shutil.which("openssl"), "openssl not on PATH")
+    def test_unsalted_or_unencrypted_session_fails_the_protected_run(self):
+        # The audit's M07: encryption on, salt gone. The key bytes are not in the clear, so only the
+        # session check can see it.
+        keys = {"wireguard": bytes(range(100, 132)), "mavlink": bytes(range(150, 182))}
+        prov = provision.Provisioned(Path("."), Path("."), b"", {}, {}, keys)
+        unsalted = self.unseal_frames(None, salt=False) + self.unseal_frames(None, salt=False)
+        self.assertEqual(len(self.failed(prov, unsalted)), 1)
+        self.assertIn("salted to the parent", self.failed(prov, unsalted)[0])
+        one_bad = self.unseal_frames(None) + self.unseal_frames(None, salt=False)
+        self.assertIn("salted to the parent", self.failed(prov, one_bad)[0])
+        no_encrypt = self.unseal_frames(None, encrypt=False) + self.unseal_frames(None)
+        self.assertIn("asks for the response to be encrypted", self.failed(prov, no_encrypt)[0])
+
+    @unittest.skipUnless(shutil.which("openssl"), "openssl not on PATH")
+    def test_unsalted_answers_decrypt_from_the_traffic_alone(self):
+        keys = {"wireguard": bytes(range(100, 132)), "mavlink": bytes(range(150, 182))}
+        prov = provision.Provisioned(Path("."), Path("."), b"", {}, {}, keys)
+        leaky = [f for key in keys.values()
+                 for f in self.unseal_frames(None, salt=False, out=self.encrypt_as_unsalted(key))]
+        self.assertEqual(self.failed(prov, leaky, "unsalted"), [])
+        self.assertEqual(sorted(len(v) for v in bc.recoverable(prov, leaky).values()), [32, 32])
+        # The same answers in a run that should be protected: the salt check and the decryption check fail.
+        self.assertEqual(len(self.failed(prov, leaky)), 2)
+        # Salted traffic does not decrypt this way, so it is no control.
+        safe = self.unseal_frames(None) + self.unseal_frames(None)
+        self.assertEqual(bc.recoverable(prov, safe), {})
+        self.assertEqual(len(self.failed(prov, safe, "unsalted")), 2)
+        # The rendered log hides a recoverable answer as well as a key in the clear.
+        text, redacted = bc.render_io_log(leaky, {**keys, **bc.recoverable(prov, leaky)})
+        self.assertEqual(len(redacted), 2)
+        self.assertEqual(bc.recoverable(prov, bc.parse_io_log(text.replace("--", "00"))), {})
 
     def test_data_disk_comes_before_the_boot_slot(self):
         m = bc.Machine(Path("u.bin"), Path("slot.img"), Path("f.img"), None, Path("sock"), data=Path("cc.img"))

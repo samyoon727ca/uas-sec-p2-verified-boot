@@ -31,8 +31,11 @@ from the release artifacts:
          its epoch-0 policy cannot unseal, nor can a policy signed by a rogue
          key; release 2 with its epoch-1 policy still unseals
   TC-09  swtpm records every TPM command and response of a TC-05 boot; neither
-         key appears in them. Control: with the agent's control build, which
-         leaves the unseal response in the clear, both keys do
+         key appears in them, each Unseal runs in a session salted to the
+         parent, and neither key decrypts from the recording alone. Controls:
+         with the agent's build that leaves the unseal response in the clear,
+         both keys appear; with its build whose session is not salted, both
+         keys decrypt from the recording
   TC-10  tools/predict_pcrs.py predicts PCRs 0, 1, 8 and 9 from the signed
          FIT and the U-Boot binary; the PCRs the initramfs reads, and the
          replay of the event log Linux received, equal the prediction. The
@@ -43,7 +46,7 @@ Each attack that would succeed against a weaker setup has a control run that
 shows it succeeding there: the environment and legacy-image cases on stock
 qemu_arm64_defconfig, and the two console cases on the P2 build with exactly
 one setting changed (the autoboot delay, or the final reset), and the
-encrypted-traffic case on the agent's control build. A negative case
+encrypted-traffic case on the agent's two control builds. A negative case
 counts only if the positive control passed in the same run: TC-01 for every
 case, and TC-05 as well for the sealing refusals (TC-06 to TC-08).
 
@@ -67,6 +70,7 @@ import dataclasses
 import datetime
 import gzip
 import hashlib
+import hmac
 import json
 import os
 import platform
@@ -136,7 +140,9 @@ UNSEAL_OK = r"(?m)^P2-UNSEAL {} ok$"                   # printed by cc/initramfs
 UNSEAL_REFUSED = r"(?m)^P2-UNSEAL \S+ refused at "
 KEY_LINE = re.compile(r"(?m)^P2-KEY (\S+) sha256 ([0-9a-f]{64})$")
 UNSEAL_ANY_OK = r"(?m)^P2-UNSEAL \S+ ok$"
-AGENT_CONTROL = r"(?m)^P2-UNSEAL control build: response encryption off$"
+AGENT_CONTROL = r"(?m)^P2-UNSEAL control build: "    # either control build of the agent
+AGENT_CONTROL_CLEAR = r"(?m)^P2-UNSEAL control build: response encryption off$"
+AGENT_CONTROL_UNSALTED = r"(?m)^P2-UNSEAL control build: session not salted$"
 # The cap, and the second attempt of the two builds for TC-05b (cc/initramfs/p2-unseal.c).
 CAP_OK = r"(?m)^P2-CAP ok$"
 CAP_FAILED = r"(?m)^P2-CAP failed"
@@ -147,6 +153,10 @@ AGAIN_SAME = r"(?m)^P2-AGAIN {} is the key released before$"
 AGAIN_ANY_OK = r"(?m)^P2-AGAIN \S+ (ok|is the key released before)$"
 AGAIN_REFUSED = r"(?m)^P2-AGAIN {} refused at PolicyAuthorize: "
 TPM_CC_UNSEAL = 0x0000015E
+TPM_CC_START_AUTH_SESSION = 0x00000176
+TPM_RH_NULL = 0x40000007
+TPM_SE_POLICY = 0x01
+TPMA_SESSION_ENCRYPT = 0x40
 KEY_ANY = r"(?m)^P2-KEY "
 
 
@@ -265,24 +275,155 @@ def render_io_log(frames: list[tuple[str, bytes]], secrets: dict[str, bytes]) ->
     return text, redacted
 
 
-def io_checks(prov: provision.Provisioned, frames: list[tuple[str, bytes]], clear: bool) -> list[dict]:
-    """TC-09: neither key in any recorded command or response; in the control, each in an Unseal response."""
-    unseal = [i for i, (kind, data) in enumerate(frames)
-              if kind == "cmd" and len(data) >= 10 and struct.unpack_from(">I", data, 6)[0] == TPM_CC_UNSEAL]
-    answers = [frames[i + 1][1] for i in unseal if i + 1 < len(frames) and frames[i + 1][0] == "rsp"]
+def tpm2b(data: bytes, pos: int) -> tuple[bytes, int]:
+    """A TPM2B at `pos`: its bytes and the position after it."""
+    (size,) = struct.unpack_from(">H", data, pos)
+    if pos + 2 + size > len(data):
+        raise ValueError("TPM2B runs past the end of the frame")
+    return data[pos + 2:pos + 2 + size], pos + 2 + size
+
+
+def unseal_sessions(frames: list[tuple[str, bytes]]) -> list[dict]:
+    """For each TPM2_Unseal command recorded: how its authorization session was started, and its answer.
+
+    Read from the recorded bytes alone (TPM 2.0 Library Part 3, TPM2_StartAuthSession and TPM2_Unseal;
+    Part 1 for the authorization areas). "start" is the latest successful TPM2_StartAuthSession that
+    returned the session handle the Unseal command uses, or None.
+    """
+    started: dict[int, dict] = {}
+    found = []
+    for i, (kind, data) in enumerate(frames):
+        if kind != "cmd" or len(data) < 10:
+            continue
+        (code,) = struct.unpack_from(">I", data, 6)
+        rsp = frames[i + 1][1] if i + 1 < len(frames) and frames[i + 1][0] == "rsp" else b""
+        ok = len(rsp) >= 10 and struct.unpack_from(">I", rsp, 6)[0] == 0
+        try:
+            if code == TPM_CC_START_AUTH_SESSION and ok:
+                tpm_key, bind = struct.unpack_from(">II", data, 10)
+                _nonce, pos = tpm2b(data, 18)
+                salt, pos = tpm2b(data, pos)
+                (handle,) = struct.unpack_from(">I", rsp, 10)
+                started[handle] = {"frame": i, "tpm_key": tpm_key, "bind": bind, "salt_bytes": len(salt),
+                                   "session_type": data[pos]}
+            elif code == TPM_CC_UNSEAL:
+                (handle,) = struct.unpack_from(">I", data, 18)    # after the item handle and authorizationSize
+                nonce_caller, pos = tpm2b(data, 22)
+                entry = {"frame": i, "session": handle, "attributes": data[pos], "start": started.get(handle),
+                         "ok": ok, "nonce_caller": nonce_caller, "out": b"", "nonce_tpm": b""}
+                if ok:
+                    entry["out"], pos = tpm2b(rsp, 14)            # after the header and parameterSize
+                    entry["nonce_tpm"], _ = tpm2b(rsp, pos)
+                found.append(entry)
+        except (struct.error, IndexError, ValueError):
+            found.append({"frame": i, "session": None, "attributes": 0, "start": None, "ok": False,
+                          "nonce_caller": b"", "out": b"", "nonce_tpm": b""})
+    return found
+
+
+def salted(start: dict | None) -> bool:
+    """SR-010.4: a policy session salted to the persistent parent."""
+    return bool(start) and start["tpm_key"] == approve_policy.PARENT_HANDLE and start["salt_bytes"] > 0 \
+        and start["session_type"] == TPM_SE_POLICY
+
+
+def kdfa(key: bytes, label: bytes, newer: bytes, older: bytes, bits: int) -> bytes:
+    """KDFa with SHA-256 (TPM 2.0 Library Part 1, 11.4.10.2): SP 800-108 counter mode over HMAC."""
+    out, counter = b"", 1
+    while len(out) * 8 < bits:
+        out += hmac.new(key, struct.pack(">I", counter) + label + b"\0" + newer + older + struct.pack(">I", bits),
+                        hashlib.sha256).digest()
+        counter += 1
+    return out[:bits // 8]
+
+
+def decrypt_as_unsalted(unseal: dict) -> bytes | None:
+    """What a recording of the traffic alone gives for an Unseal answer, if its session had no secret.
+
+    A session with neither salt nor bind has an empty session key, and the sealed objects have an empty
+    authValue. The key that encrypts the response is then KDFa of the two nonces, which both cross the
+    interface (Part 1, 21.3: AES-128 in CFB mode, 128 bits of key and 128 of IV). With a salted session
+    this yields noise, because the real key also depends on the salt.
+    """
+    if not (unseal["ok"] and unseal["out"]):
+        return None
+    material = kdfa(b"", b"CFB", unseal["nonce_tpm"], unseal["nonce_caller"], 256)
+    done = subprocess.run(["openssl", "enc", "-d", "-aes-128-cfb", "-nopad", "-K", material[:16].hex(),
+                           "-iv", material[16:].hex()], input=unseal["out"], capture_output=True)
+    return done.stdout if done.returncode == 0 else None
+
+
+def recoverable(prov: provision.Provisioned, frames: list[tuple[str, bytes]]) -> dict[str, bytes]:
+    """Unseal answers that decrypt to a key from the traffic alone: label -> the encrypted bytes.
+
+    The evidence must not hold a key in any recoverable form, so render_io_log() blanks these too.
+    """
+    out = {}
+    for s in unseal_sessions(frames):
+        plain = decrypt_as_unsalted(s)
+        for name, key in prov.secrets.items():
+            if plain == key:
+                out[f"{name}, encrypted under a key derived from the traffic"] = s["out"]
+    return out
+
+
+IO_EXPECT = ("protected", "clear", "unsalted")
+
+
+def io_checks(prov: provision.Provisioned, frames: list[tuple[str, bytes]], expect: str = "protected") -> list[dict]:
+    """TC-09: what the recorded TPM traffic gives away.
+
+    protected  the production agent: neither key in any command or response, every Unseal in a
+               session salted to the parent and set to encrypt the response, and the answers not
+               decryptable from the traffic alone
+    clear      control, response encryption off: each key in an Unseal response
+    unsalted   control, session not salted: no key in the clear either, but each one decrypts from
+               the traffic alone
+    """
+    if expect not in IO_EXPECT:
+        raise ValueError(f"io_checks: expect must be one of {IO_EXPECT}")
+    sessions = unseal_sessions(frames)
     checks = [{"kind": "io", "pattern": f"swtpm recorded {len(provision.KEYS)} TPM2_Unseal commands, each answered "
-               "with success", "ok": len(answers) == len(provision.KEYS) == len(unseal)
-               and all(struct.unpack_from(">I", a, 6)[0] == 0 for a in answers),
-               "observed": {"frames": len(frames), "unseal_commands": len(unseal)}}]
+               "with success", "ok": len(sessions) == len(provision.KEYS) and all(s["ok"] for s in sessions),
+               "observed": {"frames": len(frames), "unseal_commands": len(sessions)}}]
     for name, key in prov.secrets.items():
         anywhere = sum(len(find_all(data, key)) for _, data in frames)
-        in_answer = sum(len(find_all(a, key)) for a in answers)
-        if clear:
+        in_answer = sum(len(find_all(s["out"], key)) for s in sessions)
+        if expect == "clear":
             checks.append({"kind": "io", "pattern": f"{name}: the key appears in an Unseal response",
                            "ok": in_answer >= 1, "observed": {"in_unseal_responses": in_answer, "anywhere": anywhere}})
         else:
             checks.append({"kind": "io", "pattern": f"{name}: the key appears in no recorded command or response",
                            "ok": anywhere == 0, "observed": {"anywhere": anywhere}})
+    if expect == "clear":
+        return checks
+
+    def shown(s: dict) -> dict:
+        start = s["start"] or {}
+        return {"unseal_frame": s["frame"], "session": s["session"], "attributes": f"{s['attributes']:#04x}",
+                "started_in_frame": start.get("frame"),
+                "tpm_key": f"{start['tpm_key']:#010x}" if start else None, "salt_bytes": start.get("salt_bytes"),
+                "session_type": start.get("session_type")}
+
+    observed = [shown(s) for s in sessions]
+    all_salted = bool(sessions) and all(salted(s["start"]) for s in sessions)
+    none_salted = bool(sessions) and all(s["start"] and s["start"]["tpm_key"] == TPM_RH_NULL
+                                         and s["start"]["salt_bytes"] == 0 for s in sessions)
+    encrypting = bool(sessions) and all(s["attributes"] & TPMA_SESSION_ENCRYPT for s in sessions)
+    recovered = {decrypt_as_unsalted(s) for s in sessions}
+    leaked = sorted(name for name, key in prov.secrets.items() if key in recovered)
+    checks.append({"kind": "io", "pattern": "every Unseal session asks for the response to be encrypted",
+                   "ok": encrypting, "observed": observed})
+    if expect == "protected":
+        checks.append({"kind": "io", "pattern": "every Unseal session was started as a policy session salted to the "
+                       f"parent {approve_policy.PARENT_HANDLE:#010x}", "ok": all_salted, "observed": observed})
+        checks.append({"kind": "io", "pattern": "no key can be decrypted from the recorded traffic alone",
+                       "ok": not leaked, "observed": {"decrypted": leaked}})
+    else:
+        checks.append({"kind": "io", "pattern": "no Unseal session was salted (the control's one change)",
+                       "ok": none_salted, "observed": observed})
+        checks.append({"kind": "io", "pattern": "each key is decrypted from the recorded traffic alone",
+                       "ok": leaked == sorted(prov.secrets), "observed": {"decrypted": leaked}})
     return checks
 
 
@@ -673,6 +814,8 @@ class Artifacts:
         extra = gzip.compress(cpio_newc({"p2-release": b"2\n"}), mtime=0)
         self.signed_variant("r2", **{"initramfs.cpio.gz": initrd + extra})
         approved = approve_policy.approved_policy(self.prediction_for("hardened", "r2").pcrs, 1)
+        self.notes["tc08"] = (f"r2: a cpio member p2-release appended, signed with K-CC-OS; approved at epoch 1 "
+                              f"({approved.hex()}); committed TPM: bits 0x2 set in {provision.EPOCH_NV}")
 
         def policy(key: Path) -> dict[str, bytes]:
             return {"policy/approved": approved, "policy/approved.sig": approve_policy.sign(key, approved),
@@ -703,8 +846,15 @@ class Artifacts:
             self.data_disk(f"cc-{name}", provision.data_variant(prov, self.work / f"ccdata-{name}", {
                 "policy/approved": again, "policy/approved.sig": approve_policy.sign(kpol, again),
                 "policy/epoch": b"0\n"}))
-        self.notes["tc08"] = (f"r2: a cpio member p2-release appended, signed with K-CC-OS; approved at epoch 1 "
-                              f"({approved.hex()}); committed TPM: bits 0x2 set in {provision.EPOCH_NV}")
+        # TC-09 second control: the chain with the agent's unsalted build, approved at epoch 0 in the same way.
+        self.signed_variant("ctl-unsalted",
+                            **{"initramfs.cpio.gz": (self.build / "initramfs-ctl-unsalted.cpio.gz").read_bytes()})
+        unsalted = approve_policy.approved_policy(self.prediction_for("hardened", "ctl-unsalted").pcrs, 0)
+        self.data_disk("cc-ctl-unsalted", provision.data_variant(prov, self.work / "ccdata-ctl-unsalted", {
+            "policy/approved": unsalted, "policy/approved.sig": approve_policy.sign(kpol, unsalted),
+            "policy/epoch": b"0\n"}))
+        self.notes["tc09"] = (f"ctl-clear and ctl-unsalted: the release's chain with the agent's control builds, each "
+                              f"approved at epoch 0 ({approved.hex()}, {unsalted.hex()})")
 
     def hashes(self) -> dict[str, str]:
         names = ["fit.its", "ctrl.dtb", "kernel.dtb", "good.itb", "unsigned.itb", "rogue.itb", "added-config.itb",
@@ -713,8 +863,9 @@ class Artifacts:
         out = {n: sha256(self.work / n) for n in names}
         built = [f"u-boot-{v}.{ext}" for v in UBOOT_VARIANTS for ext in ("bin", "config")]
         for n in built + ["Image.gz", "initramfs.cpio.gz", "initramfs-ctl-clear.cpio.gz",
-                          "initramfs-tc05-again.cpio.gz", "initramfs-ctl-nocap.cpio.gz", "p2-unseal",
-                          "p2-unseal-ctl-clear", "p2-unseal-tc05-again", "p2-unseal-ctl-nocap", "mkimage",
+                          "initramfs-ctl-unsalted.cpio.gz", "initramfs-tc05-again.cpio.gz",
+                          "initramfs-ctl-nocap.cpio.gz", "p2-unseal", "p2-unseal-ctl-clear",
+                          "p2-unseal-ctl-unsalted", "p2-unseal-tc05-again", "p2-unseal-ctl-nocap", "mkimage",
                           "mkenvimage"]:
             out[n] = sha256(self.build / n)
         data = self.provisioned.data
@@ -752,6 +903,7 @@ class Case:
     changes_pcr: int | None = None  # the policy PCR this chain moves away from the approved release
     positive: str | None = None     # a further positive control that must pass in the same run
     io_log: bool = False            # record swtpm's TPM traffic and search it for the keys (TC-09)
+    io_expect: str = "protected"    # what that traffic must show: protected, clear or unsalted (io_checks)
 
 
 CASES = [
@@ -815,7 +967,7 @@ CASES = [
          expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink"), AGENT_NO_CAP,
                  AGENT_SECOND, AGAIN_OK.format("wireguard"), AGAIN_SAME.format("wireguard"),
                  AGAIN_OK.format("mavlink"), AGAIN_SAME.format("mavlink")],
-         forbid=[UNSEAL_REFUSED, CAP_OK, CAP_FAILED, AGENT_CONTROL, *CONSOLE]),
+         forbid=[UNSEAL_REFUSED, CAP_OK, CAP_FAILED, AGENT_CONTROL_CLEAR, AGENT_CONTROL_UNSALTED, *CONSOLE]),
     # TC-06: each chain is signed with K-CC-OS and boots, but no approved policy covers it.
     Case("TC-06a", "TC-06", "test", "Boot loader with another version string (PCR 0)", uboot="tc06-version",
          tpm="provisioned", data="cc", pcrs=True, positive="TC-05",
@@ -867,9 +1019,17 @@ CASES = [
          expect=[VERIFIED, BOOTED, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
          forbid=[UNSEAL_REFUSED, AGENT_CONTROL, *CONSOLE]),
     Case("TC-09-control", "TC-09", "control", "Both keys appear in it when the agent leaves the response in the clear",
-         slot="ctl-clear", tpm="provisioned", data="cc-ctl-clear", io_log=True, unseal=True, control_for="TC-09",
-         expect=[VERIFIED, BOOTED, AGENT_CONTROL, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
-         forbid=[UNSEAL_REFUSED, *CONSOLE]),
+         slot="ctl-clear", tpm="provisioned", data="cc-ctl-clear", io_log=True, io_expect="clear", unseal=True,
+         control_for="TC-09",
+         expect=[VERIFIED, BOOTED, AGENT_CONTROL_CLEAR, UNSEAL_OK.format("wireguard"), UNSEAL_OK.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, AGENT_CONTROL_UNSALTED, *CONSOLE]),
+    Case("TC-09-control-unsalted", "TC-09", "control",
+         "Both keys decrypt from it when the agent's session is not salted", slot="ctl-unsalted",
+         tpm="provisioned", data="cc-ctl-unsalted", io_log=True, io_expect="unsalted", unseal=True,
+         control_for="TC-09",
+         expect=[VERIFIED, BOOTED, AGENT_CONTROL_UNSALTED, UNSEAL_OK.format("wireguard"),
+                 UNSEAL_OK.format("mavlink")],
+         forbid=[UNSEAL_REFUSED, AGENT_CONTROL_CLEAR, *CONSOLE]),
     Case("TC-10", "TC-10", "test", "Predicted PCRs equal the measured PCRs and the event-log replay",
          expect=[VERIFIED, BOOTED, (PCR_LINE, 10)], forbid=[ENV_MARK, *CONSOLE], pcrs=True),
 ]
@@ -1073,9 +1233,10 @@ def write_markdown(out: Path, summary: dict) -> None:
                          f"{after or '–'} |")
     io_runs = [r for r in summary["runs"] if r.get("io_log")]
     if io_runs:
-        lines += ["", "TC-09: TPM commands and responses swtpm recorded during the boot, searched for each key. "
-                  "The I/O logs are swtpm's own layout with any key bytes replaced by `--`; `summary.json` gives the "
-                  "position and SHA-256 of every replacement.", "",
+        lines += ["", "TC-09: TPM commands and responses swtpm recorded during the boot, searched for each key, and "
+                  "read for how each Unseal session was started. The I/O logs are swtpm's own layout with any key "
+                  "bytes replaced by `--`, in the clear or encrypted under a key the traffic gives away; "
+                  "`summary.json` gives the position and SHA-256 of every replacement.", "",
                   "| Run | Frames | Key bytes found | I/O log |", "|---|---|---|---|"]
         for r in io_runs:
             frames = next(c["observed"]["frames"] for c in r["checks"] if c["kind"] == "io")
@@ -1156,8 +1317,9 @@ def main(argv: list[str] | None = None) -> int:
             io = {}
             if case.io_log:
                 frames = parse_io_log(tpm.log.read_text(errors="replace"))
-                checks += io_checks(art.provisioned, frames, clear=case.role == "control")
-                text, redacted = render_io_log(frames, art.provisioned.secrets)
+                checks += io_checks(art.provisioned, frames, case.io_expect)
+                text, redacted = render_io_log(frames, {**art.provisioned.secrets,
+                                                        **recoverable(art.provisioned, frames)})
                 io = {"io_log": f"{case.id}.swtpm-io.log", "io_redacted": redacted}
                 (out / io["io_log"]).write_text(text)
                 io["io_log_sha256"] = sha256(out / io["io_log"])
