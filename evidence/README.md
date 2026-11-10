@@ -4,6 +4,7 @@ One folder per run: `<event>-<ci|hw>/<YYYYMMDD>-<commit>/`, where `<commit>` is 
 
 | Run | Event | Environment | Test cases | Result |
 |---|---|---|---|---|
+| [`ve07-ci/20261110-3edd4f2`](ve07-ci/20261110-3edd4f2/summary.md) | VE-07 | GitHub Actions run [42775185879](https://github.com/samyoon727ca/uas-sec-p2-verified-boot/actions/runs/42775185879), runner image `ubuntu24` 20261101.360.1: QEMU `virt` 8.2.2 + U-Boot 2026.07 + swtpm 0.7.3 + tpm2-tools 5.6 | TC-01, TC-03 to TC-10 | Pass: 34 of 34 runs, including 6 control runs. First run with TC-06f (kernel changed at its end) and the whole-image digest checks for PCRs 8 and 9. TC-09's swtpm I/O logs have key bytes replaced by `--` |
 | [`ve07-ci/20261110-ec5ea72`](ve07-ci/20261110-ec5ea72/summary.md) | VE-07 | GitHub Actions run [42769477229](https://github.com/samyoon727ca/uas-sec-p2-verified-boot/actions/runs/42769477229), runner image `ubuntu24` 20261101.360.1: QEMU `virt` 8.2.2 + U-Boot 2026.07 + swtpm 0.7.3 + tpm2-tools 5.6 | TC-01, TC-03 to TC-10 | Pass: 33 of 33 runs, including 6 control runs. First run with the PCR cap: TC-05b is refused a second unseal, and its control without the cap gets both keys again. TC-09's swtpm I/O logs have key bytes replaced by `--` |
 | [`ve07-ci/20261110-acca55a`](ve07-ci/20261110-acca55a/summary.md) | VE-07 | GitHub Actions run [42756118017](https://github.com/samyoon727ca/uas-sec-p2-verified-boot/actions/runs/42756118017), runner image `ubuntu24` 20261101.360.1: QEMU `virt` 8.2.2 + U-Boot 2026.07 + swtpm 0.7.3 + tpm2-tools 5.6. The U-Boot tarball came from a mirror, with the pinned SHA-256 | TC-01, TC-03 to TC-10 | Pass: 31 of 31 runs, including 5 control runs. TC-09's swtpm I/O logs have key bytes replaced by `--` |
 | [`ve08-ci/20261013-aac4299`](ve08-ci/20261013-aac4299/summary.md) | VE-08 | GitHub Actions run [38351585198](https://github.com/samyoon727ca/uas-sec-p2-verified-boot/actions/runs/38351585198), runner image `ubuntu24` 20261004.327.1: PX4 `v1.18.0-rc1` built in `px4-dev` by digest; PX4's verification code on a 32-bit host | TC-11 | Pass: 5 of 5 runs, including 1 control run, and 4 of 4 static checks |
@@ -23,6 +24,7 @@ GitHub deletes an artifact, and its run's logs, 90 days after the run. Until the
 
 | Run folder | Actions run | Artifact ID | Digest of the artifact zip, as GitHub reports it | GitHub deletes it |
 |---|---|---|---|---|
+| `ve07-ci/20261110-3edd4f2` | 42775185879 | 13743743470 | `sha256:e83c73b300929c3262ec760b7d243591b283781f8f87fbfc8607ca9f8a60ab96` | 2027-02-08 |
 | `ve07-ci/20261110-ec5ea72` | 42769477229 | 13742015765 | `sha256:20b443377c178daa2ba13549957ff6e89deaa6db47e680a00ab83b8ddadba43e` | 2027-02-08 |
 | `ve07-ci/20261110-acca55a` | 42756118017 | 13735767704 | `sha256:d42e398bf3f799e807f35956d54203622baed5e7b5bb32040bdeb6e6a07317aa` | 2027-02-08 |
 | `ve08-ci/20261013-aac4299` | 38351585198 | 11790723761 | `sha256:9dcaa56deabbc280d28344d1f596d91cf95f0f7117487f8a00fae08f53b47ac0` | 2027-01-11 |
@@ -32,7 +34,7 @@ GitHub deletes an artifact, and its run's logs, 90 days after the run. Until the
 | `ve07-ci/20261013-1c9867e` | 38340963718 | 11787081162 | `sha256:fde0587dd310ba5362a97f781dc0e287c5445a586d66acf4cbcab4e44b47f6c7` | 2027-01-11 |
 | `ve07-ci/20261011-7bc523b` | 38120187352 | 11695296310 | `sha256:3301a9dda00161d2826dcd835e2adfaf63c462c841ef803daf2ac87d841fec2e` | 2027-01-09 |
 
-Checked on 2026-11-09 for the six October runs, and on 2026-11-10 for the two runs of that day as each was committed: the artifact was downloaded, its SHA-256 equalled the digest above, and it unpacked to exactly the files of its folder.
+Checked on 2026-11-09 for the six October runs, and for each later run when it was committed: the artifact was downloaded, its SHA-256 equalled the digest above, and it unpacked to exactly the files of its folder.
 
 To repeat the check while an artifact exists:
 
