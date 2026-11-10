@@ -22,20 +22,28 @@ mkdir -p "$OUT" "$DL"
 
 pin() { awk -v k="$1:" '$1 == k {print $2}' "$ROOT/cc/uboot/pin.txt"; }
 
-fetch() { # url sha256 dest
-  local url=$1 sha=$2 dest=$3
+fetch() { # sha256 dest url [mirror...]
+  # The SHA-256 decides what is accepted; a URL is only a carrier. The URLs are
+  # tried in order, and the first that delivers the pinned bytes is used.
+  local sha=$1 dest=$2 url; shift 2
   if [[ -f $dest ]] && echo "$sha  $dest" | sha256sum -c --status; then return; fi
-  curl -sSfL --retry 3 -o "$dest.part" "$url"
-  if ! echo "$sha  $dest.part" | sha256sum -c --status; then
-    echo "SHA-256 mismatch for $url" >&2; rm -f "$dest.part"; exit 1
-  fi
-  mv "$dest.part" "$dest"
+  for url in "$@"; do
+    if ! curl -sSfL --retry 3 --connect-timeout 20 -o "$dest.part" "$url"; then
+      echo "download failed: $url" >&2; rm -f "$dest.part"; continue
+    fi
+    if echo "$sha  $dest.part" | sha256sum -c --status; then
+      mv "$dest.part" "$dest"; echo "fetched $(basename "$dest") from $url"; return
+    fi
+    echo "SHA-256 mismatch for $url" >&2; rm -f "$dest.part"
+  done
+  echo "no source delivered $(basename "$dest") with SHA-256 $sha" >&2; exit 1
 }
 
 # --- U-Boot -----------------------------------------------------------------
 UB_VER=$(pin version)
 UB_TAR=$DL/u-boot-$UB_VER.tar.bz2
-fetch "$(pin url)" "$(pin sha256)" "$UB_TAR"
+mapfile -t UB_URLS < <(pin url; pin mirror)
+fetch "$(pin sha256)" "$UB_TAR" "${UB_URLS[@]}"
 SRC=$OUT/src/u-boot-$UB_VER
 rm -rf "$SRC" && mkdir -p "$OUT/src" && tar -xjf "$UB_TAR" -C "$OUT/src"
 export SOURCE_DATE_EPOCH=$(pin source_date_epoch)
@@ -70,7 +78,7 @@ cp "$OUT/uboot-hardened/tools/mkimage" "$OUT/uboot-hardened/tools/mkenvimage" "$
 GUEST=$OUT/guest && rm -rf "$GUEST" && mkdir -p "$GUEST"
 while read -r file sha; do
   [[ -z $file || $file == \#* ]] && continue
-  fetch "https://launchpad.net/ubuntu/+archive/primary/+files/$file" "$sha" "$DL/$file"
+  fetch "$sha" "$DL/$file" "https://launchpad.net/ubuntu/+archive/primary/+files/$file"
   dpkg-deb -x "$DL/$file" "$GUEST"
 done < "$ROOT/cc/emu/guest.lock"
 cp "$GUEST"/boot/vmlinuz-* "$OUT/Image.gz"
