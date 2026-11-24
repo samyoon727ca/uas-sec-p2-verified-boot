@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -154,6 +155,18 @@ class CliTest(unittest.TestCase):
         self.assertIn("already exists", output)
         self.assertEqual((self.out / "fuse-burn-record.md").read_text(), "earlier\n")
         self.assertFalse((self.out / "fuse-burn-record.json").exists())
+
+    def test_out_file_or_failed_write_leaves_no_record(self):
+        self.out.write_text("not a folder\n")
+        code, output = self.run_cli()
+        self.assertEqual((code, self.out.read_text()), (1, "not a folder\n"))
+        self.assertIn("is not a directory", output)
+        self.out.unlink()
+        real = Path.write_text
+        with mock.patch.object(Path, "write_text", lambda path, text: real(path, text) if path.suffix != ".md"
+                               else (_ for _ in ()).throw(OSError(28, "No space left on device"))):
+            code, output = self.run_cli()
+        self.assertEqual((code, list(self.out.iterdir())), (1, []))   # the JSON written first is removed
 
 
 if __name__ == "__main__":

@@ -660,6 +660,8 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
     args = parser.parse_args(argv)
 
     findings: list[Finding] = []
+    if args.out.exists() and not args.out.is_dir():
+        findings.append(Finding("input", f"--out {args.out}: exists and is not a directory"))
     data: dict[str, bytes] = {}
     for key in ("srk_table", "flash_bin", "uboot_itb", "plan", "dev_inventory", "hab_log"):
         path = getattr(args, key)
@@ -737,9 +739,17 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
     if any((w.bank, w.word) == CLOSE_FUSE for w in plan):
         record["steps"].append({"step": "B", "title": "close the chip",
                                 "commands": [f"fuse prog {CLOSE_FUSE[0]} {CLOSE_FUSE[1]} 0x{CLOSE_VALUE:X}"]})
-    args.out.mkdir(parents=True, exist_ok=True)
-    js.write_text(json.dumps(record, indent=2) + "\n")
-    md.write_text(render_record_md(record))
+    written: list[Path] = []
+    try:
+        args.out.mkdir(parents=True, exist_ok=True)
+        for path, text in ((js, json.dumps(record, indent=2) + "\n"), (md, render_record_md(record))):
+            written.append(path)
+            path.write_text(text)
+    except OSError as e:
+        for path in written:
+            path.unlink(missing_ok=True)
+        print(f"REFUSED: cannot write the record in {args.out}: {e}; no record written", file=sys.stderr)
+        return 1
     print(f"wrote {md} and {js}")
     return 0
 
