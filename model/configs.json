@@ -1,0 +1,3 @@
+[
+  {"spec": "Epoch.tla", "cfg": "Epoch.cfg", "expect": "NoOldReleaseUnseals"}
+]
