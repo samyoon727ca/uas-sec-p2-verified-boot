@@ -21,7 +21,7 @@ class ToolsTest(unittest.TestCase):
 
     def test_pins_are_parsed_and_malformed_ones_refused(self):
         url, sha = run_tlc.read_pin()
-        self.assertTrue(url.startswith("https://github.com/tlaplus/tlaplus/releases/download/") and len(sha) == 64)
+        self.assertRegex(url, r"^https://\S+/[^/]*[0-9a-f]{7,40}/tla2tools\.jar$")   # names one commit's build
         s = "\nsha256: " + "a" * 64
         for text in ("url: http://h/tla2tools.jar" + s, "url: https://h/x.jar" + s, "url: https://h/tla2tools.jar",
                      "url: https://h/tla2tools.jar" + s.upper(), "url: https://h/tla2tools.jar\n" + "a" * 64):

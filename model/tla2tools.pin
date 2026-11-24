@@ -1,4 +1,4 @@
-# TLC for model/run_tlc.py. 1.7.4, the latest stable release, lacks -dumpTrace json; on re-pinning 1.8.0, see model/README.md.
-url: https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
-sha256: fdffef247f563ef6edbfd44958d2a82db79e7564e07cb673262d896353fa6713
-commit: bc1b506bdcad80bb518bf3776a9161c34ff0fc4c
+# TLC for model/run_tlc.py: the nightly build of tlaplus commit 1a92ec7, at a URL naming that one build (model/README.md).
+url: https://nightly.tlapl.us/dist/1a92ec7/tla2tools.jar
+sha256: eac3ec94b6a590356871ef23d7e23d0d0c494458bff290f107e6f732fb63be30
+commit: 1a92ec7adebbc06c582bc34e00af11d9ff98b67c
