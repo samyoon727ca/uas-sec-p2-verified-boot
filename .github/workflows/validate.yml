@@ -31,3 +31,25 @@ jobs:
         run: python tools/check_no_secrets.py
       - name: Check the P1 snapshot matches P1 at the pinned commit
         run: python tools/check_p1_snapshot.py
+
+  # tools/fuse_preflight.py's SRK fuse hash and words, checked against NXP's SPSDK as an independent HABv4
+  # implementation. SPSDK is test-only, pinned with hashes in requirements-spsdk.txt. P2_REQUIRE_SPSDK makes a
+  # missing or changed SPSDK fail the job instead of skipping the test. The test runs through discover because
+  # SPSDK's dependency x690 installs a top-level "tests" package that shadows this repository's tests directory.
+  srk-reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # Actions are pinned to full commit SHAs; the tag is noted for review.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install the pinned SPSDK
+        run: python -m pip install --require-hashes -r requirements-spsdk.txt
+      - name: Check the SRK fuse hash and words against SPSDK
+        env:
+          P2_REQUIRE_SPSDK: "1"
+        run: python -m unittest discover -s tests -p test_fuse_preflight_spsdk.py -v
