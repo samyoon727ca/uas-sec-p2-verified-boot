@@ -39,6 +39,21 @@ segments/seg_csf.py):
 Every IVT header found is taken as an IVT and must lead to a valid CSF.
 A stray match in a payload refuses the image rather than being skipped.
 None of this has been checked against a real CST-signed image yet.
+
+Three gates come before any burn (docs/05 rule 5, OI2-02, OI2-07):
+- Dev-key inventory: lines of "<sha256-hex> <label>", "#" comments and blank
+  lines allowed. The hash is an SRK fuse hash or the SHA-256 of one SRK table
+  key entry (header included); every label must end in "-dev". It holds
+  hashes only, never key material. A match is a finding, or only a warning
+  naming the label when the burn is for a dev board.
+- HAB log: a U-Boot "hab_status" console capture, which the owner heads with
+  "# flash.bin sha256: <hex>" and "# u-boot.itb sha256: <hex>" for the images
+  booted. It is clean only with "No HAB Events Found!", no "HAB Event N"
+  block, and both digests equal to the images checked.
+- Close gate: any fuse write needs --recovery-evidence, a file under
+  evidence/ listed with its hash in evidence/SHA256SUMS: the confirmed
+  recovery run (OI2-07). Writing bank 1 word 3 (closing the chip) also needs
+  a clean HAB log for these images (OI2-02).
 """
 from __future__ import annotations
 
@@ -48,6 +63,8 @@ import re
 import struct
 import sys
 from pathlib import Path
+
+import check_evidence
 
 HAB_HEADER = struct.Struct(">BHB")  # tag, length of the whole structure (big-endian), version or algorithm
 HAB_TAG_SRK_TABLE = 0xD7
@@ -111,7 +128,7 @@ class FuseWrite:
 class Finding:
     kind: str
     message: str
-    error: bool = True          # False only for "close step", which reports the close command
+    error: bool = True          # False only for "close step" and for "dev key" on a dev board: warnings
 
 
 def hexword(value: int) -> str:
@@ -376,6 +393,170 @@ def check_images(images: dict[str, list[tuple[int, bytes, int]]], digest: bytes,
             findings.append(Finding("revocation unchecked", f"line {w.line}: bank {w.bank} word {w.word}: revocation "
                                     f"unchecked: expected no write that may revoke SRK index {indexes}, got "
                                     f"{hexword(w.value)}; neither guide states where SRK_REVOKE is"))
+    return findings
+
+
+# --- gates: dev keys, HAB log, close ---------------------------------------------
+
+SHA256_HEX = re.compile(r"[0-9a-fA-F]{64}")
+HAB_LOG_IMAGES = ("flash.bin", "u-boot.itb")
+HAB_LOG_DIGEST = re.compile(r"#[ \t]*(flash\.bin|u-boot\.itb)[ \t]+sha256:[ \t]*(\S*)[ \t]*")  # HAB_LOG_IMAGES
+HAB_LOG_EVENT = re.compile(r"\bHAB Event (\d+)\b")
+HAB_LOG_CLEAN = "No HAB Events Found!"
+
+
+@dataclasses.dataclass(frozen=True)
+class HabLog:
+    digests: dict[str, str]     # image name to lowercase SHA-256 hex, from the "# <image> sha256:" headers
+    clean: bool                 # "No HAB Events Found!" and no event block
+    events: tuple[str, ...]     # each "HAB Event N" block's text, its header line included
+
+
+def parse_dev_inventory(text: str) -> dict[bytes, str]:
+    """Read a dev-key inventory (format in the module docstring) into hash to label. Refused: a line that is not
+    a 64-digit hex hash and one label, a label not ending in "-dev", and a hash listed twice."""
+    inventory: dict[bytes, str] = {}
+    for number, raw in enumerate(text.splitlines(), 1):
+        fields = raw.split("#", 1)[0].split()
+        if not fields:
+            continue
+        if len(fields) != 2 or not SHA256_HEX.fullmatch(fields[0]):
+            raise PreflightError(f"dev inventory line {number}: malformed, expected '<sha256-hex> <label>', "
+                                 f"got {raw.strip()!r}")
+        digest, label = bytes.fromhex(fields[0]), fields[1]
+        if not label.endswith("-dev") or label == "-dev":
+            raise PreflightError(f"dev inventory line {number}: label {label!r} does not end in '-dev' "
+                                 "(docs/05 rules 3 and 5): the inventory lists dev keys only")
+        if digest in inventory:
+            raise PreflightError(f"dev inventory line {number}: hash {fields[0]} already listed as "
+                                 f"{inventory[digest]!r}")
+        inventory[digest] = label
+    return inventory
+
+
+def check_dev_keys(srk_table: bytes, digest: bytes, inventory: dict[bytes, str], dev_board: bool) -> list[Finding]:
+    """Look the SRK hash to burn, the table's own hash and each key entry's SHA-256 up in the dev-key inventory.
+    A match is an error (docs/05 rule 5), or with dev_board a warning naming the label."""
+    keys = parse_srk_table(srk_table).keys
+    found = [("SRK hash to burn", digest), ("SRK table hash", srk_fuse_hash(srk_table))]
+    found += [(f"SRK table key {n}", hashlib.sha256(key).digest()) for n, key in enumerate(keys)]
+    findings, seen = [], set()
+    for what, value in found:
+        if value not in inventory or value in seen:
+            continue
+        seen.add(value)
+        label = inventory[value]
+        if dev_board:
+            findings.append(Finding("dev key", f"{what}: dev key {label!r}: allowed for a dev board only",
+                                    error=False))
+        else:
+            findings.append(Finding("dev key", f"{what}: dev key {label!r}: expected no dev key in a fuse burn "
+                                               "without the dev-board go-ahead (docs/05 rule 5)"))
+    return findings
+
+
+def parse_hab_log(text: str) -> HabLog:
+    """Read a captured hab_status console log (format in the module docstring); other "#" lines are notes and
+    are skipped. Refused: a digest header given twice or without a 64-digit hex hash, a log with neither
+    "No HAB Events Found!" nor an event, and one with both. A missing digest header is left to check_hab_log."""
+    digests: dict[str, str] = {}
+    events: list[list[str]] = []
+    clean = 0
+    for number, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        header = HAB_LOG_DIGEST.fullmatch(line)
+        if header:
+            name, value = header[1], header[2]
+            if not SHA256_HEX.fullmatch(value):
+                raise PreflightError(f"HAB log line {number}: {name} sha256 {value!r} is not 64 hex digits")
+            if name in digests:
+                raise PreflightError(f"HAB log line {number}: {name} sha256 given twice")
+            digests[name] = value.lower()
+            continue
+        if line.startswith("#"):        # the owner's notes: not console output
+            continue
+        if HAB_LOG_EVENT.search(line):
+            events.append([raw])
+        elif events:
+            events[-1].append(raw)
+        if HAB_LOG_CLEAN in line:
+            clean += 1
+    if not events and clean != 1:
+        raise PreflightError(f"HAB log: expected one '{HAB_LOG_CLEAN}' or a 'HAB Event N' block, got "
+                             f"{clean} of the first and none of the second: not one hab_status output")
+    if events and clean:
+        raise PreflightError(f"HAB log: both '{HAB_LOG_CLEAN}' and {len(events)} HAB Event blocks: "
+                             "not one hab_status output")
+    return HabLog(digests, not events, tuple("\n".join(block).rstrip() for block in events))
+
+
+def check_hab_log(log: str, image_sha256s: dict[str, str]) -> list[Finding]:
+    """Check a captured hab_status log, as text, against the SHA-256 hex of flash.bin and u-boot.itb: it must
+    parse, name both images with these digests, and show no HAB event."""
+    try:
+        parsed = parse_hab_log(log)
+    except PreflightError as e:
+        return [Finding("hab log unparseable", str(e))]
+    findings = []
+    for name in HAB_LOG_IMAGES:
+        want, got = image_sha256s.get(name, "").lower(), parsed.digests.get(name)
+        if not want:
+            findings.append(Finding("hab log digest", f"HAB log: no {name} sha256 given to check the log against"))
+        elif got is None:
+            findings.append(Finding("hab log digest", f"HAB log: {name} sha256 header missing: expected "
+                                                      f"'# {name} sha256: {want}'"))
+        elif got != want:
+            findings.append(Finding("hab log digest", f"HAB log: {name} sha256 mismatch: the log is for another "
+                                                      f"image: expected {want}, got {got}"))
+    for n, block in enumerate(parsed.events, 1):
+        findings.append(Finding("hab event", f"HAB log: event block {n} of {len(parsed.events)}: expected none, "
+                                             f"got:\n{block}"))
+    return findings
+
+
+def check_recovery_evidence(recovery_evidence: str | None, root: Path) -> list[Finding]:
+    """The OI2-07 recovery run must be a file under root/evidence/ that evidence/SHA256SUMS lists with its hash."""
+    def refuse(why: str) -> list[Finding]:
+        return [Finding("recovery evidence", f"fuse burn refused: {why}; expected the confirmed boot-mode and uuu "
+                                             "recovery run, committed under evidence/ (OI2-07)")]
+    if not recovery_evidence:
+        return refuse("no --recovery-evidence given")
+    evidence = (root / "evidence").resolve()
+    path = (root / recovery_evidence).resolve()
+    if not path.is_relative_to(evidence) or path == evidence:
+        return refuse(f"{recovery_evidence} is not under evidence/")
+    if not path.is_file():
+        return refuse(f"{recovery_evidence} is not a file")
+    rel = path.relative_to(evidence).as_posix()
+    listed, errors = check_evidence.read_manifest(evidence)
+    if errors:
+        return refuse(f"evidence/{check_evidence.MANIFEST} unreadable: {'; '.join(errors)}")
+    if rel not in listed:
+        return refuse(f"evidence/{rel} is not listed in evidence/{check_evidence.MANIFEST}")
+    got = check_evidence.sha256(path)
+    if got != listed[rel]:
+        return refuse(f"evidence/{rel} hash mismatch: {check_evidence.MANIFEST} records {listed[rel]}, "
+                      f"the file has {got}")
+    return []
+
+
+def check_close(plan: list[FuseWrite], hab_log: str | None, recovery_evidence: str | None,
+                image_sha256s: dict[str, str], root: Path = check_evidence.ROOT) -> list[Finding]:
+    """Gate the plan's permanent steps. Any fuse write needs the OI2-07 recovery evidence (a path relative to
+    root). A write to bank 1 word 3 closes the chip, so it also needs a clean HAB log, as text, for exactly these
+    images (OI2-02). An SRK-hash-only plan needs no HAB log: an open chip still boots unsigned images."""
+    if not plan:
+        return []
+    findings = check_recovery_evidence(recovery_evidence, root)
+    close = [w for w in plan if (w.bank, w.word) == CLOSE_FUSE]
+    if close:
+        at = f"line {close[0].line}: close command refused"
+        if hab_log is None:
+            findings.append(Finding("close gate", f"{at}: no HAB log given; expected a clean hab_status log for "
+                                                  "these images before the chip is closed (OI2-02)"))
+        else:
+            findings += [Finding("close gate", f"{at}: {f.message} (OI2-02)") for f in check_hab_log(hab_log,
+                                                                                                    image_sha256s)]
     return findings
 
 
