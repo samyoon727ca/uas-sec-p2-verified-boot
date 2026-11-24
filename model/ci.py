@@ -40,15 +40,15 @@ def main() -> int:
     out = p.parse_args().out.resolve()
     entries, tla2tools, failed = load_configs(), run_tlc.jar(*run_tlc.read_pin()), 0
     for e in entries:
-        trace = out / (e["cfg"][:-4] + ".json")
+        trace, log = out / f"{e['cfg'][:-4]}.json", out / f"{e['cfg'][:-4]}.log"
         try:
             got = run_tlc.run(tla2tools, CONFIGS.parent / e["spec"], CONFIGS.parent / e["cfg"], trace)
-        except RuntimeError as err:
-            got = f"error: {err}, see {trace.with_suffix('.log')}"
+        except (RuntimeError, OSError) as err:   # OSError: e.g. no java at $JAVA_HOME/bin or on the PATH
+            got = f"error: {err}"
         failed += got != e["expect"]
         print(f"{'OK  ' if got == e['expect'] else 'DIFF'}  {e['cfg']}: expected {e['expect']}, got {got}")
-        if got != e["expect"]:   # TLC's last lines and an annotation, so the step log shows why
-            print(*trace.with_suffix(".log").read_text().splitlines()[-30:], sep="\n")
+        if got != e["expect"]:   # TLC's last lines, if it ran, and an annotation, so the step log shows why
+            print(*(log.read_text().splitlines()[-30:] if log.is_file() else [f"(no TLC log: {log})"]), sep="\n")
             print(f"::error title=model/{e['cfg']}::expected {e['expect']}, got {got}")
     if any((run_tlc.ROOT / "tests" / "model").glob("test*.py")):
         failed += subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests/model", "-t", "."],

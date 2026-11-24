@@ -2,8 +2,7 @@
 """Usage: python3 model/run_tlc.py SPEC CFG TRACE    (e.g. model/Epoch.tla model/Epoch.cfg out/Epoch.json)
 
 Runs TLC from tla2tools.jar, fetched to .cache/tla/ and refused unless its SHA-256 matches model/tla2tools.pin.
-Prints "pass" or the violated name; writes a counterexample to TRACE as JSON and TLC's output to its .log.
-"""
+Prints "pass" or the violated name; writes a counterexample to TRACE as JSON and TLC's output to its .log."""
 from __future__ import annotations
 
 import hashlib
@@ -58,7 +57,8 @@ def outcome(stdout: str, returncode: int) -> str:
 def run(tla2tools: Path, spec: Path, cfg: Path, trace: Path) -> str:
     """outcome() of TLC with one worker and no deadlock check; also writes `trace` and its .log."""
     trace.parent.mkdir(parents=True, exist_ok=True)
-    trace.unlink(missing_ok=True)
+    for old in (trace, trace.with_suffix(".log")):   # neither may outlive a run that fails
+        old.unlink(missing_ok=True)
     java = str(Path(os.environ["JAVA_HOME"]) / "bin" / "java") if os.environ.get("JAVA_HOME") else "java"
     with tempfile.TemporaryDirectory() as meta:   # TLC's state files, kept out of the tree
         proc = subprocess.run([java, "-XX:+UseParallelGC", "-cp", str(tla2tools), "tlc2.TLC", "-workers", "1",
