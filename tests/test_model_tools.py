@@ -44,6 +44,7 @@ class ToolsTest(unittest.TestCase):
     def test_tlc_outcomes(self):
         self.assertEqual(run_tlc.outcome(VIOLATION, 12), "NoOldReleaseUnseals")
         self.assertEqual(run_tlc.outcome("Error: Action property EpochMonotonic is violated.\n", 13), "EpochMonotonic")
+        self.assertEqual(run_tlc.outcome("Error: Invariant Inv is violated by the initial state:\nx = 0\n", 12), "Inv")
         self.assertEqual(run_tlc.outcome(run_tlc.PASSED + "\n11749 distinct states found\n", 0), "pass")
         for stdout, rc in (("Parsing or semantic analysis failed.\n", 255), (run_tlc.PASSED, 1), (VIOLATION, 0),
                            (VIOLATION + VIOLATION.replace("NoOld", "Other"), 12)):

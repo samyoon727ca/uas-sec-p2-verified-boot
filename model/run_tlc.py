@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VIOLATED = re.compile(r"^Error: (?:Invariant|Action property) (\w+) is violated\.$", re.M)
+VIOLATED = re.compile(r"^Error: (?:Invariant|Action property) (\w+) is violated(?:\.| by the initial state:)$", re.M)
 PASSED = "Model checking completed. No error has been found."
 
 

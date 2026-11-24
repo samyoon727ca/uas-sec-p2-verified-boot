@@ -33,4 +33,4 @@ jobs:
         with:
           name: model-traces
           path: ${{ runner.temp }}/model
-          if-no-files-found: error
+          if-no-files-found: warn   # none if ci.py stops before TLC, e.g. on a jar mismatch

@@ -112,8 +112,8 @@ Spec == Init /\ [][Next]_vars
 
 \* No release older than the committed epoch obtains the keys.
 NoOldReleaseUnseals == \A r \in released : r[1] >= r[2]
-
-\* The epoch never decreases (3.4): defined and written, as PolicyNV needs, the index holds the committed epoch or more.
+\* The epoch never decreases (3.4): written, as PolicyNV needs, the index is at the committed epoch or more, and never drops.
 EpochOf(r) == IF r.bits = {} THEN 0 ELSE CHOOSE b \in r.bits : \A c \in r.bits : c <= b
-EpochMonotonic == [][nv'[EpochIdx].defined /\ nv'[EpochIdx].written => EpochOf(nv'[EpochIdx]) >= committed']_vars
+EpochMonotonic == [][LET was == nv[EpochIdx]  now == nv'[EpochIdx] IN now.defined /\ now.written =>
+                       EpochOf(now) >= committed' /\ (was.defined /\ was.written => EpochOf(now) >= EpochOf(was))]_vars
 =============================================================================
