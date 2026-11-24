@@ -42,7 +42,7 @@ def jar(url: str, sha: str, cache: Path = ROOT / ".cache" / "tla") -> Path:
         got = hashlib.file_digest(f, "sha256").hexdigest()
     if got != sha:
         path.unlink()
-        raise SystemExit(f"refusing tla2tools.jar from {url}: SHA-256 {got} is not the pinned {sha}")
+        raise SystemExit(f"refusing {url}: SHA-256 {got} is not the pinned {sha} (re-pin: model/README.md)")
     return path
 
 

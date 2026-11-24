@@ -1,5 +1,5 @@
-# TLC for model/run_tlc.py. 1.7.4, the latest stable release, lacks -dumpTrace json. 1.8.0 is a
-# pre-release whose asset TLA+ may rebuild; a rebuilt jar fails the SHA-256 until a reviewed pin replaces it.
+# TLC for model/run_tlc.py. 1.7.4, the latest stable release, lacks -dumpTrace json. 1.8.0 is a pre-release
+# whose asset TLA+ rebuilds; a rebuilt jar fails the SHA-256 until it is re-pinned (model/README.md, Run).
 url: https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
 sha256: fdffef247f563ef6edbfd44958d2a82db79e7564e07cb673262d896353fa6713
 commit: bc1b506bdcad80bb518bf3776a9161c34ff0fc4c

@@ -1,3 +1,4 @@
 [
-  {"spec": "Epoch.tla", "cfg": "Epoch.cfg", "expect": "NoOldReleaseUnseals"}
+  {"spec": "Epoch.tla", "cfg": "Epoch.cfg", "expect": "NoOldReleaseUnseals"},
+  {"spec": "Epoch.tla", "cfg": "EpochMonotonic.cfg", "expect": "EpochMonotonic"}
 ]
