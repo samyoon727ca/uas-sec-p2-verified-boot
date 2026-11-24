@@ -81,6 +81,7 @@ class HabLogTest(unittest.TestCase):
         self.assertEqual(log, fp.HabLog({"flash.bin": FLASH, "u-boot.itb": ITB}, True, ()))
         self.assertEqual(fp.check_hab_log(HEADERS + CLEAN, IMAGES), [])
         self.assertEqual(fp.check_hab_log(HEADERS.replace(FLASH, FLASH.upper()) + CLEAN, IMAGES), [])
+        self.assertEqual(fp.check_hab_log(HEADERS + "# spl.bin sha256: n/a, a note\n" + CLEAN, IMAGES), [])
 
     def test_log_with_one_event(self):
         log = fp.parse_hab_log(HEADERS + EVENT)

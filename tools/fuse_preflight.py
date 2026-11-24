@@ -400,7 +400,7 @@ def check_images(images: dict[str, list[tuple[int, bytes, int]]], digest: bytes,
 
 SHA256_HEX = re.compile(r"[0-9a-fA-F]{64}")
 HAB_LOG_IMAGES = ("flash.bin", "u-boot.itb")
-HAB_LOG_DIGEST = re.compile(r"#[ \t]*(\S+)[ \t]+sha256:[ \t]*(\S*)[ \t]*")
+HAB_LOG_DIGEST = re.compile(r"#[ \t]*(flash\.bin|u-boot\.itb)[ \t]+sha256:[ \t]*(\S*)[ \t]*")  # HAB_LOG_IMAGES
 HAB_LOG_EVENT = re.compile(r"\bHAB Event (\d+)\b")
 HAB_LOG_CLEAN = "No HAB Events Found!"
 
@@ -426,7 +426,7 @@ def parse_dev_inventory(text: str) -> dict[bytes, str]:
         digest, label = bytes.fromhex(fields[0]), fields[1]
         if not label.endswith("-dev") or label == "-dev":
             raise PreflightError(f"dev inventory line {number}: label {label!r} does not end in '-dev' "
-                                 "(docs/05 rule 3): the inventory lists dev keys only")
+                                 "(docs/05 rules 3 and 5): the inventory lists dev keys only")
         if digest in inventory:
             raise PreflightError(f"dev inventory line {number}: hash {fields[0]} already listed as "
                                  f"{inventory[digest]!r}")
