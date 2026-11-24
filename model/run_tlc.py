@@ -38,8 +38,7 @@ def jar(url: str, sha: str, cache: Path = ROOT / ".cache" / "tla") -> Path:
         with urllib.request.urlopen(url, timeout=120) as response:
             path.with_suffix(".part").write_bytes(response.read())
         path.with_suffix(".part").replace(path)
-    with path.open("rb") as f:
-        got = hashlib.file_digest(f, "sha256").hexdigest()
+    got = hashlib.sha256(path.read_bytes()).hexdigest()
     if got != sha:
         path.unlink()
         raise SystemExit(f"refusing {url}: SHA-256 {got} is not the pinned {sha} (re-pin: model/README.md)")

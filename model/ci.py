@@ -2,8 +2,7 @@
 """Usage: python3 model/ci.py [--out DIR]    (DIR defaults to build/model)
 
 Runs TLC on each entry of model/configs.json, failing unless the outcome is its "expect" ("pass" or the violated
-name); writes <cfg>.log and <cfg>.json to DIR. Then runs tests/model, if it has tests, with P2_MODEL_TRACES=DIR.
-"""
+name); writes <cfg>.log and <cfg>.json to DIR. Then runs tests/model, if it has tests, with P2_MODEL_TRACES=DIR."""
 from __future__ import annotations
 
 import argparse
@@ -48,6 +47,9 @@ def main() -> int:
             got = f"error: {err}, see {trace.with_suffix('.log')}"
         failed += got != e["expect"]
         print(f"{'OK  ' if got == e['expect'] else 'DIFF'}  {e['cfg']}: expected {e['expect']}, got {got}")
+        if got != e["expect"]:   # TLC's last lines and an annotation, so the step log shows why
+            print(*trace.with_suffix(".log").read_text().splitlines()[-30:], sep="\n")
+            print(f"::error title=model/{e['cfg']}::expected {e['expect']}, got {got}")
     if any((run_tlc.ROOT / "tests" / "model").glob("test*.py")):
         failed += subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests/model", "-t", "."],
                                  cwd=run_tlc.ROOT, env=dict(os.environ, P2_MODEL_TRACES=str(out))).returncode != 0
