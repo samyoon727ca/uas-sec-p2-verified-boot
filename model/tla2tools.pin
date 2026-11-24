@@ -1,0 +1,4 @@
+# TLC for model/run_tlc.py: the nightly build of tlaplus commit 1a92ec7, at a URL naming that one build (model/README.md).
+url: https://nightly.tlapl.us/dist/1a92ec7/tla2tools.jar
+sha256: eac3ec94b6a590356871ef23d7e23d0d0c494458bff290f107e6f732fb63be30
+commit: 1a92ec7adebbc06c582bc34e00af11d9ff98b67c
