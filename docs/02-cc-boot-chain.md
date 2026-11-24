@@ -105,7 +105,24 @@ Refusing to *boot* an older chain would need a U-Boot patch that reads the TPM e
 | ID | Item | Closed by |
 |---|---|---|
 | OI2-01 | U-Boot driving the SPI TPM on ECSPI2 of the DEBIX has not been shown (A2-06). Fallback: measure from the verified initramfs, recorded as a deviation from SR-010.1 | First hardware spike |
-| OI2-02 | HAB enforces only on a closed chip (§2.2). Burning the SRK hash and closing the chip are separate permanent steps; a wrong SRK hash on a closed chip leaves a board that does not boot [UBOOT-HAB]. Not yet known whether HAB events mean anything before the SRK hash is burned | TC-02 needs both steps. Each is taken only with the owner's explicit go-ahead at that moment |
+| OI2-02 | HAB enforces only on a closed chip (§2.2). Burning the SRK hash and closing the chip are separate permanent steps; a wrong SRK hash on a closed chip leaves a board that does not boot [UBOOT-HAB]. Not yet known whether HAB events mean anything before the SRK hash is burned | TC-02 needs both steps. Each is taken only with the owner's explicit go-ahead at that moment, after `tools/fuse_preflight.py` passes for that step (§2.8) |
 | OI2-03 | Closed 2026-10-12 by DD2-01. It asked whether U-Boot could run inside a Raspberry Pi secure-boot `boot.img`; on the i.MX 8M Plus, U-Boot is HAB's native payload | — |
 | OI2-07 | How to recover the DEBIX is not confirmed: its boot-mode selection and USB serial download (`uuu`) | Before any fuse is burned |
 | OI2-08 | Vendor sources disagree on the ECSPI2 chip-select and clock pins of the DEBIX header J2 [DEBIX-GPIO]. The 3.3 V supply pin is not confirmed | Schematic or a meter, before the TPM is powered |
+
+## 2.8 Fuse preflight
+
+Before each fuse step of TC-02 (OI2-02), the owner runs [`tools/fuse_preflight.py`](../tools/fuse_preflight.py) and types the commands from its record, not from notes:
+
+```
+python tools/fuse_preflight.py --srk-table SRK_1_2_3_4_table.bin --flash-bin flash.bin --uboot-itb u-boot.itb \
+  --plan plan.txt --dev-inventory dev-keys.txt [--dev-board] [--hab-log hab.log] \
+  --recovery-evidence evidence/<run>/<file> --out <dir>
+```
+
+- **Inputs.** CST's SRK table, the two signed images, the planned `fuse prog` lines, the dev-key hash inventory, a `hab_status` capture headed with both images' SHA-256, and the committed recovery run.
+- **Checks.** The SRK fuse hash and its eight words, against the plan, in bank 6 then bank 7 order [NXP-FUSE]. Every SRK table the images' CSFs install hashes to the same value. No dev key unless `--dev-board` is given, and then only as a warning. The recovery run is under `evidence/` and matches `SHA256SUMS` (OI2-07).
+- **Refuses.** Any wrong, swapped or missing word; any other fuse write, which may revoke an SRK; a dev key; a missing or mismatched recovery run. It refuses the close command (`fuse prog 1 3 0x2000000` [NXP-FUSE]) unless the HAB log shows no event for exactly these images. It prints every finding and writes nothing when it refuses.
+- **Record.** On success it writes `fuse-burn-record.md` and `.json`: input hashes, the SRK hash and words, each image's SRK index, warnings, and the commands as Step A (SRK hash) and, only if the plan closes the chip, Step B. Each step is permanent and still needs the owner's go-ahead at that moment ([§5](05-key-management.md) rule 5).
+
+The tool reads files only. It never opens a device, serial port or network connection, so it touches no hardware.

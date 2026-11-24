@@ -8,7 +8,15 @@ SRK Hash results in a part that does not boot" [UBOOT-HAB]. So this tool
 computes the fuse words from the SRK table, renders the eight SRK commands,
 and checks a planned command file against them. It works only on the bytes
 and text it is given: it never opens a device, serial port or network
-connection. The command line comes in a later task. Standard library only.
+connection. Standard library only.
+
+    python tools/fuse_preflight.py --srk-table T --flash-bin F --uboot-itb U --plan P
+        [--dev-inventory I] [--dev-board] [--hab-log L] [--recovery-evidence E] --out DIR
+
+runs every check, prints every finding and exits 1 if any blocks, writing
+nothing. Otherwise it writes DIR/fuse-burn-record.md and .json (keys in
+main's docstring): the commands the owner types at TC-02, Step A the SRK
+hash and Step B, only for a plan that closes the chip, the close command.
 
 The hash burned must be the hash of the SRK table CST put in each signed
 image, so the tool also reads that table out of flash.bin and u-boot.itb.
@@ -57,8 +65,11 @@ Three gates come before any burn (docs/05 rule 5, OI2-02, OI2-07):
 """
 from __future__ import annotations
 
+import argparse
 import dataclasses
+import datetime
 import hashlib
+import json
 import re
 import struct
 import sys
@@ -560,9 +571,177 @@ def check_close(plan: list[FuseWrite], hab_log: str | None, recovery_evidence: s
     return findings
 
 
-def main() -> int:
-    print("fuse_preflight.py has no command line yet; import its functions", file=sys.stderr)
-    return 2
+# --- command line and fuse-burn record -------------------------------------------
+
+RECORD = "fuse-burn-record"
+RECORD_SCHEMA = "fuse-burn-record/1"
+OPEN_ITEMS = "https://github.com/samyoon727ca/uas-sec-p2-verified-boot/blob/main/docs/02-cc-boot-chain.md#27-open-items"
+
+
+def tool_version(root: Path = check_evidence.ROOT) -> str:
+    """The repo's git commit, read from .git without running git (this tool starts no process), or "unknown"."""
+    try:
+        git = root / ".git"
+        if git.is_file():                       # a worktree: "gitdir: <path>"
+            git = (root / git.read_text().split("gitdir:", 1)[1].strip()).resolve()
+        common = (git / (git / "commondir").read_text().strip()).resolve() if (git / "commondir").is_file() else git
+        head = (git / "HEAD").read_text().strip()
+        if not head.startswith("ref: "):
+            commit = head
+        else:
+            ref = head[5:]
+            loose = next((d / ref for d in (git, common) if (d / ref).is_file()), None)
+            if loose is not None:
+                commit = loose.read_text().strip()
+            else:
+                packed = (common / "packed-refs").read_text().splitlines() if (common / "packed-refs").is_file() else []
+                commit = next((line.split()[0] for line in packed if line.endswith(" " + ref)), "")
+    except (OSError, IndexError):
+        return "unknown"
+    return commit if re.fullmatch(r"[0-9a-f]{40}([0-9a-f]{24})?", commit) else "unknown"
+
+
+def render_record_md(record: dict) -> str:
+    """The fuse-burn record as markdown, from the same dict as the JSON."""
+    lines = ["# Fuse-burn record", "",
+             f"Written by `tools/fuse_preflight.py` at `{record['tool_version']}` on {record['created_utc']}. "
+             "Every check passed. The tool read only the files below; it never touched hardware.", "",
+             "**Each step below is permanent. Type its commands only with the owner's explicit go-ahead at that "
+             "moment (docs/05 rule 5).** U-Boot asks before each write; answer `y` only then. "
+             f"See [OI2-02 and OI2-07]({OPEN_ITEMS}).", "",
+             "## Inputs", "", "| Input | Path | SHA-256 |", "|---|---|---|"]
+    lines += [f"| {name} | `{item['path']}` | `{item['sha256']}` |"
+              for name, item in record["inputs"].items() if item is not None]
+    lines += ["", "## SRK hash", "", f"`{record['srk_fuse_hash']}`, as fuse words:", "",
+              "| Bank | Word | Value |", "|---|---|---|"]
+    lines += [f"| {bank} | {word} | `{value}` |" for (bank, word), value in zip(SRK_FUSES, record["fuse_words"])]
+    lines += ["", "## Images", "", "| Image | SRK index | IVT offsets |", "|---|---|---|"]
+    lines += [f"| {name} | {image['srk_index']} | {', '.join(image['ivt_offsets'])} |"
+              for name, image in record["images"].items()]
+    lines += ["", "## Warnings", ""] + ([f"- {w}" for w in record["warnings"]] or ["None."])
+    for step in record["steps"]:
+        lines += ["", f"## Step {step['step']}: {step['title']}", "",
+                  "Permanent. Needs the owner's explicit go-ahead at this moment (docs/05 rule 5).", "",
+                  "```"] + step["commands"] + ["```"]
+    if not any(step["step"] == "B" for step in record["steps"]):
+        lines += ["", "No Step B: this plan does not close the chip. Closing it needs its own preflight run, with "
+                  "a clean HAB log for these images (OI2-02)."]
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int:
+    """Run every check, print every finding, and write DIR/fuse-burn-record.md and .json only if none blocks.
+
+    Exit 0 when the record is written, 1 when the preflight refuses (nothing written), 2 on a usage error.
+    --recovery-evidence is a path relative to root, the repo root. The JSON keys (schema "fuse-burn-record/1"):
+      schema          "fuse-burn-record/1"
+      tool_version    git commit of the repo's HEAD, or "unknown"
+      created_utc     ISO 8601 UTC time, "YYYY-MM-DDTHH:MM:SSZ"
+      inputs          srk_table, flash_bin, uboot_itb, plan, dev_inventory, hab_log, recovery_evidence: each
+                      {"path", "sha256"}, or null when not given
+      dev_board       true when --dev-board was given
+      srk_fuse_hash   SHA-256 hex of the SRK hash to burn
+      fuse_words      the eight words as "0x%08X", bank 6 words 0-3 then bank 7 words 0-3
+      images          "flash.bin" and "u-boot.itb": {"srk_index", "ivt_offsets": ["0x..", ...]}
+      warnings        every non-blocking finding's message
+      steps           [{"step": "A", "title", "commands"}] then, only for a plan that closes the chip,
+                      {"step": "B", ...}; commands are exactly what the owner types, in order
+    """
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--srk-table", required=True, type=Path, help="CST's SRK_1_2_3_4_table.bin")
+    parser.add_argument("--flash-bin", required=True, type=Path, help="signed flash.bin")
+    parser.add_argument("--uboot-itb", required=True, type=Path, help="signed u-boot.itb")
+    parser.add_argument("--plan", required=True, type=Path, help="planned fuse prog commands")
+    parser.add_argument("--dev-inventory", type=Path, help="dev-key hash inventory")
+    parser.add_argument("--dev-board", action="store_true", help="the burn is for a dev board: dev keys warn only")
+    parser.add_argument("--hab-log", type=Path, help="hab_status capture headed with the image digests")
+    parser.add_argument("--recovery-evidence", help="the OI2-07 recovery run, a file under evidence/")
+    parser.add_argument("--out", required=True, type=Path, help="folder for the fuse-burn record")
+    args = parser.parse_args(argv)
+
+    findings: list[Finding] = []
+    data: dict[str, bytes] = {}
+    for key in ("srk_table", "flash_bin", "uboot_itb", "plan", "dev_inventory", "hab_log"):
+        path = getattr(args, key)
+        if path is not None:
+            try:
+                data[key] = path.read_bytes()
+            except OSError as e:
+                findings.append(Finding("input", f"--{key.replace('_', '-')} {path}: cannot read: {e.strerror}"))
+
+    def parse(what, *a):
+        try:
+            return what(*a)
+        except PreflightError as e:
+            findings.append(Finding("input", str(e)))
+        except UnicodeDecodeError as e:
+            findings.append(Finding("input", f"a text input is not UTF-8: {e}"))
+        return None
+
+    digest = parse(srk_fuse_hash, data["srk_table"]) if "srk_table" in data else None
+    plan = parse(lambda b: parse_fuse_plan(b.decode()), data["plan"]) if "plan" in data else None
+    inventory = parse(lambda b: parse_dev_inventory(b.decode()), data["dev_inventory"]) \
+        if "dev_inventory" in data else None
+    hab_log = parse(bytes.decode, data["hab_log"]) if "hab_log" in data else None
+    images = {}
+    for name, key in (("flash.bin", "flash_bin"), ("u-boot.itb", "uboot_itb")):
+        found = parse(extract_srk, getattr(args, key)) if key in data else None
+        if found is not None:
+            images[name] = found
+    sha256s = {key: hashlib.sha256(value).hexdigest() for key, value in data.items()}
+    image_sha256s = {name: sha256s[key] for name, key in (("flash.bin", "flash_bin"), ("u-boot.itb", "uboot_itb"))
+                     if key in sha256s}
+
+    if digest is not None and plan is not None:
+        findings += check_plan(plan, digest)
+        findings += check_images(images, digest, plan)
+    if digest is not None and inventory is not None:
+        findings += check_dev_keys(data["srk_table"], digest, inventory, args.dev_board)
+    if args.dev_board:
+        findings.append(Finding("dev board", "--dev-board: this burn is for a dev board, so dev keys are allowed; "
+                                             "nothing it boots is a release (docs/05 rules 3 and 5)", error=False))
+    if plan is not None and (args.hab_log is None or hab_log is not None):
+        findings += check_close(plan, hab_log, args.recovery_evidence, image_sha256s, root=root)
+    if plan is not None and not plan:
+        findings.append(Finding("empty plan", "plan: no fuse prog command"))
+
+    errors = [f for f in findings if f.error]
+    for f in findings:
+        print(f"{'ERROR' if f.error else 'WARNING'}: {f.kind}: {f.message}")
+    if errors:
+        print(f"REFUSED: {len(errors)} blocking finding(s); no record written", file=sys.stderr)
+        return 1
+    md, js = args.out / f"{RECORD}.md", args.out / f"{RECORD}.json"
+    if md.exists() or js.exists():
+        print(f"REFUSED: {md} or {js} already exists; no record written", file=sys.stderr)
+        return 1
+
+    recovery = root / args.recovery_evidence
+    sha256s["recovery_evidence"] = check_evidence.sha256(recovery)
+    paths = {key: str(getattr(args, key)) for key in sha256s}
+    record = {
+        "schema": RECORD_SCHEMA,
+        "tool_version": tool_version(root),
+        "created_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "inputs": {key: {"path": paths[key], "sha256": sha256s[key]} if key in sha256s else None
+                   for key in ("srk_table", "flash_bin", "uboot_itb", "plan", "dev_inventory", "hab_log",
+                               "recovery_evidence")},
+        "dev_board": args.dev_board,
+        "srk_fuse_hash": digest.hex(),
+        "fuse_words": [hexword(w) for w in fuse_words(digest)],
+        "images": {name: {"srk_index": found[0][2], "ivt_offsets": [f"{offset:#x}" for offset, _, _ in found]}
+                   for name, found in images.items()},
+        "warnings": [f.message for f in findings],
+        "steps": [{"step": "A", "title": "burn the SRK hash", "commands": render_srk_commands(fuse_words(digest))}],
+    }
+    if any((w.bank, w.word) == CLOSE_FUSE for w in plan):
+        record["steps"].append({"step": "B", "title": "close the chip",
+                                "commands": [f"fuse prog {CLOSE_FUSE[0]} {CLOSE_FUSE[1]} 0x{CLOSE_VALUE:X}"]})
+    args.out.mkdir(parents=True, exist_ok=True)
+    js.write_text(json.dumps(record, indent=2) + "\n")
+    md.write_text(render_record_md(record))
+    print(f"wrote {md} and {js}")
+    return 0
 
 
 if __name__ == "__main__":
