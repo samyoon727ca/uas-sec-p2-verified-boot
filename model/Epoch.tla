@@ -116,4 +116,6 @@ NoOldReleaseUnseals == \A r \in released : r[1] >= r[2]
 EpochOf(r) == IF r.bits = {} THEN 0 ELSE CHOOSE b \in r.bits : \A c \in r.bits : c <= b
 EpochMonotonic == [][LET was == nv[EpochIdx]  now == nv'[EpochIdx] IN now.defined /\ now.written =>
                        EpochOf(now) >= committed' /\ (was.defined /\ was.written => EpochOf(now) >= EpochOf(was))]_vars
+\* Witness, expected violated: after Commit(2), release 2 still obtains the keys.
+CommittedReleaseNeverUnseals == <<2, 2>> \notin released
 =============================================================================
