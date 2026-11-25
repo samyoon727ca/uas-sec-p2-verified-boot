@@ -1,4 +1,8 @@
 [
   {"spec": "Epoch.tla", "cfg": "Epoch.cfg", "expect": "NoOldReleaseUnseals"},
-  {"spec": "Epoch.tla", "cfg": "EpochMonotonic.cfg", "expect": "EpochMonotonic"}
+  {"spec": "Epoch.tla", "cfg": "EpochMonotonic.cfg", "expect": "EpochMonotonic"},
+  {"spec": "Boot.tla", "cfg": "Boot.cfg", "expect": "OnlyInitramfsObtainsKeys"},
+  {"spec": "Boot.tla", "cfg": "BootRoot.cfg", "expect": "pass"},
+  {"spec": "Boot.tla", "cfg": "BootRootWitness.cfg", "expect": "InitramfsNeverObtainsKeys"},
+  {"spec": "Boot.tla", "cfg": "BootNoCap.cfg", "expect": "OnlyInitramfsObtainsKeys"}
 ]

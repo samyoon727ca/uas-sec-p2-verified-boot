@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Usage: python3 model/trace_to_tpm2.py TRACE    (a TLC JSON counterexample of model/Epoch.tla)
+"""Usage: python3 model/trace_to_tpm2.py TRACE    (a TLC JSON counterexample of model/Epoch.tla or model/Boot.tla)
 
-Prints each step of the trace as JSON: the state it reaches, the Epoch.tla action that explains it, found by comparing
+Prints each step of the trace as JSON: the state it reaches, the spec's action that explains it, found by comparing
 the state with the one before (the pinned TLC build records no action names), and the tpm2-tools argv lists that
 replay it, with {placeholders} for the harness's handles and files (model/README.md, "Replay"). Exits non-zero, naming
 the state or the action, if a step matches no action, an action has no mapping or the trace has no step."""
@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 
 VARS = {"nv", "ownerAuth", "committed", "session", "released"}   # Epoch.tla's variables
+BOOT_VARS = VARS | {"pcrs", "stage", "pc", "pcrPolicy", "unsealedIn"}   # Boot.tla's
+PCRS = ("0", "1", "8", "9")   # as TLC writes the keys of Boot.tla's pcrs
 FLAGS = ("ownerwrite", "authwrite", "ownerread", "authread", "no_da")   # what NV_DefineSpace may set; tpm2-tools names
 SESSION = ["-S", "session.ctx"]
 
@@ -101,7 +103,7 @@ COMMANDS = {
 }
 
 
-def action(prev: dict, cur: dict) -> tuple[str, list]:
+def action(prev: dict, cur: dict, spec: str = "model/Epoch.tla") -> tuple[str, list]:
     """The action, with its arguments, that takes prev to cur; TraceError if no action of Epoch.tla does."""
     changed = {v for v in VARS if prev[v] != cur[v]}
     was, now = prev["session"], cur["session"]
@@ -126,28 +128,76 @@ def action(prev: dict, cur: dict) -> tuple[str, list]:
             return "PolicyAuthorize", [now["via"]]
         if d == ["other"]:
             raise TraceError("PolicyNV to a digest no release signs: its operand is not in the trace")
-    raise TraceError(f"no action of model/Epoch.tla changes {', '.join(sorted(changed)) or 'nothing'} this way")
+    raise TraceError(f"no action of {spec} changes {', '.join(sorted(changed)) or 'nothing'} this way")
 
 
-def commands(name: str, prev: dict, cur: dict, args: list) -> list[list[str]]:
-    if name not in COMMANDS:
+def extend(prev: dict, cur: dict, p: str, v: str) -> list[list[str]]:
+    """U-Boot's measurement of the release, one digest per PCR, or p2-unseal's cap: TPM2_PCR_Event of a fixed event."""
+    if p not in PCRS or v not in ("release", "cap"):
+        raise TraceError(f"Extend({p!r}, {v!r}) has no tpm2-tools mapping")
+    return [["tpm2_pcrevent", "-Q", p, "{cap_event}"]] if v == "cap" else [["tpm2_pcrextend", f"{p}:sha256={{release_{p}}}"]]
+
+
+# A TPM reset: orderly, as Linux shuts the TPM down on reboot, so the DA counter does not move; then _TPM_Init.
+RESET = [["tpm2_shutdown", "-c"], ["swtpm_ioctl", "--tcp", "{swtpm_ctrl}", "-i"], ["tpm2_startup", "-c"]]
+# Every action of Boot.tla's Next. It has no NV commands, and PolicyPCR is its own action.
+BOOT_COMMANDS = {
+    **{name: f for name, f in COMMANDS.items() if not name.startswith("NV_")},
+    "Extend": extend,
+    "PolicyPCR": lambda prev, cur: [["tpm2_policypcr", "-Q", *SESSION, "-l", "{pcr_selection}"]],
+    "PolicyNV": lambda prev, cur, i, b: COMMANDS["PolicyNV"](prev, cur, i, b)[1:],   # without its tpm2_policypcr
+    "Handover": lambda prev, cur, s: [],   # the next stage starts: no TPM command
+    "Reboot": lambda prev, cur: RESET,   # the CC's power cycle resets the TPM with it
+    "TPMReset": lambda prev, cur: RESET,
+}
+
+
+def boot_action(prev: dict, cur: dict) -> tuple[str, list]:
+    """As action(), for Boot.tla: its own actions first, then those it takes from Epoch.tla."""
+    changed = {v for v in BOOT_VARS if prev[v] != cur[v]}
+    if set(cur["pcrs"]) != set(PCRS):
+        raise TraceError(f"not PCRs {', '.join(PCRS)}: {cur['pcrs']!r}")
+    reset = all(v == [] for v in cur["pcrs"].values()) and not cur["session"]["open"]
+    if "stage" in changed:
+        if cur["stage"] == "rom" and reset:
+            return "Reboot", []
+        if changed <= {"stage", "pc"}:
+            return "Handover", [cur["stage"]]
+    elif "committed" not in changed:
+        if reset and changed & {"pcrs", "session"}:   # Unseal needs approved PCRs, so none closes a session here
+            return "TPMReset", []
+        if changed - {"pc"} == {"pcrs"}:
+            (p,) = [p for p in PCRS if prev["pcrs"][p] != cur["pcrs"][p]] or [None]
+            if cur["pcrs"][p] == ["release"]:
+                return "Extend", [p, "release"]
+            if prev["stage"] == "initramfs":   # the only value it extends is the cap event
+                return "Extend", [p, "cap"]
+            raise TraceError("Extend to an unapproved PCR value: the value is not in the trace")
+        if changed - {"pc"} == {"pcrPolicy"}:
+            return ("PolicyPCR", []) if cur["pcrPolicy"] != "none" else ("StartAuthSession", [])
+    return action({v: prev[v] for v in VARS}, {v: cur[v] for v in VARS}, "model/Boot.tla")
+
+
+def commands(name: str, prev: dict, cur: dict, args: list, table: dict = COMMANDS) -> list[list[str]]:
+    if name not in table:
         raise TraceError(f"no tpm2-tools mapping for action {name}")
-    return COMMANDS[name](prev, cur, *args)
+    return table[name](prev, cur, *args)
 
 
 def translate(trace: object) -> list[dict]:
     """[{"state": n, "action": name, "args": [...], "argv": [[...], ...]}] for states 2 to N of a TLC JSON trace."""
     if not isinstance(trace, list) or len(trace) < 2:
         raise TraceError("not a TLC JSON trace with at least one step (a list of two or more states)")
-    steps = []
+    steps, boot = [], isinstance(trace[0], dict) and set(trace[0]) == BOOT_VARS
     for n, (prev, cur) in enumerate(zip(trace, trace[1:]), start=2):
         try:
             for s in (prev, cur):
-                if not isinstance(s, dict) or set(s) != VARS or len(s["nv"]) != 1 or s["ownerAuth"] not in (
-                        "empty", "set") or s["nv"].keys() != cur["nv"].keys():
-                    raise TraceError(f"not a state of model/Epoch.tla with one NV index: {s!r}")
-            name, args = action(prev, cur)
-            steps.append({"state": n, "action": name, "args": args, "argv": commands(name, prev, cur, args)})
+                if not isinstance(s, dict) or set(s) != (BOOT_VARS if boot else VARS) or len(s["nv"]) != 1 or s[
+                        "ownerAuth"] not in ("empty", "set") or s["nv"].keys() != cur["nv"].keys():
+                    raise TraceError(f"not a state of model/{'Boot' if boot else 'Epoch'}.tla with one NV index: {s!r}")
+            name, args = (boot_action if boot else action)(prev, cur)
+            steps.append({"state": n, "action": name, "args": args,
+                          "argv": commands(name, prev, cur, args, BOOT_COMMANDS if boot else COMMANDS)})
         except TraceError as err:
             raise TraceError(f"state {n}: {err}") from None
         except (KeyError, TypeError, IndexError, AttributeError, ValueError) as err:

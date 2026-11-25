@@ -1,5 +1,5 @@
 """Unit tests for model/run_tlc.py, model/ci.py and model/trace_to_tpm2.py. No network, Java or swtpm: TLC's output
-is canned, and traces are the committed A-01 fixture or edits of it."""
+is canned, and traces are the committed A-01 and A-02 fixtures or edits of them."""
 from __future__ import annotations
 
 import hashlib
@@ -16,6 +16,7 @@ import run_tlc  # noqa: E402
 import trace_to_tpm2  # noqa: E402
 
 FIXTURE = Path(__file__).resolve().parent / "model" / "fixtures" / "a01-trace.json"
+BOOT_FIXTURE = FIXTURE.with_name("a02-trace.json")
 VIOLATION = 'Error: Invariant NoOldReleaseUnseals is violated.\nState 1: <Initial predicate>\n"CounterExample written: x"\n'
 
 
@@ -77,9 +78,28 @@ class TraceToTpm2Test(unittest.TestCase):
         self.trace = json.loads(FIXTURE.read_text())
 
     def test_every_action_of_the_spec_has_a_mapping(self):
-        spec = (run_tlc.ROOT / "model" / "Epoch.tla").read_text()
-        actions = set(re.findall(r"(?:\\/|:)\s*([A-Za-z_]\w*)", spec[spec.index("\nNext =="):spec.index("\nSpec ==")]))
-        self.assertEqual(actions, set(trace_to_tpm2.COMMANDS))
+        for name, table in (("Epoch.tla", trace_to_tpm2.COMMANDS), ("Boot.tla", trace_to_tpm2.BOOT_COMMANDS)):
+            spec = (run_tlc.ROOT / "model" / name).read_text()
+            actions = set(re.findall(r"(?:\\/|:)\s*([A-Za-z_]\w*)", spec[spec.index("\nNext =="):spec.index("\nSpec ==")]))
+            with self.subTest(spec=name):
+                self.assertEqual(actions, set(table))
+
+    def test_boot_steps_map_to_extends_and_resets(self):
+        steps = trace_to_tpm2.translate(json.loads(BOOT_FIXTURE.read_text()))
+        argv = {(s["action"], *map(str, s["args"])): s["argv"] for s in steps}
+        self.assertEqual(argv["Extend", "8", "release"], [["tpm2_pcrextend", "8:sha256={release_8}"]])
+        self.assertEqual(argv["Extend", "8", "cap"], [["tpm2_pcrevent", "-Q", "8", "{cap_event}"]])
+        self.assertEqual(argv["TPMReset",], trace_to_tpm2.RESET)
+        self.assertEqual(argv["Handover", "userspace"], [])
+        self.assertEqual([a[0] for a in argv["PolicyNV", "0x01000001", "[3]"]], ["tpm2_policynv"])
+        trace = json.loads(BOOT_FIXTURE.read_text())
+        rebooted = dict(trace[0], unsealedIn=trace[17]["unsealedIn"], released=trace[17]["released"])
+        self.assertEqual(trace_to_tpm2.translate([trace[17], rebooted])[0]["action"], "Reboot")
+        capped = {"stage": "userspace", "pcrs": dict(trace[22]["pcrs"], **{"8": ["unapproved"]})}
+        for cur, error in ((dict(trace[22], **capped), "state 2: Extend to an unapproved PCR value"),
+                           (dict(trace[22], pcrs={"0": []}), "state 2: not PCRs 0, 1, 8, 9")):
+            with self.subTest(error=error), self.assertRaisesRegex(trace_to_tpm2.TraceError, error):
+                trace_to_tpm2.translate([trace[22], cur])
 
     def test_unknown_action_is_rejected_by_name(self):
         with self.assertRaisesRegex(trace_to_tpm2.TraceError, "no tpm2-tools mapping for action PCR_Extend"):
