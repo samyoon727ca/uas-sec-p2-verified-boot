@@ -1,8 +1,10 @@
-"""Unit tests for model/run_tlc.py and model/ci.py. No network and no Java: TLC's output is canned."""
+"""Unit tests for model/run_tlc.py, model/ci.py and model/trace_to_tpm2.py. No network, Java or swtpm: TLC's output
+is canned, and traces are the committed A-01 fixture or edits of it."""
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -11,7 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "model"))
 import ci as model_ci  # noqa: E402
 import run_tlc  # noqa: E402
+import trace_to_tpm2  # noqa: E402
 
+FIXTURE = Path(__file__).resolve().parent / "model" / "fixtures" / "a01-trace.json"
 VIOLATION = 'Error: Invariant NoOldReleaseUnseals is violated.\nState 1: <Initial predicate>\n"CounterExample written: x"\n'
 
 
@@ -66,6 +70,46 @@ class ToolsTest(unittest.TestCase):
                     self.assertEqual(model_ci.load_configs(self.tmp / "configs.json"), entries)
                 else:
                     self.assertRaises(ValueError, model_ci.load_configs, self.tmp / "configs.json")
+
+
+class TraceToTpm2Test(unittest.TestCase):
+    def setUp(self):
+        self.trace = json.loads(FIXTURE.read_text())
+
+    def test_every_action_of_the_spec_has_a_mapping(self):
+        spec = (run_tlc.ROOT / "model" / "Epoch.tla").read_text()
+        actions = set(re.findall(r"(?:\\/|:)\s*([A-Za-z_]\w*)", spec[spec.index("\nNext =="):spec.index("\nSpec ==")]))
+        self.assertEqual(actions, set(trace_to_tpm2.COMMANDS))
+
+    def test_unknown_action_is_rejected_by_name(self):
+        with self.assertRaisesRegex(trace_to_tpm2.TraceError, "no tpm2-tools mapping for action PCR_Extend"):
+            trace_to_tpm2.commands("PCR_Extend", self.trace[0], self.trace[1], [])
+
+    def test_step_no_action_explains_is_rejected(self):
+        unexplained = dict(self.trace[1], ownerAuth="set")   # no action changes ownerAuth
+        other = dict(self.trace[6], session=dict(self.trace[6]["session"], digest=["other"]))
+        for trace, error in (([self.trace[0], unexplained], "state 2: no action .* changes committed, nv, ownerAuth"),
+                             (self.trace[:6] + [other], "state 7: PolicyNV to a digest no release signs"),
+                             ([self.trace[0], dict(self.trace[1], pcrs=[])], "state 2: not a state of"),
+                             ([self.trace[0], {**self.trace[1], "nv": {}}], "state 2: not a state of"),
+                             ([self.trace[0], dict(self.trace[0], session=[])], "state 2: malformed")):
+            with self.subTest(error=error), self.assertRaisesRegex(trace_to_tpm2.TraceError, error):
+                trace_to_tpm2.translate(trace)
+
+    def test_empty_trace_is_rejected(self):
+        for trace in ([], self.trace[:1], {}, {"counterexample": self.trace}):
+            with self.subTest(trace=trace), self.assertRaisesRegex(trace_to_tpm2.TraceError, "at least one step"):
+                trace_to_tpm2.translate(trace)
+        path = Path(self.enterContext(tempfile.TemporaryDirectory())) / "t.json"
+        path.write_text("[]")
+        with self.assertRaisesRegex(SystemExit, "at least one step"):
+            trace_to_tpm2.main([str(path)])
+
+    def test_placeholders_are_filled(self):
+        self.assertEqual(trace_to_tpm2.fill(["-i", "{policy_dir_1}/approved", "o"], {"policy_dir_1": "/p"}),
+                         ["-i", "/p/approved", "o"])
+        with self.assertRaises(KeyError):
+            trace_to_tpm2.fill(["{owner_auth}"], {})
 
 
 if __name__ == "__main__":
