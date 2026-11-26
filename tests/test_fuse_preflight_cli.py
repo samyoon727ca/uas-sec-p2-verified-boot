@@ -36,9 +36,8 @@ class CliTest(unittest.TestCase):
         self.inputs = self.root / "inputs"
         self.inputs.mkdir()
         flash, itb = flash_bin(csf(TABLE, index=2), csf(TABLE, index=2)), u_boot_itb(csf(TABLE, index=2))
-        self.write("table.bin", TABLE)
-        self.write("flash.bin", flash)
-        self.write("u-boot.itb", itb)
+        for name, blob in (("table.bin", TABLE), ("flash.bin", flash), ("u-boot.itb", itb)):
+            self.write(name, blob)
         self.write("plan.txt", "\n".join(COMMANDS) + "\n")
         self.headers = (f"# flash.bin sha256: {hashlib.sha256(flash).hexdigest()}\n"
                         f"# u-boot.itb sha256: {hashlib.sha256(itb).hexdigest()}\n")
@@ -85,6 +84,9 @@ class CliTest(unittest.TestCase):
             self.assertEqual(data["inputs"][key]["sha256"],
                              hashlib.sha256((self.inputs / name).read_bytes()).hexdigest())
         self.assertIsNone(data["inputs"]["hab_log"])
+        warning = "no --dev-inventory given: dev-key check not run, so this SRK hash may be a dev key (docs/05 rule 5)"
+        self.assertIn(warning, data["warnings"])                # no --dev-inventory: warned in both files
+        self.assertIn(f"- {warning}", md)
         self.assertEqual(data["inputs"]["recovery_evidence"]["path"], "evidence/" + RECOVERY)
         # The markdown carries the same commands, hashes and links.
         self.assertEqual(re.findall(r"```\n(.*?)\n```", md, re.S), ["\n".join(COMMANDS)])
@@ -127,10 +129,26 @@ class CliTest(unittest.TestCase):
         self.assertIn("ERROR: table mismatch: u-boot.itb", output)
         (self.inputs / "table.bin").unlink()
         self.write("plan.txt", "reset\n")
-        code, output = self.run_cli()
+        code, output = self.run_cli(recovery=None)
         self.assert_refused(code)
         self.assertRegex(output, r"ERROR: input: --srk-table .*table.bin: cannot read")
         self.assertIn("ERROR: input: plan line 1: not a fuse prog command", output)
+        self.assertIn("ERROR: recovery evidence: fuse burn refused: no --recovery-evidence given", output)
+        code, output = self.run_cli("--hab-log", str(self.write("hab.log", b"\xff")), recovery="nowhere/run.log")
+        self.assert_refused(code)
+        for text in ("input: a text input is not UTF-8", "recovery evidence: fuse burn refused: nowhere/run.log"):
+            self.assertIn(f"ERROR: {text}", output)
+
+    def test_hab_log_for_srk_only_plan_is_checked_as_warnings(self):
+        other = f"# flash.bin sha256: {'0' * 64}\n"            # a log captured for another flash.bin
+        self.write("hab.log", other + self.headers.splitlines()[1] + "\n" + EVENT)
+        code, output = self.run_cli("--hab-log", str(self.inputs / "hab.log"))
+        self.assertEqual(code, 0, output)
+        data, md = self.record()
+        hab = [w for w in data["warnings"] if w.startswith("HAB log:")]
+        self.assertEqual([("sha256 mismatch" in w, "event block 1" in w) for w in hab], [(True, False), (False, True)])
+        self.assertTrue(all(w.endswith("(not a gate: this plan does not close the chip)") for w in hab))
+        self.assertIn(f"- {hab[0]}", md)
 
     def test_dev_board_warning_in_both_files(self):
         self.write("dev.txt", f"{fp.srk_fuse_hash(TABLE).hex()} k-cc-root-dev\n")
@@ -151,9 +169,8 @@ class CliTest(unittest.TestCase):
         self.out.mkdir()
         (self.out / "fuse-burn-record.md").write_text("earlier\n")
         code, output = self.run_cli()
-        self.assertEqual(code, 1)
+        self.assertEqual((code, (self.out / "fuse-burn-record.md").read_text()), (1, "earlier\n"))
         self.assertIn("already exists", output)
-        self.assertEqual((self.out / "fuse-burn-record.md").read_text(), "earlier\n")
         self.assertFalse((self.out / "fuse-burn-record.json").exists())
 
     def test_out_file_or_failed_write_leaves_no_record(self):

@@ -121,7 +121,7 @@ python tools/fuse_preflight.py --srk-table SRK_1_2_3_4_table.bin --flash-bin fla
 ```
 
 - **Inputs.** CST's SRK table, the two signed images, the planned `fuse prog` lines, the dev-key hash inventory, a `hab_status` capture headed with both images' SHA-256, and the committed recovery run.
-- **Checks.** The SRK fuse hash and its eight words, against the plan, in bank 6 then bank 7 order [NXP-FUSE]. Every SRK table the images' CSFs install hashes to the same value. No dev key unless `--dev-board` is given, and then only as a warning. The recovery run is under `evidence/` and matches `SHA256SUMS` (OI2-07).
+- **Checks.** The SRK fuse hash and its eight words, against the plan, in bank 6 then bank 7 order [NXP-FUSE]. Every SRK table the images' CSFs install hashes to the same value. No dev key unless `--dev-board` is given, and then only as a warning; without `--dev-inventory` the record warns that this was not checked. A HAB log given for an SRK-only plan is still checked, as warnings. The recovery run is under `evidence/` and matches `SHA256SUMS` (OI2-07).
 - **Refuses.** Any wrong, swapped or missing word; any other fuse write, which may revoke an SRK; a dev key; a missing or mismatched recovery run. It refuses the close command (`fuse prog 1 3 0x2000000` [NXP-FUSE]) unless the HAB log shows no event for exactly these images. It prints every finding and writes nothing when it refuses.
 - **Record.** On success it writes `fuse-burn-record.md` and `.json`: input hashes, the SRK hash and words, each image's SRK index, warnings, and the commands as Step A (SRK hash) and, only if the plan closes the chip, Step B. Each step is permanent and still needs the owner's go-ahead at that moment ([§5](05-key-management.md) rule 5).
 
