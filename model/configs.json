@@ -1,0 +1,15 @@
+[
+  {"spec": "Epoch.tla", "cfg": "Epoch.cfg", "expect": "NoOldReleaseUnseals"},
+  {"spec": "Epoch.tla", "cfg": "EpochMonotonic.cfg", "expect": "EpochMonotonic"},
+  {"spec": "Boot.tla", "cfg": "Boot.cfg", "expect": "OnlyInitramfsObtainsKeys"},
+  {"spec": "Boot.tla", "cfg": "BootRoot.cfg", "expect": "pass"},
+  {"spec": "Boot.tla", "cfg": "BootRootWitness.cfg", "expect": "InitramfsNeverObtainsKeys"},
+  {"spec": "Boot.tla", "cfg": "BootNoCap.cfg", "expect": "OnlyInitramfsObtainsKeys"},
+  {"spec": "Epoch.tla", "cfg": "FixOwnerAuth.cfg", "expect": "pass"},
+  {"spec": "Epoch.tla", "cfg": "FixOwnerAuthWitness.cfg", "expect": "CommittedReleaseNeverUnseals"},
+  {"spec": "Epoch.tla", "cfg": "FixPolicyDelete.cfg", "expect": "pass"},
+  {"spec": "Epoch.tla", "cfg": "FixPolicyDeleteWitness.cfg", "expect": "CommittedReleaseNeverUnseals"},
+  {"spec": "Boot.tla", "cfg": "FixCombined.cfg", "expect": "OnlyInitramfsObtainsKeys"},
+  {"spec": "Boot.tla", "cfg": "FixCombinedRoot.cfg", "expect": "pass"},
+  {"spec": "Boot.tla", "cfg": "FixCombinedRootWitness.cfg", "expect": "InitramfsNeverObtainsKeys"}
+]

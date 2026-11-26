@@ -1,0 +1,35 @@
+name: model
+
+# TLC on model/configs.json, then tests/model. Paths: what the job runs and the P2 code it models.
+on:
+  push:
+    paths: ["model/**", "tests/model/**", "tests/ve07/provision.py", "tools/approve_policy.py", "cc/emu/install-host-packages.sh", "cc/emu/host-packages.txt", ".github/workflows/model.yml"]
+  pull_request:
+    paths: ["model/**", "tests/model/**", "tests/ve07/provision.py", "tools/approve_policy.py", "cc/emu/install-host-packages.sh", "cc/emu/host-packages.txt", ".github/workflows/model.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tlc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # Actions are pinned to full commit SHAs; the tag is noted for review.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned host packages from the Ubuntu snapshot (swtpm, tpm2-tools for tests/model)
+        run: cc/emu/install-host-packages.sh || { sleep 60; cc/emu/install-host-packages.sh; }   # one retry: apt can fail transiently
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/tla
+          key: model-tla-${{ hashFiles('model/tla2tools.pin') }}   # run_tlc.py re-checks the SHA-256
+      - name: Run TLC on every model configuration, then tests/model (the runner image's JDK 17)
+        run: JAVA_HOME="$JAVA_HOME_17_X64" python3 model/ci.py --out "$RUNNER_TEMP/model"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()   # only warns if there are no traces, as when the job stops before TLC
+        with:
+          name: model-traces
+          path: ${{ runner.temp }}/model
