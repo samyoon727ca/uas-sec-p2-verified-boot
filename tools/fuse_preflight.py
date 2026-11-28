@@ -8,9 +8,7 @@ SRK Hash results in a part that does not boot" [UBOOT-HAB]. So this tool
 computes the fuse words from the SRK table, renders the eight SRK commands,
 and checks a planned command file against them. It works only on the bytes
 and text it is given: it never opens a device, serial port or network
-connection. Standard library only. Its command line (see main) runs every
-check and writes the fuse-burn record, the commands the owner types at TC-02,
-only when no finding blocks.
+connection. Standard library only; main() is the command line.
 
 The hash burned must be the hash of the SRK table CST put in each signed
 image, so the tool also reads that table out of flash.bin and u-boot.itb.
@@ -570,6 +568,7 @@ def check_close(plan: list[FuseWrite], hab_log: str | None, recovery_evidence: s
 RECORD = "fuse-burn-record"
 RECORD_SCHEMA = "fuse-burn-record/1"
 FILE_INPUTS = ("srk_table", "flash_bin", "uboot_itb", "plan", "dev_inventory", "hab_log")
+IMAGES = (("flash.bin", "flash_bin"), ("u-boot.itb", "uboot_itb"))
 OPEN_ITEMS = "https://github.com/samyoon727ca/uas-sec-p2-verified-boot/blob/main/docs/02-cc-boot-chain.md#27-open-items"
 
 
@@ -610,19 +609,21 @@ def render_record_md(record: dict) -> str:
               for name, image in record["images"].items()]
     lines += ["", "## Warnings", ""] + ([f"- {w}" for w in record["warnings"]] or ["None."])
     for step in record["steps"]:
+        lines += ["", "If the SRK hash was already burned in an earlier run, do not type Step A again; it is listed so "
+                  "the owner can check it against the burned fuses."] if step["step"] == "B" else []
         lines += ["", f"## Step {step['step']}: {step['title']}", "",
                   "Permanent. Needs the owner's explicit go-ahead at this moment (docs/05 rule 5).", "",
                   "```"] + step["commands"] + ["```"]
     if not any(step["step"] == "B" for step in record["steps"]):
-        lines += ["", "No Step B: this plan does not close the chip. Closing it needs its own preflight run, with "
-                  "a clean HAB log for these images (OI2-02)."]
+        lines += ["", "No Step B: this plan does not close the chip. Closing it needs a later preflight run whose plan "
+                  "repeats the eight SRK lines plus the close line, with a clean HAB log for these images (OI2-02)."]
     return "\n".join(lines) + "\n"
 
 
 def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int:
     """Run every check, print every finding, and write DIR/fuse-burn-record.md and .json only if none blocks.
 
-    Exit 0 when the record is written, 1 when the preflight refuses (nothing written), 2 on a usage error.
+    Returns 0 (record written) or 1 (refused, nothing written); exits 2 (argparse raises SystemExit) on a usage error.
     --recovery-evidence is a path relative to root, the repo root. The JSON keys (schema "fuse-burn-record/1"):
       schema          "fuse-burn-record/1"
       tool_version    git commit of the repo's HEAD, or "unknown"
@@ -671,21 +672,15 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
 
     digest = parse(srk_fuse_hash, data["srk_table"]) if "srk_table" in data else None
     plan = parse(lambda b: parse_fuse_plan(b.decode()), data["plan"]) if "plan" in data else None
-    inventory = parse(lambda b: parse_dev_inventory(b.decode()), data["dev_inventory"]) \
-        if "dev_inventory" in data else None
+    inventory = parse(lambda: parse_dev_inventory(data["dev_inventory"].decode())) if "dev_inventory" in data else None
     hab_log = parse(bytes.decode, data["hab_log"]) if "hab_log" in data else None
-    images = {}
-    for name, key in (("flash.bin", "flash_bin"), ("u-boot.itb", "uboot_itb")):
-        found = parse(extract_srk, getattr(args, key)) if key in data else None
-        if found is not None:
-            images[name] = found
+    images = {name: parse(extract_srk, getattr(args, key)) if key in data else None for name, key in IMAGES}
+    images = {name: found for name, found in images.items() if found is not None}
     sha256s = {key: hashlib.sha256(value).hexdigest() for key, value in data.items()}
-    image_sha256s = {name: sha256s[key] for name, key in (("flash.bin", "flash_bin"), ("u-boot.itb", "uboot_itb"))
-                     if key in sha256s}
+    image_sha256s = {name: sha256s[key] for name, key in IMAGES if key in sha256s}
 
     if digest is not None and plan is not None:
-        findings += check_plan(plan, digest)
-        findings += check_images(images, digest, plan)
+        findings += check_plan(plan, digest) + check_images(images, digest, plan)
     if digest is not None and inventory is not None:
         findings += check_dev_keys(data["srk_table"], digest, inventory, args.dev_board)
     if args.dev_inventory is None:
@@ -711,10 +706,6 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
         print(f"REFUSED: {len(errors)} blocking finding(s); no record written", file=sys.stderr)
         return 1
     md, js = args.out / f"{RECORD}.md", args.out / f"{RECORD}.json"
-    if md.exists() or js.exists():
-        print(f"REFUSED: {md} or {js} already exists; no record written", file=sys.stderr)
-        return 1
-
     sha256s["recovery_evidence"] = check_evidence.sha256(root / args.recovery_evidence)
     paths = {key: str(getattr(args, key)) for key in sha256s}
     record = {
@@ -734,14 +725,18 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
     if any((w.bank, w.word) == CLOSE_FUSE for w in plan):
         record["steps"].append({"step": "B", "title": "close the chip",
                                 "commands": [f"fuse prog {CLOSE_FUSE[0]} {CLOSE_FUSE[1]} 0x{CLOSE_VALUE:X}"]})
+    created: list[Path] = []
     try:
         args.out.mkdir(parents=True, exist_ok=True)
         for path, text in ((js, json.dumps(record, indent=2) + "\n"), (md, render_record_md(record))):
-            path.write_text(text)
-    except OSError as e:
-        for path in (js, md):                   # neither existed before this run (checked above)
+            with path.open("x", encoding="utf-8") as f:     # exclusive create: never overwrite a record
+                created.append(path)
+                f.write(text)
+    except OSError as e:                        # FileExistsError too: remove only what this run created
+        for path in created:
             path.unlink(missing_ok=True)
-        print(f"REFUSED: cannot write the record in {args.out}: {e}; no record written", file=sys.stderr)
+        why = f"{e.filename} already exists" if isinstance(e, FileExistsError) else f"cannot write in {args.out}: {e}"
+        print(f"REFUSED: {why}; no record written", file=sys.stderr)
         return 1
     print(f"wrote {md} and {js}")
     return 0

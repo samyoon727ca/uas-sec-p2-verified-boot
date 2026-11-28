@@ -31,8 +31,7 @@ class CliTest(unittest.TestCase):
         record = self.root / "evidence" / RECOVERY
         record.parent.mkdir(parents=True)
         record.write_text("uuu recovery run\n")
-        (self.root / "evidence" / "SHA256SUMS").write_text(f"{hashlib.sha256(record.read_bytes()).hexdigest()}  "
-                                                          f"{RECOVERY}\n")
+        (self.root / "evidence/SHA256SUMS").write_text(f"{fp.check_evidence.sha256(record)}  {RECOVERY}\n")
         self.inputs = self.root / "inputs"
         self.inputs.mkdir()
         flash, itb = flash_bin(csf(TABLE, index=2), csf(TABLE, index=2)), u_boot_itb(csf(TABLE, index=2))
@@ -60,8 +59,7 @@ class CliTest(unittest.TestCase):
         return code, out.getvalue()
 
     def record(self) -> tuple[dict, str]:
-        return (json.loads((self.out / "fuse-burn-record.json").read_text()),
-                (self.out / "fuse-burn-record.md").read_text())
+        return json.loads((self.out / f"{fp.RECORD}.json").read_text()), (self.out / f"{fp.RECORD}.md").read_text()
 
     def assert_refused(self, code: int):
         self.assertEqual(code, 1)
@@ -110,6 +108,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual([s["commands"] for s in data["steps"]], [COMMANDS, [CLOSE]])
         self.assertEqual(re.findall(r"```\n(.*?)\n```", md, re.S), ["\n".join(COMMANDS), CLOSE])
         self.assertLess(md.index("## Step A"), md.index("## Step B: close the chip"))
+        self.assertIn("If the SRK hash was already burned in an earlier run, do not type Step A again", md)
         self.assertTrue(any("closes the chip" in w for w in data["warnings"]))
 
     def test_refusing_run_prints_every_finding_and_writes_nothing(self):
@@ -167,11 +166,13 @@ class CliTest(unittest.TestCase):
 
     def test_existing_record_is_not_overwritten(self):
         self.out.mkdir()
-        (self.out / "fuse-burn-record.md").write_text("earlier\n")
-        code, output = self.run_cli()
-        self.assertEqual((code, (self.out / "fuse-burn-record.md").read_text()), (1, "earlier\n"))
-        self.assertIn("already exists", output)
-        self.assertFalse((self.out / "fuse-burn-record.json").exists())
+        for old in ("fuse-burn-record.md", "fuse-burn-record.json"):       # either one alone
+            (self.out / old).write_text("earlier\n")
+            code, output = self.run_cli()
+            self.assertEqual((code, (self.out / old).read_text()), (1, "earlier\n"))
+            self.assertIn(f"{self.out / old} already exists", output)
+            self.assertEqual(list(self.out.iterdir()), [self.out / old])    # nothing of this run is left
+            (self.out / old).unlink()
 
     def test_out_file_or_failed_write_leaves_no_record(self):
         self.out.write_text("not a folder\n")
@@ -179,11 +180,15 @@ class CliTest(unittest.TestCase):
         self.assertEqual((code, self.out.read_text()), (1, "not a folder\n"))
         self.assertIn("is not a directory", output)
         self.out.unlink()
-        real = Path.write_text
-        with mock.patch.object(Path, "write_text", lambda path, text: real(path, text) if path.suffix != ".md"
-                               else (_ for _ in ()).throw(OSError(28, "No space left on device"))):
+        real = Path.open
+
+        def full_disk(path, *args, **kwargs):       # the .md is created, then its write fails: both files go
+            f = real(path, *args, **kwargs)
+            f.write = mock.Mock(side_effect=OSError(28, "No space left on device")) if path.suffix == ".md" else f.write
+            return f
+        with mock.patch.object(Path, "open", full_disk):
             code, output = self.run_cli()
-        self.assertEqual((code, list(self.out.iterdir())), (1, []))   # the JSON written first is removed
+        self.assertEqual((code, list(self.out.iterdir()), "cannot write in" in output), (1, [], True))
 
 
 if __name__ == "__main__":
