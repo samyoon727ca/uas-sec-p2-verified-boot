@@ -6,6 +6,7 @@ import contextlib
 import hashlib
 import io
 import json
+import os
 import re
 import sys
 import tempfile
@@ -21,6 +22,34 @@ from test_fuse_preflight_images import OTHER, TABLE, csf, flash_bin, u_boot_itb 
 
 COMMANDS = fp.render_srk_commands(fp.fuse_words(fp.srk_fuse_hash(TABLE)))
 CLOSE = "fuse prog 1 3 0x2000000"
+DEVICE_ROOTS = (Path("/dev"), Path("/sys"))     # device nodes, and the files Linux exposes devices through
+AUDITING: list[list] = []                       # inside audited(), the list that collects what is opened
+
+
+def record_open(event: str, args: tuple) -> None:
+    """PEP 578 audit hook. open(), io.open() and os.open(), and so every Path read or write, raise "open"."""
+    if event == "open" and AUDITING:
+        AUDITING[-1].append(args[0])
+
+
+sys.addaudithook(record_open)       # a hook cannot be removed, so it records only inside audited()
+
+
+@contextlib.contextmanager
+def audited():
+    """Collect every path opened in the block, as given: str, bytes, path-like, or an int file descriptor."""
+    opened: list = []
+    AUDITING.append(opened)
+    try:
+        yield opened
+    finally:
+        AUDITING.pop()
+
+
+def device_paths(opened: list) -> list[str]:
+    """The paths in opened that lie under /dev or /sys once symbolic links are followed."""
+    paths = [os.fsdecode(p) for p in opened if not isinstance(p, int)]
+    return [p for p in paths if any(Path(os.path.realpath(p)).is_relative_to(d) for d in DEVICE_ROOTS)]
 
 
 class CliTest(unittest.TestCase):
@@ -54,8 +83,9 @@ class CliTest(unittest.TestCase):
         if recovery is not None:
             argv += ["--recovery-evidence", recovery]
         out = io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+        with audited() as self.opened, contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             code = fp.main(argv, root=self.root)
+        self.assertEqual(device_paths(self.opened), [], "fuse_preflight opened a device")    # every run, any outcome
         return code, out.getvalue()
 
     def passed(self, *extra: str) -> tuple[dict, str]:
@@ -186,6 +216,24 @@ class CliTest(unittest.TestCase):
         with mock.patch.object(Path, "open", full_disk):
             code, output = self.run_cli()
         self.assertEqual((code, (self.root / "out").exists(), "cannot write in" in output), (1, False, True))
+
+    def test_device_check_sees_every_open(self):
+        # run_cli fails any run that opens a path under /dev or /sys. Here: that check sees the tool's own reads,
+        # and would catch a device opened with open(), os.open() or Path.
+        self.write("plan.txt", "\n".join(COMMANDS + [CLOSE]) + "\n")
+        self.write("hab.log", self.headers + CLEAN)
+        self.write("dev.txt", f"{'0' * 64} k-other-dev\n")
+        self.passed("--hab-log", str(self.inputs / "hab.log"), "--dev-inventory", str(self.inputs / "dev.txt"))
+        seen = {os.path.realpath(os.fsdecode(p)) for p in self.opened if not isinstance(p, int)}
+        given = [self.inputs / name for name in ("table.bin", "flash.bin", "u-boot.itb", "plan.txt", "hab.log",
+                                                 "dev.txt")] + [self.root / "evidence" / RECOVERY]
+        self.assertLessEqual({os.path.realpath(p) for p in given}, seen)
+        with audited() as opened:
+            with open("/dev/null", "rb"):
+                pass
+            os.close(os.open("/dev/null", os.O_RDONLY))
+            Path("/dev/null").read_bytes()
+        self.assertEqual(device_paths(opened), ["/dev/null"] * 3)
 
 
 if __name__ == "__main__":
