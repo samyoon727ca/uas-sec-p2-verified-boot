@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import random
+import re
 import struct
 import sys
 import unittest
@@ -153,6 +154,15 @@ class CheckPlanTest(unittest.TestCase):
         self.assertOnly(self.check(lines), "mismatch", [
             f"line 3: bank 6 word 2: mismatch: expected {fp.hexword(self.words[2])}, got {fp.hexword(wrong)}"])
 
+    def test_duplicate_srk_word(self):
+        # A repeated SRK word line passes if it repeats the right value; a wrong value is a mismatch at its own line,
+        # even after the right one.
+        self.assertEqual(self.check(self.commands[:3] + [self.commands[2]] + self.commands[3:]), [])
+        wrong = self.words[2] ^ 0x10
+        lines = self.commands[:3] + [f"fuse prog 6 2 {fp.hexword(wrong)}"] + self.commands[3:]
+        self.assertOnly(self.check(lines), "mismatch", [
+            f"line 4: bank 6 word 2: mismatch: expected {fp.hexword(self.words[2])}, got {fp.hexword(wrong)}"])
+
     def test_missing_word(self):
         self.assertOnly(self.check(self.commands[:6] + self.commands[7:]), "missing", [
             f"bank 7 word 2: SRK hash word missing: expected {fp.hexword(self.words[6])}, got no write"])
@@ -186,6 +196,14 @@ class NoDeviceAccessTest(unittest.TestCase):
         imported |= {node.module.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
         self.assertEqual(imported & {"socket", "ssl", "http", "urllib", "asyncio", "subprocess", "serial", "termios",
                                      "tty", "fcntl", "pty", "ctypes", "mmap"}, set())
+
+    def test_names_no_device_path(self):
+        # test_fuse_preflight_cli.py checks that no CLI run opens a path under /dev or /sys; this also covers code
+        # no test runs, for a path written in the source.
+        tree = ast.parse(Path(fp.__file__).read_text())
+        texts = [node.value.decode("latin-1") if isinstance(node.value, bytes) else node.value
+                 for node in ast.walk(tree) if isinstance(node, ast.Constant) and isinstance(node.value, (str, bytes))]
+        self.assertEqual([text for text in texts if re.search(r"(?<!\w)/(dev|sys)\b", text)], [])
 
 
 if __name__ == "__main__":
