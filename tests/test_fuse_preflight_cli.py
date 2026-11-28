@@ -32,7 +32,7 @@ class CliTest(unittest.TestCase):
         record.parent.mkdir(parents=True)
         record.write_text("uuu recovery run\n")
         (self.root / "evidence/SHA256SUMS").write_text(f"{fp.check_evidence.sha256(record)}  {RECOVERY}\n")
-        self.inputs = self.root / "inputs"
+        self.inputs = self.root / "in|puts`"       # a '|' and a backtick the markdown table must escape
         self.inputs.mkdir()
         flash, itb = flash_bin(csf(TABLE, index=2), csf(TABLE, index=2)), u_boot_itb(csf(TABLE, index=2))
         for name, blob in (("table.bin", TABLE), ("flash.bin", flash), ("u-boot.itb", itb)):
@@ -58,19 +58,22 @@ class CliTest(unittest.TestCase):
             code = fp.main(argv, root=self.root)
         return code, out.getvalue()
 
-    def record(self) -> tuple[dict, str]:
+    def passed(self, *extra: str) -> tuple[dict, str]:
+        code, output = self.run_cli(*extra)
+        self.assertEqual(code, 0, output)
         return json.loads((self.out / f"{fp.RECORD}.json").read_text()), (self.out / f"{fp.RECORD}.md").read_text()
 
-    def assert_refused(self, code: int):
+    def assert_refused(self, code: int, output: str = "") -> str:
         self.assertEqual(code, 1)
         self.assertFalse(self.out.exists())
+        return output
 
     def test_passing_run_writes_both_records(self):
-        code, output = self.run_cli()
-        self.assertEqual(code, 0, output)
-        data, md = self.record()
-        self.assertEqual(data["schema"], "fuse-burn-record/1")
-        self.assertEqual(data["tool_version"], "unknown")      # the temporary root is not a git repo
+        with mock.patch.object(Path, "read_bytes", autospec=True, side_effect=Path.read_bytes) as read:
+            data, md = self.passed()
+        names = sorted(path.name for (path,), _ in read.call_args_list if path.parent == self.inputs)
+        self.assertEqual(names, ["flash.bin", "plan.txt", "table.bin", "u-boot.itb"])   # each input read once
+        self.assertEqual((data["schema"], data["tool_version"]), ("fuse-burn-record/1", "unknown"))   # not a git repo
         self.assertRegex(data["created_utc"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
         self.assertEqual(data["srk_fuse_hash"], fp.srk_fuse_hash(TABLE).hex())
         self.assertEqual(data["fuse_words"], [fp.hexword(w) for w in fp.fuse_words(fp.srk_fuse_hash(TABLE))])
@@ -86,6 +89,8 @@ class CliTest(unittest.TestCase):
         self.assertIn(warning, data["warnings"])                # no --dev-inventory: warned in both files
         self.assertIn(f"- {warning}", md)
         self.assertEqual(data["inputs"]["recovery_evidence"]["path"], "evidence/" + RECOVERY)
+        plan = str(self.inputs / "plan.txt").replace("|", "\\|")
+        self.assertIn(f"| plan | `` {plan} `` | `{data['inputs']['plan']['sha256']}` |", md)
         # The markdown carries the same commands, hashes and links.
         self.assertEqual(re.findall(r"```\n(.*?)\n```", md, re.S), ["\n".join(COMMANDS)])
         self.assertIn("## Step A: burn the SRK hash", md)
@@ -96,15 +101,12 @@ class CliTest(unittest.TestCase):
 
     def test_close_step_only_behind_its_gate(self):
         self.write("plan.txt", "\n".join(COMMANDS + [CLOSE]) + "\n")
-        self.assert_refused(self.run_cli()[0])
+        self.assert_refused(*self.run_cli())
         self.write("hab.log", self.headers + EVENT)
-        code, output = self.run_cli("--hab-log", str(self.inputs / "hab.log"))
-        self.assert_refused(code)
+        output = self.assert_refused(*self.run_cli("--hab-log", str(self.inputs / "hab.log")))
         self.assertIn("ERROR: close gate: line 9: close command refused: HAB log: event block 1", output)
         self.write("hab.log", self.headers + CLEAN)
-        code, output = self.run_cli("--hab-log", str(self.inputs / "hab.log"))
-        self.assertEqual(code, 0, output)
-        data, md = self.record()
+        data, md = self.passed("--hab-log", str(self.inputs / "hab.log"))
         self.assertEqual([s["commands"] for s in data["steps"]], [COMMANDS, [CLOSE]])
         self.assertEqual(re.findall(r"```\n(.*?)\n```", md, re.S), ["\n".join(COMMANDS), CLOSE])
         self.assertLess(md.index("## Step A"), md.index("## Step B: close the chip"))
@@ -115,48 +117,42 @@ class CliTest(unittest.TestCase):
         swapped = COMMANDS[:]
         swapped[1] = swapped[1][:-1] + ("0" if swapped[1][-1] != "0" else "1")
         self.write("plan.txt", "\n".join(swapped[:-1]) + "\n")
-        code, output = self.run_cli(recovery=None)
-        self.assert_refused(code)
+        output = self.assert_refused(*self.run_cli(recovery=None))
         for kind in ("mismatch", "missing", "recovery evidence"):
             self.assertIn(f"ERROR: {kind}:", output)
         self.assertIn("REFUSED: 3 blocking finding(s); no record written", output)
 
     def test_bad_inputs_are_findings(self):
         self.write("u-boot.itb", u_boot_itb(csf(OTHER)))
-        code, output = self.run_cli()
-        self.assert_refused(code)
+        output = self.assert_refused(*self.run_cli())
         self.assertIn("ERROR: table mismatch: u-boot.itb", output)
         (self.inputs / "table.bin").unlink()
         self.write("plan.txt", "reset\n")
-        code, output = self.run_cli(recovery=None)
-        self.assert_refused(code)
+        output = self.assert_refused(*self.run_cli(recovery=None))
         self.assertRegex(output, r"ERROR: input: --srk-table .*table.bin: cannot read")
         self.assertIn("ERROR: input: plan line 1: not a fuse prog command", output)
         self.assertIn("ERROR: recovery evidence: fuse burn refused: no --recovery-evidence given", output)
-        code, output = self.run_cli("--hab-log", str(self.write("hab.log", b"\xff")), recovery="nowhere/run.log")
-        self.assert_refused(code)
+        output = self.assert_refused(*self.run_cli("--hab-log", str(self.write("hab.log", b"\xff")),
+                                                   recovery="nowhere/run.log"))
         for text in ("input: a text input is not UTF-8", "recovery evidence: fuse burn refused: nowhere/run.log"):
             self.assertIn(f"ERROR: {text}", output)
 
     def test_hab_log_for_srk_only_plan_is_checked_as_warnings(self):
         other = f"# flash.bin sha256: {'0' * 64}\n"            # a log captured for another flash.bin
         self.write("hab.log", other + self.headers.splitlines()[1] + "\n" + EVENT)
-        code, output = self.run_cli("--hab-log", str(self.inputs / "hab.log"))
-        self.assertEqual(code, 0, output)
-        data, md = self.record()
+        data, md = self.passed("--hab-log", str(self.inputs / "hab.log"))
         hab = [w for w in data["warnings"] if w.startswith("HAB log:")]
         self.assertEqual([("sha256 mismatch" in w, "event block 1" in w) for w in hab], [(True, False), (False, True)])
         self.assertTrue(all(w.endswith("(not a gate: this plan does not close the chip)") for w in hab))
         self.assertIn(f"- {hab[0]}", md)
+        first, *block = hab[1].split("\n")                      # the event block: a code block in its list item
+        self.assertIn("\n".join([f"- {first}", ""] + [f"      {line}" for line in block]), md)
 
     def test_dev_board_warning_in_both_files(self):
         self.write("dev.txt", f"{fp.srk_fuse_hash(TABLE).hex()} k-cc-root-dev\n")
-        code, output = self.run_cli("--dev-inventory", str(self.inputs / "dev.txt"))
-        self.assert_refused(code)
+        output = self.assert_refused(*self.run_cli("--dev-inventory", str(self.inputs / "dev.txt")))
         self.assertIn("ERROR: dev key: SRK hash to burn: dev key 'k-cc-root-dev'", output)
-        code, output = self.run_cli("--dev-inventory", str(self.inputs / "dev.txt"), "--dev-board")
-        self.assertEqual(code, 0, output)
-        data, md = self.record()
+        data, md = self.passed("--dev-inventory", str(self.inputs / "dev.txt"), "--dev-board")
         self.assertTrue(data["dev_board"])
         warning = "SRK hash to burn: dev key 'k-cc-root-dev': allowed for a dev board only"
         self.assertIn(warning, data["warnings"])
@@ -180,6 +176,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual((code, self.out.read_text()), (1, "not a folder\n"))
         self.assertIn("is not a directory", output)
         self.out.unlink()
+        self.out = self.root / "out" / "sub"         # mkdir makes both folders; the rollback removes both
         real = Path.open
 
         def full_disk(path, *args, **kwargs):       # the .md is created, then its write fails: both files go
@@ -188,7 +185,7 @@ class CliTest(unittest.TestCase):
             return f
         with mock.patch.object(Path, "open", full_disk):
             code, output = self.run_cli()
-        self.assertEqual((code, list(self.out.iterdir()), "cannot write in" in output), (1, [], True))
+        self.assertEqual((code, (self.root / "out").exists(), "cannot write in" in output), (1, False, True))
 
 
 if __name__ == "__main__":

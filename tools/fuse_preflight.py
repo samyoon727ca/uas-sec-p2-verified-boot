@@ -58,6 +58,7 @@ Three gates come before any burn (docs/05 rule 5, OI2-02, OI2-07):
 from __future__ import annotations
 
 import argparse
+import contextlib
 import dataclasses
 import datetime
 import hashlib
@@ -131,7 +132,7 @@ class FuseWrite:
 class Finding:
     kind: str
     message: str
-    error: bool = True          # False only for "close step" and for "dev key" on a dev board: warnings
+    error: bool = True          # False for warnings, which never block
 
 
 def hexword(value: int) -> str:
@@ -592,6 +593,9 @@ def tool_version(root: Path = check_evidence.ROOT) -> str:
 
 def render_record_md(record: dict) -> str:
     """The fuse-burn record as markdown, from the same dict as the JSON."""
+    def code(text: str) -> str:             # a code span no backtick in text ends, and no '|' splits in a table
+        tick = "`" * (max(map(len, re.findall("`+", text)), default=0) + 1)
+        return f"{tick} {text} {tick}".replace("|", "\\|")
     lines = ["# Fuse-burn record", "",
              f"Written by `tools/fuse_preflight.py` at `{record['tool_version']}` on {record['created_utc']}. "
              "No check blocked; see the warnings. The tool read only the files below; it never touched hardware.", "",
@@ -599,15 +603,16 @@ def render_record_md(record: dict) -> str:
              "moment (docs/05 rule 5).** U-Boot asks before each write; answer `y` only then. "
              f"See [OI2-02 and OI2-07]({OPEN_ITEMS}).", "",
              "## Inputs", "", "| Input | Path | SHA-256 |", "|---|---|---|"]
-    lines += [f"| {name} | `{item['path']}` | `{item['sha256']}` |"
-              for name, item in record["inputs"].items() if item is not None]
+    lines += [f"| {name} | {code(entry['path'])} | `{entry['sha256']}` |"
+              for name, entry in record["inputs"].items() if entry is not None]
     lines += ["", "## SRK hash", "", f"`{record['srk_fuse_hash']}`, as fuse words:", "",
               "| Bank | Word | Value |", "|---|---|---|"]
     lines += [f"| {bank} | {word} | `{value}` |" for (bank, word), value in zip(SRK_FUSES, record["fuse_words"])]
     lines += ["", "## Images", "", "| Image | SRK index | IVT offsets |", "|---|---|---|"]
     lines += [f"| {name} | {image['srk_index']} | {', '.join(image['ivt_offsets'])} |"
               for name, image in record["images"].items()]
-    lines += ["", "## Warnings", ""] + ([f"- {w}" for w in record["warnings"]] or ["None."])
+    lines += ["", "## Warnings", ""] + ([   # a multi-line warning (a HAB event block) goes in a code block in its item
+        ("- " + w.replace("\n", "\n      ")).replace("\n", "\n\n", 1) for w in record["warnings"]] or ["None."])
     for step in record["steps"]:
         lines += ["", "If the SRK hash was already burned in an earlier run, do not type Step A again; it is listed so "
                   "the owner can check it against the burned fuses."] if step["step"] == "B" else []
@@ -661,21 +666,20 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
             except OSError as e:
                 findings.append(Finding("input", f"--{key.replace('_', '-')} {path}: cannot read: {e.strerror}"))
 
-    def parse(what, *a):
+    def parse(what, *a, at=""):
         try:
             return what(*a)
         except PreflightError as e:
-            findings.append(Finding("input", str(e)))
+            findings.append(Finding("input", f"{at}{e}"))
         except UnicodeDecodeError as e:
             findings.append(Finding("input", f"a text input is not UTF-8: {e}"))
-        return None
 
     digest = parse(srk_fuse_hash, data["srk_table"]) if "srk_table" in data else None
     plan = parse(lambda b: parse_fuse_plan(b.decode()), data["plan"]) if "plan" in data else None
     inventory = parse(lambda: parse_dev_inventory(data["dev_inventory"].decode())) if "dev_inventory" in data else None
     hab_log = parse(bytes.decode, data["hab_log"]) if "hab_log" in data else None
-    images = {name: parse(extract_srk, getattr(args, key)) if key in data else None for name, key in IMAGES}
-    images = {name: found for name, found in images.items() if found is not None}
+    images = {name: found for name, key in IMAGES        # the bytes read above, not a second read of the file
+              if key in data and (found := parse(_srk_in, data[key], at=f"{getattr(args, key)}: ")) is not None}
     sha256s = {key: hashlib.sha256(value).hexdigest() for key, value in data.items()}
     image_sha256s = {name: sha256s[key] for name, key in IMAGES if key in sha256s}
 
@@ -707,12 +711,11 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
         return 1
     md, js = args.out / f"{RECORD}.md", args.out / f"{RECORD}.json"
     sha256s["recovery_evidence"] = check_evidence.sha256(root / args.recovery_evidence)
-    paths = {key: str(getattr(args, key)) for key in sha256s}
     record = {
         "schema": RECORD_SCHEMA,
         "tool_version": tool_version(root),
         "created_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "inputs": {key: {"path": paths[key], "sha256": sha256s[key]} if key in sha256s else None
+        "inputs": {key: {"path": str(getattr(args, key)), "sha256": sha256s[key]} if key in sha256s else None
                    for key in FILE_INPUTS + ("recovery_evidence",)},
         "dev_board": args.dev_board,
         "srk_fuse_hash": digest.hex(),
@@ -725,7 +728,7 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
     if any((w.bank, w.word) == CLOSE_FUSE for w in plan):
         record["steps"].append({"step": "B", "title": "close the chip",
                                 "commands": [f"fuse prog {CLOSE_FUSE[0]} {CLOSE_FUSE[1]} 0x{CLOSE_VALUE:X}"]})
-    created: list[Path] = []
+    created = [d for d in reversed((args.out, *args.out.parents)) if not d.exists()]   # what mkdir will make
     try:
         args.out.mkdir(parents=True, exist_ok=True)
         for path, text in ((js, json.dumps(record, indent=2) + "\n"), (md, render_record_md(record))):
@@ -733,8 +736,9 @@ def main(argv: list[str] | None = None, root: Path = check_evidence.ROOT) -> int
                 created.append(path)
                 f.write(text)
     except OSError as e:                        # FileExistsError too: remove only what this run created
-        for path in created:
-            path.unlink(missing_ok=True)
+        for path in reversed(created):          # the files, then the folders mkdir made
+            with contextlib.suppress(OSError):
+                (path.unlink if path.is_file() else path.rmdir)()
         why = f"{e.filename} already exists" if isinstance(e, FileExistsError) else f"cannot write in {args.out}: {e}"
         print(f"REFUSED: {why}; no record written", file=sys.stderr)
         return 1
